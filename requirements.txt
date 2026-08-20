@@ -1,5 +1,9 @@
 fastapi==0.141.1
+google-adk[gcp]==2.7.1
 google-genai==2.12.1
+mcp==1.26.0
+mcp-clickhouse==0.3.0
+clickhouse-connect==0.9.2
 numpy==2.4.2
 pydantic==2.12.5
 uvicorn[standard]==0.41.0

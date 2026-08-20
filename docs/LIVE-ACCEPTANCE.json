@@ -1,0 +1,33 @@
+{
+  "verified_at": "2026-08-20T22:25:00Z",
+  "revision": "safe-frame-regression-00008-q4v",
+  "public_url": "https://safe-frame-regression-109051079423.us-central1.run.app",
+  "health": {
+    "clickhouse": true,
+    "mcp_clickhouse": true,
+    "google_vertex": true,
+    "agent_runtime_ready": true
+  },
+  "constructed_pair": {
+    "parent_asset": "approved-master",
+    "child_asset": "social-60fps",
+    "verdict": "fail",
+    "certified": false,
+    "regression_count": 1,
+    "decision_source": "clickhouse_sql_via_official_mcp",
+    "mcp_tool": "run_query",
+    "mcp_is_error": false,
+    "failed_gate": "no_child_only_general_flash"
+  },
+  "agent": {
+    "status": "completed",
+    "name": "RegressionExplainer",
+    "model": "gemini-2.5-flash",
+    "evidence_transport": "official_mcp_clickhouse_stdio",
+    "requires_human": true
+  },
+  "notes": [
+    "The sample contains self-authored numerical metrics, not flashing media.",
+    "This is an open pre-check and never claims device or regulatory certification."
+  ]
+}

@@ -1,6 +1,9 @@
 .git
-.venv
-__pycache__
+.github
 .pytest_cache
-tests
+__pycache__
 *.pyc
+.env
+clickhouse
+tests
+docs

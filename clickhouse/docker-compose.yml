@@ -1,0 +1,39 @@
+services:
+  caddy:
+    image: caddy:2.10.0-alpine
+    restart: unless-stopped
+    environment:
+      SAFE_FRAME_DOMAIN: ${SAFE_FRAME_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:26.3-alpine
+    restart: unless-stopped
+    environment:
+      CLICKHOUSE_DB: safe_frame
+      CLICKHOUSE_USER: safe_frame_ingest
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_INGEST_PASSWORD}
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - clickhouse_logs:/var/log/clickhouse-server
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8123/ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  caddy_data:
+  caddy_config:
+  clickhouse_data:
+  clickhouse_logs:

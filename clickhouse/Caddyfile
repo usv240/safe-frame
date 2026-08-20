@@ -1,0 +1,4 @@
+{$SAFE_FRAME_DOMAIN} {
+  encode zstd gzip
+  reverse_proxy clickhouse:8123
+}
