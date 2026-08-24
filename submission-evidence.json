@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0",
+  "project": "Safe Frame",
+  "track": "ClickHouse",
+  "public_url": "https://safe-frame-regression-109051079423.us-central1.run.app",
+  "repository": "https://github.com/usv240/safe-frame",
+  "license": "Apache-2.0",
+  "google_runtime": {"status": "verified", "evidence": "/health"},
+  "partner_runtime": {"status": "verified", "technology": "official mcp-clickhouse", "evidence": "/v1/integrations/clickhouse/evidence"},
+  "decision_owner": "deterministic detector plus ClickHouse SQL; human QC owns action",
+  "judge_contrast": {"positive": "parent pass / child fail", "control": "parent and child share no child-only violation"},
+  "claims_excluded": ["medical diagnosis", "certification", "broadcast approval", "private-market novelty"],
+  "submission_video": {"status": "pending_external"},
+  "devpost": {"status": "pending_external"}
+}

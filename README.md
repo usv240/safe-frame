@@ -6,6 +6,9 @@ that was absent from the approved parent?
 
 Public app: <https://safe-frame-regression-109051079423.us-central1.run.app>
 
+Start with [`JUDGING.md`](JUDGING.md) for the shortest verified judge path and
+[`submission-evidence.json`](submission-evidence.json) for machine-readable proof.
+
 It is **not a certified, broadcaster-approved, or medical diagnostic device**.
 The deterministic detector and ClickHouse SQL are an open pre-check against
 published criteria. Gemini may explain database evidence; it cannot decide pass
