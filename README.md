@@ -43,6 +43,26 @@ that already flashed in luminance does not excuse a rendition that introduced a
 red flash. Both rules are evaluated in ClickHouse in a single pass over the
 catalogue.
 
+## From pixels to a verdict
+
+`safe_frame.ingest.frames_to_transitions` measures decoded frames into the
+transition rows everything downstream evaluates. For each consecutive pair it
+records two things separately, because the criteria test them independently:
+how large the change is *where it happened* (averaged over the pixels that
+actually moved) and how much of the screen moved at all. Averaging over the
+whole frame would conflate the two and let a partial-screen flash slip under
+the delta floor.
+
+Presentation time comes from the frame rate, never the frame index, so a 24 to
+60 fps conversion still aligns against its master. Decoding a container into
+frames is out of scope on purpose: that is commodity ffmpeg work, and its codec
+dependencies do not belong in the request path of a service whose job is
+arithmetic.
+
+`tests/test_ingest.py` runs constructed frame sequences end to end, including a
+saturated-red alternation at matched BT.709 luminance where the luminance rule
+measures a swing below 0.01 and stays silent while the red rule fires.
+
 ## Runtime architecture
 
 - The deterministic detector measures affected area directly, before lossy tile

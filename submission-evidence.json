@@ -5,11 +5,40 @@
   "public_url": "https://safe-frame-regression-109051079423.us-central1.run.app",
   "repository": "https://github.com/usv240/safe-frame",
   "license": "Apache-2.0",
-  "google_runtime": {"status": "verified", "evidence": "/health"},
-  "partner_runtime": {"status": "verified", "technology": "official mcp-clickhouse", "evidence": "/v1/integrations/clickhouse/evidence"},
+  "google_runtime": {
+    "status": "verified",
+    "evidence": "/health"
+  },
+  "partner_runtime": {
+    "status": "verified",
+    "technology": "official mcp-clickhouse",
+    "evidence": "/v1/integrations/clickhouse/evidence and /v1/catalogue/sweep"
+  },
   "decision_owner": "deterministic detector plus ClickHouse SQL; human QC owns action",
-  "judge_contrast": {"positive": "parent pass / child fail", "control": "parent and child share no child-only violation"},
-  "claims_excluded": ["medical diagnosis", "certification", "broadcast approval", "private-market novelty"],
-  "submission_video": {"status": "pending_external"},
-  "devpost": {"status": "pending_external"}
+  "judge_contrast": {
+    "positive_luminance": "a rendition that introduced a general flash its master never had",
+    "positive_red": "a rendition that introduced a saturated-red flash while luminance stayed under the general-flash floor",
+    "control_inherited": "titles whose master already violates; the rendition introduced nothing and must be excluded",
+    "control_clean": "renditions of a clean master, which must return nothing"
+  },
+  "claims_excluded": [
+    "medical diagnosis",
+    "certification",
+    "broadcast approval",
+    "private-market novelty"
+  ],
+  "submission_video": {
+    "status": "pending_external"
+  },
+  "devpost": {
+    "status": "pending_external"
+  },
+  "rules_implemented": [
+    "general_flash",
+    "red_flash"
+  ],
+  "rules_not_implemented": [
+    "regular_pattern"
+  ],
+  "parity": "tests/test_sql_parity.py holds sql/006 to safe_frame.detector for both rules"
 }

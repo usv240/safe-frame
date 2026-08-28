@@ -15,17 +15,22 @@ Updated: 2026-08-28
 - [x] Real Google ADK + Gemini Vertex explanation path
 - [x] Light-default, opt-in dark, non-flashing public web product
 - [x] Self-authored constructed judge sample
-- [x] Public Cloud Run revision `safe-frame-regression-00008-q4v`
-- [x] Live acceptance: official MCP anti-join returned one regression and ADK explanation completed
+- [x] Public Cloud Run revision `safe-frame-regression-00013-7sf`
+- [x] Live acceptance re-verified against the deployed revision: sweep, per-pair
+      verdict and ADK explanation agree on both a general-flash and a red-flash
+      pair; all four controls behave (`docs/LIVE-ACCEPTANCE.json`)
+- [x] Measurement stage from decoded frames (`safe_frame/ingest.py`), including a
+      matched-luminance red alternation the luminance rule provably cannot see
 - [x] Catalogue corpus at scale: 9,600,000 transition rows, 3,200 renditions, 400 titles
 - [x] Published criteria evaluated inside ClickHouse in one pass (`sql/006_catalogue_regression.sql`)
-- [x] Catalogue sweep isolates 31 introduced regressions and excludes 28 inherited ones
+- [x] Catalogue sweep isolates 44 introduced regressions (31 general flash, 13 red
+      flash) and excludes every inherited one, for both rules
 - [x] Two published rules implemented and windowed independently: general flash
       and red flash (no luminance floor), both evaluated in one sweep
 - [x] SQL/Python parity suite: 43 cases agree exactly with the reference
       detector across both rules, with a guard test that fails if the fixtures
       stop producing violations
-- [x] Persistent official mcp-clickhouse session, warmed at startup (sweep 1.6s end to end)
+- [x] Persistent official mcp-clickhouse session, warmed at startup (sweep 1.7s end to end over 9.6M rows)
 - [x] Official ClickHouse Agent Skills applied to schema and catalogue query;
       findings and three measured declines in docs/CLICKHOUSE-SKILLS-REVIEW.md,
       including a CRITICAL rule that benchmarking contradicted

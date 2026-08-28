@@ -1,9 +1,11 @@
 /*
   Catalogue-scale transition measurements.
 
-  One row per measured transition, per asset. `frame_metrics` holds raw
-  per-tile samples; this table holds the transition-level reduction that the
-  published-criteria window query actually evaluates.
+  One row per measured transition, per asset -- the level the published
+  criteria are actually evaluated at. `safe_frame.ingest.frames_to_transitions`
+  produces these rows from decoded frames, measuring the luminance and
+  saturated-red step within the changed region and the changed area separately,
+  at full resolution and before any tile aggregation.
 
   Every rendition of a title shares its `lineage_id`, so the parent/child
   anti-join can run across the whole catalogue in a single query rather than

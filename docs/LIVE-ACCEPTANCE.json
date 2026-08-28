@@ -1,33 +1,94 @@
 {
-  "verified_at": "2026-08-20T22:25:00Z",
-  "revision": "safe-frame-regression-00008-q4v",
+  "verified_at": "2026-08-28T12:40:00Z",
+  "revision": "safe-frame-regression-00013-7sf",
   "public_url": "https://safe-frame-regression-109051079423.us-central1.run.app",
+  "note": "Every value below was read from the deployed revision or the live cluster. It contains no credentials.",
   "health": {
     "clickhouse": true,
     "mcp_clickhouse": true,
     "google_vertex": true,
     "agent_runtime_ready": true
   },
-  "constructed_pair": {
-    "parent_asset": "approved-master",
-    "child_asset": "social-60fps",
-    "verdict": "fail",
-    "certified": false,
-    "regression_count": 1,
+  "catalogue_sweep": {
+    "endpoint": "/v1/catalogue/sweep",
+    "corpus_transitions": 9600000,
+    "corpus_assets": 3200,
+    "corpus_titles": 400,
+    "regression_count": 44,
+    "by_rule": {"general_flash": 31, "red_flash": 13},
+    "by_transform": {
+      "60fps_interp": 16,
+      "adbreak_insert": 15,
+      "subtitle_burnin": 7,
+      "social_crop_v": 6
+    },
+    "clickhouse_query_ms": 1710.8,
     "decision_source": "clickhouse_sql_via_official_mcp",
-    "mcp_tool": "run_query",
-    "mcp_is_error": false,
-    "failed_gate": "no_child_only_general_flash"
+    "criteria_source": "sql/006_catalogue_regression.sql"
   },
-  "agent": {
-    "status": "completed",
-    "name": "RegressionExplainer",
-    "model": "gemini-2.5-flash",
-    "evidence_transport": "official_mcp_clickhouse_stdio",
-    "requires_human": true
+  "surfaces_agree": {
+    "claim": "the sweep, the per-pair verdict and the agent's evidence resolve one pair identically",
+    "general_flash_pair": {
+      "parent": "title_0017__master",
+      "child": "title_0017__60fps_interp",
+      "sweep": "fail",
+      "catalogue_regressions": {"verdict": "fail", "regression_count": 1},
+      "explain": {"decision_source": "clickhouse_sql", "requires_human": true, "cited_rule": "general_flash"}
+    },
+    "red_flash_pair": {
+      "parent": "title_0022__master",
+      "child": "title_0022__subtitle_burnin",
+      "sweep": "fail",
+      "catalogue_regressions": {"verdict": "fail", "regression_count": 1},
+      "explain": {"decision_source": "clickhouse_sql", "requires_human": true, "cited_rule": "red_flash"}
+    }
+  },
+  "controls": {
+    "inherited_general": {
+      "example_lineage": "title_0011",
+      "expected": 0,
+      "observed": 0,
+      "why": "the master already violates, so the rendition introduced nothing"
+    },
+    "inherited_red": {
+      "example_lineages": ["title_0240", "title_0316"],
+      "expected_rows_in_sweep": 0,
+      "observed_rows_in_sweep": 0
+    },
+    "clean_pair": {
+      "parent": "title_0001__master",
+      "child": "title_0001__sdr_tonemap",
+      "expected": 0,
+      "observed": 0
+    },
+    "persisted_pair": {
+      "parent": "approved-master",
+      "child": "social-60fps",
+      "expected": 1,
+      "observed": 1,
+      "why": "submitted through /v1/scan rather than the catalogue; must resolve through the same anti-join"
+    }
+  },
+  "parity": {
+    "seeds": 40,
+    "agreement": "40/40 exact",
+    "rules_exercised": {"general_flash": 6, "red_flash": 5},
+    "plus": [
+      "six-versus-seven transition boundary",
+      "same-direction burst must not violate",
+      "red alternation under the luminance floor: red_flash only",
+      "four red and four luminance transitions in one second: neither rule fires"
+    ]
+  },
+  "query_shape_benchmark": {
+    "question": "one scan with ARRAY JOIN fan-out, or two scans unioned",
+    "runs_each": 5,
+    "two_pass_union_shipped": {"rows_read": 19200000, "median_ms": 703},
+    "one_pass_array_join": {"rows_read": 9600000, "median_ms": 1096},
+    "result": "identical 31-row output; halving rows read was 56% slower, so the two-pass form ships"
   },
   "notes": [
-    "The sample contains self-authored numerical metrics, not flashing media.",
+    "The catalogue is self-authored synthetic measurement, not footage, and contains no flashing media.",
     "This is an open pre-check and never claims device or regulatory certification."
   ]
 }
