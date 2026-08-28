@@ -99,23 +99,165 @@ class ClickHouseMcp:
         return collected, timing
 
 
+PAIR_CRITERIA_SQL = """
+general_flash_qualifying AS
+(
+    SELECT lineage_id, asset_id, parent_id, transform,
+           pts_ms, changed_area_fraction, toUInt8(direction) AS dir
+    FROM safe_frame.transitions
+    WHERE asset_id IN ({assets})
+      AND luma_delta >= 0.10
+      AND changed_area_fraction >= 0.25
+      AND direction != 'flat'
+),
+general_flash_windowed AS
+(
+    SELECT
+        lineage_id, asset_id, parent_id, transform,
+           pts_ms AS win_start,
+        count() OVER w AS win_transitions,
+        max(changed_area_fraction) OVER w AS win_peak_area,
+        min(dir) OVER w AS win_dir_min,
+        max(dir) OVER w AS win_dir_max
+    FROM general_flash_qualifying
+    WINDOW w AS (
+        PARTITION BY asset_id
+        ORDER BY pts_ms
+        RANGE BETWEEN CURRENT ROW AND 999 FOLLOWING
+    )
+),
+general_flash_measured AS
+(
+    SELECT
+        toString(lineage_id) AS lineage_id,
+        toString(asset_id) AS asset_id,
+        toString(parent_id) AS parent_id,
+        toString(transform) AS transform,
+        'general_flash' AS rule,
+        toUInt32(min(win_start)) AS window_start_ms,
+        toUInt32(min(win_start) + 1000) AS window_end_ms,
+        toUInt64(argMin(win_transitions, win_start)) AS transitions,
+        toFloat64(argMin(win_peak_area, win_start)) AS peak_changed_area_fraction
+    FROM general_flash_windowed
+    WHERE win_transitions > 6
+      AND win_dir_min != win_dir_max
+    GROUP BY lineage_id, asset_id, parent_id, transform
+),
+red_flash_qualifying AS
+(
+    SELECT lineage_id, asset_id, parent_id, transform,
+           pts_ms, changed_area_fraction, toUInt8(direction) AS dir
+    FROM safe_frame.transitions
+    WHERE asset_id IN ({assets})
+      AND red_delta >= 0.20
+      AND changed_area_fraction >= 0.25
+      AND direction != 'flat'
+),
+red_flash_windowed AS
+(
+    SELECT
+        lineage_id, asset_id, parent_id, transform,
+           pts_ms AS win_start,
+        count() OVER w AS win_transitions,
+        max(changed_area_fraction) OVER w AS win_peak_area,
+        min(dir) OVER w AS win_dir_min,
+        max(dir) OVER w AS win_dir_max
+    FROM red_flash_qualifying
+    WINDOW w AS (
+        PARTITION BY asset_id
+        ORDER BY pts_ms
+        RANGE BETWEEN CURRENT ROW AND 999 FOLLOWING
+    )
+),
+red_flash_measured AS
+(
+    SELECT
+        toString(lineage_id) AS lineage_id,
+        toString(asset_id) AS asset_id,
+        toString(parent_id) AS parent_id,
+        toString(transform) AS transform,
+        'red_flash' AS rule,
+        toUInt32(min(win_start)) AS window_start_ms,
+        toUInt32(min(win_start) + 1000) AS window_end_ms,
+        toUInt64(argMin(win_transitions, win_start)) AS transitions,
+        toFloat64(argMin(win_peak_area, win_start)) AS peak_changed_area_fraction
+    FROM red_flash_windowed
+    WHERE win_transitions > 6
+      AND win_dir_min != win_dir_max
+    GROUP BY lineage_id, asset_id, parent_id, transform
+),
+stored AS
+(
+    SELECT
+        toString(lineage_id) AS lineage_id,
+        toString(asset_id) AS asset_id,
+        toString(parent_id) AS parent_id,
+        toString(transform) AS transform,
+        toString(rule) AS rule,
+        toUInt32(window_start_ms) AS window_start_ms,
+        toUInt32(window_end_ms) AS window_end_ms,
+        toUInt64(transitions) AS transitions,
+        toFloat64(peak_changed_area_fraction) AS peak_changed_area_fraction
+    FROM safe_frame.violations FINAL
+    WHERE asset_id IN ({assets})
+),
+evaluated AS
+(
+    SELECT * FROM general_flash_measured
+    UNION ALL
+    SELECT * FROM red_flash_measured
+    UNION ALL
+    SELECT * FROM stored
+)
+""".strip()
+
+
+
 def regression_sql(parent_asset: str, child_asset: str, *, count_only: bool = False) -> str:
+    """Child-minus-parent anti-join over one asset pair, evaluated in ClickHouse.
+
+    A violation for a pair can exist in either of two places:
+
+    * measured  -- the published criteria applied live to `safe_frame.transitions`,
+                   which is where every catalogue rendition lives. This is the same
+                   rule expression as `sql/006_catalogue_regression.sql`, scoped to
+                   two assets instead of the whole corpus.
+    * stored    -- rows already persisted to `safe_frame.violations` by `/v1/scan`,
+                   which is where a pair submitted as raw metrics lives.
+
+    Both must feed one verdict. Reading only `violations` made the per-pair
+    endpoints answer "pass" for renditions the catalogue sweep had just flagged,
+    because catalogue violations are never materialised. Unioning the two planes
+    before the anti-join means the sweep, `/v1/catalogue/regressions` and
+    `/v1/explain` cannot disagree about the same pair.
+
+    The anti-join is keyed on `rule`, so a master that already flashed in
+    luminance does not excuse a rendition that introduced a red flash.
+    """
     parent = _asset(parent_asset)
     child = _asset(child_asset)
-    projection = "count() AS regression_count" if count_only else "child.*"
+    assets = f"'{parent}', '{child}'"
+    projection = (
+        "count() AS regression_count"
+        if count_only
+        else "child.lineage_id AS lineage_id, child.asset_id AS asset_id, "
+        "child.parent_id AS parent_id, child.transform AS transform, child.rule AS rule, "
+        "child.window_start_ms AS window_start_ms, child.window_end_ms AS window_end_ms, "
+        "child.transitions AS transitions, "
+        "round(child.peak_changed_area_fraction, 4) AS peak_changed_area_fraction"
+    )
     return f"""
-WITH parent AS
+WITH
+{PAIR_CRITERIA_SQL.format(assets=assets)},
+parent AS
 (
     SELECT lineage_id, rule, window_start_ms
-    FROM safe_frame.violations FINAL
+    FROM evaluated
     WHERE asset_id = '{parent}'
 ),
 child AS
 (
-    SELECT lineage_id, asset_id, parent_id, transform, rule, window_start_ms,
-           window_end_ms, transitions, peak_changed_area_fraction
-    FROM safe_frame.violations FINAL
-    WHERE asset_id = '{child}'
+    SELECT * FROM evaluated WHERE asset_id = '{child}'
 )
 SELECT {projection}
 FROM child
@@ -123,7 +265,7 @@ LEFT ANTI JOIN parent
     ON child.lineage_id = parent.lineage_id
    AND child.rule = parent.rule
    AND abs(toInt64(child.window_start_ms) - toInt64(parent.window_start_ms)) <= 100
-{"" if count_only else "ORDER BY child.window_start_ms"}
+{"" if count_only else "ORDER BY child.window_start_ms, child.rule"}
 """.strip()
 
 
@@ -159,45 +301,82 @@ async def regression_count(parent_asset: str, child_asset: str) -> tuple[int, di
 
 
 CRITERIA_SQL = """
-qualifying AS
+general_flash_qualifying AS
 (
-    SELECT asset_id, pts_ms, changed_area_fraction,
-           multiIf(direction = 'up', 1, direction = 'down', 2, 0) AS dir
+    SELECT asset_id, pts_ms, changed_area_fraction, multiIf(direction = 'up', 1, direction = 'down', 2, 0) AS dir
     FROM src
     WHERE luma_delta >= 0.10
       AND changed_area_fraction >= 0.25
       AND direction != 'flat'
 ),
-windowed AS
+general_flash_windowed AS
 (
     SELECT
-        asset_id,
-        pts_ms AS win_start,
+        asset_id, pts_ms AS win_start,
         count() OVER w AS win_transitions,
         max(changed_area_fraction) OVER w AS win_peak_area,
         min(dir) OVER w AS win_dir_min,
         max(dir) OVER w AS win_dir_max
-    FROM qualifying
+    FROM general_flash_qualifying
     WINDOW w AS (
         PARTITION BY asset_id
         ORDER BY pts_ms
         RANGE BETWEEN CURRENT ROW AND 999 FOLLOWING
     )
 ),
-violations AS
+general_flash_violations AS
+(
+    SELECT asset_id, 'general_flash' AS rule,
+           min(win_start) AS window_start_ms,
+           min(win_start) + 1000 AS window_end_ms,
+           argMin(win_transitions, win_start) AS transitions,
+           argMin(win_peak_area, win_start) AS peak_changed_area_fraction
+    FROM general_flash_windowed
+    WHERE win_transitions > 6 AND win_dir_min != win_dir_max
+    GROUP BY asset_id
+),
+red_flash_qualifying AS
+(
+    SELECT asset_id, pts_ms, changed_area_fraction, multiIf(direction = 'up', 1, direction = 'down', 2, 0) AS dir
+    FROM src
+    WHERE red_delta >= 0.20
+      AND changed_area_fraction >= 0.25
+      AND direction != 'flat'
+),
+red_flash_windowed AS
 (
     SELECT
-        asset_id,
-        min(win_start) AS window_start_ms,
-        min(win_start) + 1000 AS window_end_ms,
-        argMin(win_transitions, win_start) AS transitions,
-        argMin(win_peak_area, win_start) AS peak_changed_area_fraction
-    FROM windowed
-    WHERE win_transitions > 6
-      AND win_dir_min != win_dir_max
+        asset_id, pts_ms AS win_start,
+        count() OVER w AS win_transitions,
+        max(changed_area_fraction) OVER w AS win_peak_area,
+        min(dir) OVER w AS win_dir_min,
+        max(dir) OVER w AS win_dir_max
+    FROM red_flash_qualifying
+    WINDOW w AS (
+        PARTITION BY asset_id
+        ORDER BY pts_ms
+        RANGE BETWEEN CURRENT ROW AND 999 FOLLOWING
+    )
+),
+red_flash_violations AS
+(
+    SELECT asset_id, 'red_flash' AS rule,
+           min(win_start) AS window_start_ms,
+           min(win_start) + 1000 AS window_end_ms,
+           argMin(win_transitions, win_start) AS transitions,
+           argMin(win_peak_area, win_start) AS peak_changed_area_fraction
+    FROM red_flash_windowed
+    WHERE win_transitions > 6 AND win_dir_min != win_dir_max
     GROUP BY asset_id
+),
+violations AS
+(
+    SELECT * FROM general_flash_violations
+    UNION ALL
+    SELECT * FROM red_flash_violations
 )
 """.strip()
+
 
 
 def _sql_string(value: str) -> str:
@@ -211,8 +390,9 @@ def parity_sql(rows: list[dict[str, Any]]) -> str:
 
     Used by tests/test_sql_parity.py to run the exact ClickHouse window
     evaluation over the same rows the reference Python detector sees, through
-    the same read-only MCP transport the product uses. No table is written,
-    so the SELECT-only MCP user can execute it.
+    the same read-only MCP transport the product uses. Both rules are evaluated,
+    so a fixture that trips one and not the other is checked too. No table is
+    written, so the SELECT-only MCP user can execute it.
     """
     if not rows:
         raise ValueError("parity_sql needs at least one row")
@@ -221,10 +401,11 @@ def parity_sql(rows: list[dict[str, Any]]) -> str:
         if row["direction"] not in ("up", "down", "flat"):
             raise ValueError(f"unknown direction {row['direction']!r}")
         literals.append(
-            "({asset}, {pts}, {luma}, {area}, {direction})".format(
+            "({asset}, {pts}, {luma}, {red}, {area}, {direction})".format(
                 asset=_sql_string(str(row["asset_id"])),
                 pts=int(row["pts_ms"]),
                 luma=float(row["luma_delta"]),
+                red=float(row.get("red_delta", 0.0)),
                 area=float(row["changed_area_fraction"]),
                 direction=_sql_string(str(row["direction"])),
             )
@@ -235,15 +416,15 @@ WITH
 src AS
 (
     SELECT * FROM VALUES(
-        'asset_id String, pts_ms UInt32, luma_delta Float64, changed_area_fraction Float64, direction String',
+        'asset_id String, pts_ms UInt32, luma_delta Float64, red_delta Float64, changed_area_fraction Float64, direction String',
         {values}
     )
 ),
 {CRITERIA_SQL}
-SELECT asset_id, window_start_ms, window_end_ms, transitions,
+SELECT asset_id, rule, window_start_ms, window_end_ms, transitions,
        round(peak_changed_area_fraction, 6) AS peak_changed_area_fraction
 FROM violations
-ORDER BY asset_id
+ORDER BY asset_id, rule
 """.strip()
 
 

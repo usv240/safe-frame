@@ -13,8 +13,11 @@ and the peak changed area.
 The SQL half executes through the official read-only `mcp-clickhouse` transport,
 so this also exercises the same partner path the product uses at runtime.
 
-Skipped unless MCP_CLICKHOUSE_COMMAND and the ClickHouse connection variables are
-configured; CI supplies them from Secret Manager.
+These tests execute real SQL, so they are skipped unless MCP_CLICKHOUSE_COMMAND
+and the ClickHouse connection variables point at a reachable cluster. Public CI
+has no cluster credentials and therefore skips them; the structural guards in
+`tests/test_clickhouse_mcp.py` run everywhere and catch threshold drift. Run
+these against a cluster before publishing any parity claim.
 """
 
 from __future__ import annotations
@@ -25,36 +28,66 @@ import random
 import pytest
 
 from safe_frame.clickhouse_mcp import parity_violations
-from safe_frame.detector import detect_general_flashes
+from safe_frame.detector import detect_violations
 from safe_frame.models import TransitionMetric
 
 
-pytestmark = pytest.mark.skipif(
+# Applied per test rather than to the module: the fixture-strength check below
+# needs no cluster and must run in CI, or a fixture that stops producing
+# violations would silently weaken every parity assertion here.
+requires_cluster = pytest.mark.skipif(
     not (os.getenv("MCP_CLICKHOUSE_COMMAND") and os.getenv("CLICKHOUSE_HOST")),
     reason="official mcp-clickhouse transport is not configured",
 )
 
 
 def _case(seed: int) -> list[dict[str, object]]:
-    """One synthetic asset whose transitions straddle every threshold."""
+    """One synthetic asset whose transitions straddle every threshold.
+
+    Spacing is drawn per case rather than per row. Sparse cases (200-400 ms
+    apart) can never fit seven qualifying transitions into a second and must
+    agree on "no violation"; dense cases (40-120 ms apart) routinely do fire.
+    Without the dense band the suite would only ever prove the two
+    implementations agree about nothing, which is not the claim being made --
+    `test_fixtures_exercise_both_rules` fails if that regresses.
+    """
     rng = random.Random(seed)
+    spacing = rng.choice([[40, 60, 80], [80, 100, 120], [100, 150, 250], [250, 400]])
     rows: list[dict[str, object]] = []
     pts = 0
     for _ in range(rng.randint(8, 40)):
-        pts += rng.choice([40, 80, 100, 120, 150, 250, 400])
+        pts += rng.choice(spacing)
         rows.append(
             {
                 "asset_id": f"parity_{seed}",
                 "pts_ms": pts,
                 # straddle the 0.10 luma floor and the 0.25 area floor
-                "luma_delta": round(rng.choice([0.0, 0.05, 0.09, 0.10, 0.11, 0.4, 0.8]), 4),
+                "luma_delta": round(rng.choice([0.0, 0.05, 0.09, 0.10, 0.11, 0.4, 0.8, 0.8]), 4),
+                # straddle the 0.20 red floor independently, so cases arise where
+                # one rule fires and the other does not
+                "red_delta": round(rng.choice([0.0, 0.05, 0.19, 0.20, 0.21, 0.5, 0.9, 0.9]), 4),
                 "changed_area_fraction": round(
-                    rng.choice([0.0, 0.1, 0.24, 0.25, 0.26, 0.6, 0.95]), 4
+                    rng.choice([0.0, 0.1, 0.24, 0.25, 0.26, 0.6, 0.95, 0.95]), 4
                 ),
-                "direction": rng.choice(["up", "down", "flat"]),
+                "direction": rng.choice(["up", "down", "up", "down", "flat"]),
             }
         )
     return rows
+
+
+def test_fixtures_exercise_both_rules() -> None:
+    """Agreement is only evidence if the fixtures actually trip the criteria.
+
+    Needs no cluster: it checks the reference detector alone, so a fixture
+    change that quietly stops producing violations fails here rather than
+    silently weakening every parity assertion above.
+    """
+    fired: dict[str, int] = {}
+    for seed in range(40):
+        for violation in _reference(_case(seed)):
+            fired[str(violation["rule"])] = fired.get(str(violation["rule"]), 0) + 1
+    assert fired.get("general_flash", 0) >= 5, f"general_flash barely fires: {fired}"
+    assert fired.get("red_flash", 0) >= 5, f"red_flash barely fires: {fired}"
 
 
 def _reference(rows: list[dict[str, object]]) -> dict[str, object] | None:
@@ -66,35 +99,46 @@ def _reference(rows: list[dict[str, object]]) -> dict[str, object] | None:
             transform="master",
             pts_ms=int(row["pts_ms"]),
             luma_delta=float(row["luma_delta"]),
-            red_delta=0.0,
+            red_delta=float(row.get("red_delta", 0.0)),
             changed_area_fraction=float(row["changed_area_fraction"]),
             direction=str(row["direction"]),
         )
         for row in rows
     ]
-    found = detect_general_flashes(metrics)
-    if not found:
-        return None
-    violation = found[0]
-    return {
-        "asset_id": violation.asset_id,
-        "window_start_ms": violation.window_start_ms,
-        "window_end_ms": violation.window_end_ms,
-        "transitions": violation.transitions,
-        "peak_changed_area_fraction": round(violation.peak_changed_area_fraction, 6),
-    }
+    return sorted(
+        (
+            {
+                "asset_id": violation.asset_id,
+                "rule": violation.rule,
+                "window_start_ms": violation.window_start_ms,
+                "window_end_ms": violation.window_end_ms,
+                "transitions": violation.transitions,
+                "peak_changed_area_fraction": round(violation.peak_changed_area_fraction, 6),
+            }
+            for violation in detect_violations(metrics)
+        ),
+        key=lambda item: (item["asset_id"], item["rule"]),
+    )
 
 
-def _normalise(row: dict[str, object]) -> dict[str, object]:
-    return {
-        "asset_id": str(row["asset_id"]),
-        "window_start_ms": int(row["window_start_ms"]),
-        "window_end_ms": int(row["window_end_ms"]),
-        "transitions": int(row["transitions"]),
-        "peak_changed_area_fraction": round(float(row["peak_changed_area_fraction"]), 6),
-    }
+def _normalise(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    return sorted(
+        (
+            {
+                "asset_id": str(row["asset_id"]),
+                "rule": str(row["rule"]),
+                "window_start_ms": int(row["window_start_ms"]),
+                "window_end_ms": int(row["window_end_ms"]),
+                "transitions": int(row["transitions"]),
+                "peak_changed_area_fraction": round(float(row["peak_changed_area_fraction"]), 6),
+            }
+            for row in rows
+        ),
+        key=lambda item: (item["asset_id"], item["rule"]),
+    )
 
 
+@requires_cluster
 @pytest.mark.asyncio
 @pytest.mark.parametrize("seed", range(40))
 async def test_sql_matches_reference_detector(seed: int) -> None:
@@ -109,6 +153,7 @@ async def test_sql_matches_reference_detector(seed: int) -> None:
     )
 
 
+@requires_cluster
 @pytest.mark.asyncio
 async def test_boundary_of_six_transitions_agrees() -> None:
     """Exactly six opposing transitions must pass in both implementations."""
@@ -124,13 +169,12 @@ async def test_boundary_of_six_transitions_agrees() -> None:
             for index in range(count)
         ]
         expected = _reference(rows)
-        returned = await parity_violations(rows)
-        assert (expected is not None) is should_violate
-        assert (len(returned) > 0) is should_violate
-        if should_violate:
-            assert _normalise(returned[0]) == expected
+        actual = _normalise(await parity_violations(rows))
+        assert (len(expected) > 0) is should_violate
+        assert actual == expected
 
 
+@requires_cluster
 @pytest.mark.asyncio
 async def test_same_direction_burst_agrees_on_pass() -> None:
     """A fast burst that never reverses is not a general flash in either implementation."""
@@ -144,5 +188,68 @@ async def test_same_direction_burst_agrees_on_pass() -> None:
         }
         for index in range(10)
     ]
-    assert _reference(rows) is None
+    assert _reference(rows) == []
+    assert await parity_violations(rows) == []
+
+
+@requires_cluster
+@pytest.mark.asyncio
+async def test_red_flash_fires_where_general_flash_cannot() -> None:
+    """The case a luminance-only detector passes, agreed by both implementations.
+
+    Luminance change is held at 0.04, below the 0.10 general-flash floor, while
+    saturated red alternates well above the 0.20 red floor. `general_flash` must
+    stay silent and `red_flash` must fire, in Python and in ClickHouse alike.
+    """
+    rows = [
+        {
+            "asset_id": "red_only",
+            "pts_ms": index * 100,
+            "luma_delta": 0.04,
+            "red_delta": 0.55,
+            "changed_area_fraction": 0.8,
+            "direction": "up" if index % 2 == 0 else "down",
+        }
+        for index in range(9)
+    ]
+    expected = _reference(rows)
+    assert [item["rule"] for item in expected] == ["red_flash"], (
+        "a red alternation under the luminance floor must be caught only by the red rule"
+    )
+    assert _normalise(await parity_violations(rows)) == expected
+
+
+@requires_cluster
+@pytest.mark.asyncio
+async def test_rules_are_windowed_independently() -> None:
+    """One rule's qualifying transitions must not pad the other rule's window.
+
+    Four red-only transitions followed by four luminance-only transitions is
+    eight qualifying transitions inside one second, but neither rule reaches
+    seven on its own, so nothing may be reported.
+    """
+    red = [
+        {
+            "asset_id": "independent",
+            "pts_ms": index * 100,
+            "luma_delta": 0.04,
+            "red_delta": 0.55,
+            "changed_area_fraction": 0.8,
+            "direction": "up" if index % 2 == 0 else "down",
+        }
+        for index in range(4)
+    ]
+    luma = [
+        {
+            "asset_id": "independent",
+            "pts_ms": 400 + index * 100,
+            "luma_delta": 0.8,
+            "red_delta": 0.01,
+            "changed_area_fraction": 0.8,
+            "direction": "up" if index % 2 == 0 else "down",
+        }
+        for index in range(4)
+    ]
+    rows = red + luma
+    assert _reference(rows) == []
     assert await parity_violations(rows) == []

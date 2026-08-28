@@ -74,15 +74,20 @@ async def sweep() -> dict[str, Any]:
     shape = scale[0] if scale else {}
 
     by_transform: dict[str, int] = {}
+    by_rule: dict[str, int] = {}
     for row in rows:
         transform = str(row.get("transform", "unknown"))
         by_transform[transform] = by_transform.get(transform, 0) + 1
+        rule = str(row.get("rule", "unknown"))
+        by_rule[rule] = by_rule.get(rule, 0) + 1
 
     return {
         "regressions": rows,
         "regression_count": len(rows),
         "affected_titles": len({row.get("lineage_id") for row in rows}),
+        "by_rule": dict(sorted(by_rule.items(), key=lambda kv: -kv[1])),
         "by_transform": dict(sorted(by_transform.items(), key=lambda kv: -kv[1])),
+        "rules_evaluated": ["general_flash", "red_flash"],
         "corpus": {
             "transitions": int(shape.get("transitions", 0) or 0),
             "assets": int(shape.get("assets", 0) or 0),

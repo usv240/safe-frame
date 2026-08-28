@@ -53,6 +53,11 @@
     tbody tr:hover{background:color-mix(in srgb,var(--amber) 8%,transparent)}
     tbody tr.sel{background:color-mix(in srgb,var(--amber) 15%,transparent)}
     .tf{font-weight:750;color:var(--red)}
+    .rule{font-size:.68rem;font-weight:850;letter-spacing:.06em;text-transform:uppercase;padding:.25rem .5rem;border-radius:999px;white-space:nowrap}
+    .rule.general_flash{background:color-mix(in srgb,var(--amber) 20%,transparent);color:var(--amber)}
+    .rule.red_flash{background:color-mix(in srgb,var(--red) 20%,transparent);color:var(--red)}
+    .bars.red i.hot{background:var(--red)}
+    .bars.red i.warm{background:color-mix(in srgb,var(--red) 55%,var(--amber))}
     .mono{font-family:ui-monospace,Consolas,monospace;font-size:.8rem}
     .empty{padding:2.6rem 1.2rem;color:var(--muted);text-align:center}
 
@@ -126,7 +131,7 @@
     <div class="eyebrow">Catalogue sweep</div>
     <h2>Every title. Every rendition. One question.</h2>
     <p class="lead plain">Which renditions about to ship introduced a flash their approved master never had?</p>
-    <p class="lead technical">The criteria are computed live over the corpus below — nothing on this page is a pre-computed answer.</p>
+    <p class="lead technical">Both published rules — general flash and red flash — are computed live over the corpus below in a single pass. Nothing on this page is a pre-computed answer.</p>
 
     <div class="scale" id="scale">
       <div><b id="s-tr">—</b><span>transition rows</span></div>
@@ -149,8 +154,8 @@
       </div>
       <div class="tablewrap">
         <table>
-          <thead><tr><th>Title</th><th>Rendition</th><th>Introduced by</th><th>Window</th><th>Transitions</th><th>Peak area</th></tr></thead>
-          <tbody id="rows"><tr><td colspan="6"><div class="empty">No sweep has been run in this browser session.</div></td></tr></tbody>
+          <thead><tr><th>Title</th><th>Rendition</th><th>Rule</th><th>Introduced by</th><th>Window</th><th>Transitions</th><th>Peak area</th></tr></thead>
+          <tbody id="rows"><tr><td colspan="7"><div class="empty">No sweep has been run in this browser session.</div></td></tr></tbody>
         </table>
       </div>
     </div>
@@ -183,7 +188,7 @@
 
   <section class="block">
     <div class="grid3">
-      <article class="card"><span class="tag">01 · MEASURE</span><h3>Area before tiles</h3><p>Direct pixel change preserves a 100% checkerboard reversal that an 8×8 average erases entirely.</p></article>
+      <article class="card"><span class="tag">01 · MEASURE</span><h3>Two rules, not one</h3><p>A saturated-red alternation can hold luminance under the general-flash floor. Checking luminance alone passes it, so both rules are windowed independently.</p></article>
       <article class="card"><span class="tag">02 · ALIGN</span><h3>Presentation time</h3><p>Frame-rate conversion renumbers every frame. Millisecond timestamps survive it; frame indices do not.</p></article>
       <article class="card"><span class="tag">03 · ISOLATE</span><h3>Child minus parent</h3><p>A violation the master already had is not a regression. The sweep excludes inherited ones by construction.</p></article>
     </div>
@@ -197,7 +202,7 @@
       <p class="technical">If the MCP query fails or its rows cannot be parsed, the endpoint returns 502. It never substitutes Gemini or a local guess in the live path.</p>
       <p class="technical"><code>tests/test_sql_parity.py</code> runs the reference Python detector and this SQL over identical randomized inputs and requires exact agreement, so the catalogue sweep cannot silently drift from the per-file pre-check.</p>
     </div>
-    <div class="sql"><span class="kw">WHERE</span> luma_delta &gt;= 0.10<br>&nbsp;&nbsp;<span class="kw">AND</span> changed_area_fraction &gt;= 0.25<br>&nbsp;&nbsp;<span class="kw">AND</span> direction != <span class="st">'flat'</span><br><br><span class="kw">WINDOW</span> w <span class="kw">AS</span> (<span class="kw">PARTITION BY</span> asset_id<br>&nbsp;&nbsp;<span class="kw">ORDER BY</span> pts_ms<br>&nbsp;&nbsp;<span class="kw">RANGE BETWEEN CURRENT ROW AND</span> 999 <span class="kw">FOLLOWING</span>)<br><br><span class="kw">WHERE</span> win_transitions &gt; 6<br>&nbsp;&nbsp;<span class="kw">AND</span> win_dir_min != win_dir_max<br><br>DECISION_SOURCE = clickhouse_sql_via_official_mcp</div>
+    <div class="sql"><span class="kw">ARRAY JOIN</span> arrayFilter((name, keep) -&gt; keep,<br>&nbsp;&nbsp;[<span class="st">'general_flash'</span>, <span class="st">'red_flash'</span>],<br>&nbsp;&nbsp;[luma_delta &gt;= 0.10, red_delta &gt;= 0.20])<br><br><span class="kw">WINDOW</span> w <span class="kw">AS</span> (<span class="kw">PARTITION BY</span> asset_id, rule<br>&nbsp;&nbsp;<span class="kw">ORDER BY</span> pts_ms<br>&nbsp;&nbsp;<span class="kw">RANGE BETWEEN CURRENT ROW AND</span> 999 <span class="kw">FOLLOWING</span>)<br><br><span class="kw">WHERE</span> win_transitions &gt; 6<br>&nbsp;&nbsp;<span class="kw">AND</span> win_dir_min != win_dir_max<br><br>DECISION_SOURCE = clickhouse_sql_via_official_mcp</div>
   </section>
 
   <footer>
@@ -215,6 +220,11 @@ $('#tech').onclick=()=>{document.body.classList.add('tech');$('#tech').classList
 $('#dark').onclick=()=>{const d=document.documentElement.dataset.theme!=='dark';document.documentElement.dataset.theme=d?'dark':'';$('#dark').textContent=d?'Light':'Dark';$('#dark').classList.toggle('active',d)};
 
 const nf=n=>Number(n).toLocaleString();
+const RULE_LABEL={general_flash:'General flash',red_flash:'Red flash'};
+const RULE_NOTE={
+  general_flash:'Luminance alternation over the general-flash floor.',
+  red_flash:'Saturated-red alternation. Luminance change here stays under the general-flash floor, so a luminance-only check passes this rendition.'
+};
 
 async function loadScale(){
   try{
@@ -244,10 +254,12 @@ function select(row,tr){
   $('#detail').hidden=false;
   $('#d-parent').textContent=row.parent_id;
   $('#d-child').textContent=row.asset_id;
-  $('#d-parent-n').textContent='under the 6-per-second criterion';
+  $('#d-parent-n').textContent='under the 6-per-second criterion for '+RULE_LABEL[row.rule].toLowerCase();
   $('#d-child-n').textContent=row.transitions+' in 1000 ms';
   $('#d-caption').textContent='Flagged window '+row.window_start_ms+'–'+row.window_end_ms+' ms · peak changed area '+
-    Math.round(row.peak_changed_area_fraction*100)+'% · introduced by '+row.transform+'.';
+    Math.round(row.peak_changed_area_fraction*100)+'% · introduced by '+row.transform+'. '+RULE_NOTE[row.rule];
+  $('#d-verdict').textContent='introduced '+RULE_LABEL[row.rule].toLowerCase();
+  $('#bars-child').classList.toggle('red',row.rule==='red_flash');
   bars($('#bars-parent'),0,false);
   bars($('#bars-child'),Math.min(row.transitions,25),true);
   $('#explain').disabled=false;
@@ -266,17 +278,19 @@ function renderSweep(d){
   const t=d.timing||{};
   if(t.query_ms!=null)parts.push('<span>ClickHouse <b>'+t.query_ms+' ms</b></span>');
   if(t.mcp_setup_ms!=null)parts.push('<span>MCP handshake <b>'+t.mcp_setup_ms+' ms</b></span>');
+  Object.entries(d.by_rule||{}).forEach(([k,v])=>parts.push('<span>'+RULE_LABEL[k]+' <b>'+v+'</b></span>'));
   Object.entries(d.by_transform||{}).forEach(([k,v])=>parts.push('<span>'+k+' <b>'+v+'</b></span>'));
   $('#qstat').innerHTML=parts.join('');
   const body=$('#rows');body.replaceChildren();
   if(!d.regressions.length){
-    body.innerHTML='<tr><td colspan="6"><div class="empty">No rendition in the catalogue introduced a violation its master did not already have.</div></td></tr>';
+    body.innerHTML='<tr><td colspan="7"><div class="empty">No rendition in the catalogue introduced a violation its master did not already have.</div></td></tr>';
     return;
   }
   d.regressions.forEach(row=>{
     const tr=document.createElement('tr');
     tr.innerHTML='<td class="mono">'+row.lineage_id+'</td><td class="mono">'+row.asset_id+
-      '</td><td class="tf">'+row.transform+'</td><td>'+row.window_start_ms+'–'+row.window_end_ms+' ms</td><td>'+
+      '</td><td><span class="rule '+row.rule+'">'+RULE_LABEL[row.rule]+'</span></td><td class="tf">'+row.transform+
+      '</td><td>'+row.window_start_ms+'–'+row.window_end_ms+' ms</td><td>'+
       row.transitions+'</td><td>'+Math.round(row.peak_changed_area_fraction*100)+'%</td>';
     tr.onclick=()=>select(row,tr);
     body.append(tr);

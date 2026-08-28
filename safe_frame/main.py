@@ -15,7 +15,7 @@ from .clickhouse_mcp import (
     catalogue_regression_evidence,
     regression_count,
 )
-from .detector import detect_general_flashes
+from .detector import detect_violations
 from .lineage import regressions
 from .models import TransitionMetric
 
@@ -159,8 +159,8 @@ async def health() -> dict[str, object]:
 
 @app.post("/v1/scan")
 async def scan(request: ScanRequest) -> dict[str, object]:
-    parent = detect_general_flashes(request.parent_metrics)
-    child = detect_general_flashes(request.rendition_metrics)
+    parent = detect_violations(request.parent_metrics)
+    child = detect_violations(request.rendition_metrics)
     local_introduced = regressions(parent, child)
     parent_asset = request.parent_metrics[0].asset_id
     child_asset = request.rendition_metrics[0].asset_id
@@ -189,9 +189,10 @@ async def scan(request: ScanRequest) -> dict[str, object]:
         "verdict": "fail" if introduced_count else "pass",
         "certified": False,
         "decision_source": decision_source,
+        "rules_evaluated": ["general_flash", "red_flash"],
         "gate": {
-            "passed": [] if introduced_count else ["no_child_only_general_flash"],
-            "failed": ["no_child_only_general_flash"] if introduced_count else [],
+            "passed": [] if introduced_count else ["no_child_only_flash_violation"],
+            "failed": ["no_child_only_flash_violation"] if introduced_count else [],
         },
         "parent_violations": [item.model_dump() for item in parent],
         "rendition_violations": [item.model_dump() for item in child],

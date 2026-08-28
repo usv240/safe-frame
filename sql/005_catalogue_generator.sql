@@ -17,16 +17,30 @@
                       Below the >6-per-second criterion, so clean content never
                       trips the rule.
 
-    introduced burst  ~4% of titles get a saturated 1-second burst in their
-                      `60fps_interp` and/or `adbreak_insert` rendition only.
-                      The approved master stays clean, so these ARE child-only
-                      regressions and must be returned by the anti-join.
+    introduced burst  ~4% of titles get a saturated 1-second luminance burst in
+                      their `60fps_interp` and/or `adbreak_insert` rendition
+                      only. The approved master stays clean, so these ARE
+                      child-only regressions and must be returned by the
+                      anti-join.
 
-    inherited burst   ~1% of titles get the burst in the MASTER, propagated to
-                      every rendition at the same presentation time. These are
-                      NOT regressions -- the rendition introduced nothing -- and
-                      the anti-join must exclude them. Without this control the
-                      anti-join would look correct while doing nothing.
+    inherited burst   ~1% of titles get the luminance burst in the MASTER,
+                      propagated to every rendition at the same presentation
+                      time. These are NOT regressions -- the rendition
+                      introduced nothing -- and the anti-join must exclude them.
+                      Without this control the anti-join would look correct
+                      while doing nothing.
+
+    red burst         ~3% of titles get a saturated-RED 1-second burst in their
+                      `social_crop_v` and/or `subtitle_burnin` rendition only,
+                      at a DIFFERENT second from the luminance burst. Its
+                      luma_delta is held at 0.02-0.08, deliberately below the
+                      0.10 general-flash floor, so the general rule cannot fire
+                      on it. Only `red_flash` catches these. This is the case a
+                      luminance-only detector passes, and it is why the corpus
+                      carries a second rule at all.
+
+    inherited red     ~1% of titles get the red burst in the MASTER too, as the
+                      matching control for the red rule.
 
   Re-running is safe: the INSERT is deterministic in the row index, so
   TRUNCATE + re-run reproduces byte-identical content.
@@ -60,7 +74,7 @@ FROM
         if(transform = 'master', '', concat(lineage_id, '__master')) AS parent_id,
         toUInt32(seq * 40) AS pts_ms,
 
-        -- which second, if any, carries a burst for this lineage
+        -- which second, if any, carries a LUMINANCE burst for this lineage
         (sipHash64(title_index, 'inherited') % 100) < 1 AS lineage_burst,
         toUInt32(30 + (sipHash64(title_index, 'when') % 60)) AS burst_second,
         transform IN ('60fps_interp', 'adbreak_insert') AS burst_capable,
@@ -68,6 +82,17 @@ FROM
         (lineage_burst OR (burst_capable AND introduced_burst)) AS asset_has_burst,
         intDiv(pts_ms, 1000) = burst_second AS in_burst_window,
         asset_has_burst AND in_burst_window AS bursting,
+
+        -- which second, if any, carries a SATURATED-RED burst. Held to a
+        -- different second and different transforms so the two rules never
+        -- overlap in one window and each keeps its own attribution.
+        (sipHash64(title_index, 'red_inherited') % 100) < 1 AS lineage_red,
+        toUInt32(95 + (sipHash64(title_index, 'red_when') % 20)) AS red_second,
+        transform IN ('social_crop_v', 'subtitle_burnin') AS red_capable,
+        (sipHash64(title_index, transform, 'red') % 100) < 3 AS introduced_red,
+        (lineage_red OR (red_capable AND introduced_red)) AS asset_has_red,
+        intDiv(pts_ms, 1000) = red_second AS in_red_window,
+        asset_has_red AND in_red_window AS red_bursting,
 
         -- deterministic per-sample noise
         sipHash64(title_index, transform_index, seq) AS h,
@@ -83,19 +108,24 @@ FROM
         transform,
         pts_ms,
         toFloat32(multiIf(
+            -- a red burst is held BELOW the 0.10 general-flash floor on purpose
+            red_bursting,        0.02 + (r * 0.06),
             bursting,            0.34 + (r * 0.22),
             qualifying_baseline, 0.12 + (r * 0.30),
                                  r * 0.09)) AS luma_delta,
         toFloat32(multiIf(
+            red_bursting,        0.24 + (r * 0.16),
             bursting,            0.05 + (r * 0.10),
             qualifying_baseline, 0.02 + (r * 0.08),
                                  r * 0.03)) AS red_delta,
         toFloat32(multiIf(
+            red_bursting,        0.48 + (r * 0.32),
             bursting,            0.52 + (r * 0.30),
             qualifying_baseline, 0.28 + (r * 0.38),
                                  r * 0.22)) AS changed_area_fraction,
         multiIf(
-            bursting OR qualifying_baseline, if((seq % 2) = 0, 'up', 'down'),
+            red_bursting OR bursting OR qualifying_baseline,
+                                             if((seq % 2) = 0, 'up', 'down'),
             (h % 3) = 0,                     'flat',
             if((seq % 2) = 0, 'up', 'down')) AS direction
     FROM numbers_mt(9600000)

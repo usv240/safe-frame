@@ -6,8 +6,8 @@ The official ClickHouse Agent Skills are vendored at
 Safe Frame's schema and its catalogue query.
 
 This records what each applicable rule said, what was measured, and what changed.
-Two rules were checked and deliberately **not** applied, with the measurement that
-justified declining them. A review where every rule "passed" would not be worth
+Three rules were checked and deliberately **not** applied, with the measurement
+that justified declining them. A review where every rule "passed" would not be worth
 publishing.
 
 Reviewed: 2026-08-28, against `sql/004_transitions.sql` and
@@ -58,6 +58,37 @@ SELECT-only database user distinct from the ingest user. Failures surface as HTT
 ---
 
 ## Checked and deliberately not applied
+
+### `query-join-consider-alternatives`, declined the second time (CRITICAL)
+
+> Repeated JOINs add overhead; shift work away from query time.
+
+Adding the red-flash rule made this rule point the other way, so it was measured
+rather than obeyed. The sweep now evaluates each rule over its own qualifying
+set and `UNION ALL`s the two, which scans the 9.6M-row table twice. The
+single-scan alternative was built and benchmarked: filter once with the union of
+both predicates, then fan each surviving row out to the rules it satisfies with
+`ARRAY JOIN arrayFilter((name, keep) -> keep, ['general_flash','red_flash'], [...])`,
+windowed `PARTITION BY asset_id, rule`.
+
+Five runs of each against the live cluster, `system` statistics from the same
+response as the rows:
+
+| | rows read | median | min | max |
+|---|---|---|---|---|
+| two passes, `UNION ALL` (shipped) | 19,200,000 | **703 ms** | 672 ms | 851 ms |
+| one pass, `ARRAY JOIN` fan-out | 9,600,000 | 1,096 ms | 1,006 ms | 1,141 ms |
+
+Byte-identical 31-row results from both. Halving the rows read made the query
+**56% slower**: the red predicate is selective enough that its extra scan is
+nearly free, while unnesting a two-element array for every row that survives the
+combined filter is not. The rule is sound advice and the measurement still
+contradicted it here, so the two-pass form ships.
+
+This also keeps the two rules independent by construction rather than by a
+`PARTITION BY ..., rule` clause somebody could later drop, which matters more
+than the milliseconds: if one rule's transitions ever padded the other's window,
+the sweep would report violations that neither rule actually supports.
 
 ### `schema-pk-cardinality-order` (CRITICAL) — declined, no measurable benefit
 

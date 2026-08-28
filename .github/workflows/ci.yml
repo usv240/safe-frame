@@ -11,7 +11,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: python -m pip install -r requirements.txt pytest httpx
+      - run: python -m pip install -r requirements-dev.txt
       - run: python -m pytest -q
       - run: python -m compileall -q safe_frame
       - name: Enforce Google-only AI policy

@@ -20,9 +20,20 @@ Updated: 2026-08-28
 - [x] Catalogue corpus at scale: 9,600,000 transition rows, 3,200 renditions, 400 titles
 - [x] Published criteria evaluated inside ClickHouse in one pass (`sql/006_catalogue_regression.sql`)
 - [x] Catalogue sweep isolates 31 introduced regressions and excludes 28 inherited ones
-- [x] SQL/Python parity suite: 42 cases agree exactly with the reference detector
+- [x] Two published rules implemented and windowed independently: general flash
+      and red flash (no luminance floor), both evaluated in one sweep
+- [x] SQL/Python parity suite: 43 cases agree exactly with the reference
+      detector across both rules, with a guard test that fails if the fixtures
+      stop producing violations
 - [x] Persistent official mcp-clickhouse session, warmed at startup (sweep 1.6s end to end)
-- [x] Official ClickHouse Agent Skills applied to schema and catalogue query; findings and two measured declines in docs/CLICKHOUSE-SKILLS-REVIEW.md
+- [x] Official ClickHouse Agent Skills applied to schema and catalogue query;
+      findings and three measured declines in docs/CLICKHOUSE-SKILLS-REVIEW.md,
+      including a CRITICAL rule that benchmarking contradicted
+- [x] Every surface agrees about a pair: the sweep, `/v1/catalogue/regressions`
+      and the ADK agent's evidence all read one union of the catalogue and
+      persisted planes
+- [x] Dead scaffolding removed; every tracked module is reachable from the
+      running product or its tests
 
 ## Release tasks
 

@@ -45,7 +45,31 @@ def test_local_scan_is_honest_when_live_catalogue_is_not_configured(monkeypatch)
     assert body["verdict"] == "fail"
     assert body["certified"] is False
     assert body["decision_source"] == "local_reference_precheck"
-    assert body["gate"]["failed"] == ["no_child_only_general_flash"]
+    assert body["gate"]["failed"] == ["no_child_only_flash_violation"]
+    assert body["rules_evaluated"] == ["general_flash", "red_flash"]
+    assert [item["rule"] for item in body["rendition_violations"]] == ["general_flash"]
+
+
+def test_scan_reports_a_red_flash_the_luminance_rule_cannot_see(monkeypatch):
+    """A red alternation under the general-flash floor must still fail the scan."""
+    monkeypatch.delenv("MCP_CLICKHOUSE_COMMAND", raising=False)
+    def red(asset: str, transform: str, count: int):
+        rows = burst(asset, transform, count)
+        for row in rows:
+            row["luma_delta"] = 0.04   # below the 0.10 general-flash floor
+            row["red_delta"] = 0.55
+        return rows
+
+    response = TestClient(app).post(
+        "/v1/scan",
+        json={"parent_metrics": red("master", "master", 6), "rendition_metrics": red("child", "social_crop_v", 8)},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["verdict"] == "fail"
+    assert [item["rule"] for item in body["rendition_violations"]] == ["red_flash"]
+    assert [item["child"]["rule"] for item in body["regressions"]] == ["red_flash"]
+    assert body["regressions"][0]["attribution"] == "social_crop_v"
 
 
 def test_scan_rejects_cross_lineage_comparison():

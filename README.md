@@ -27,6 +27,22 @@ then uses a ClickHouse anti-join to isolate violations present only in the child
 and attribute them to the conversion. Frame index is never used for lineage
 alignment because frame-rate conversion makes it invalid.
 
+## Two rules, windowed independently
+
+Published photosensitivity guidance is not one rule. Safe Frame implements two:
+
+- **general flash** — luminance alternation at or above a 0.10 delta.
+- **red flash** — saturated-red alternation at or above a 0.20 red delta, with
+  **no luminance floor at all**. A red/blue alternation can hold luminance
+  almost flat and still be the higher-risk sequence, so gating it on luminance
+  would reproduce the exact blind spot the rule exists to close.
+
+Each rule gets its own 1000 ms window, so one rule's qualifying transitions can
+never pad the other's count, and the anti-join is keyed on `rule` — a master
+that already flashed in luminance does not excuse a rendition that introduced a
+red flash. Both rules are evaluated in ClickHouse in a single pass over the
+catalogue.
+
 ## Runtime architecture
 
 - The deterministic detector measures affected area directly, before lossy tile
@@ -45,26 +61,36 @@ alignment because frame-rate conversion makes it invalid.
 
 `POST /v1/scan` computes the parent and child violations, persists them, and then
 asks ClickHouse—through official MCP—to execute the published child-minus-parent
-anti-join. If MCP fails or the SQL count cannot be parsed, the live API returns
+anti-join. The same anti-join backs `/v1/catalogue/regressions` and the evidence
+the ADK agent reads, so no two surfaces can disagree about one pair. If MCP fails or the SQL count cannot be parsed, the live API returns
 502. It never substitutes a Gemini verdict or a local guess.
 
 Useful judge endpoints:
 
-- `/` — one-click constructed boundary proof, no flashing media
+- `/` — the catalogue sweep, no flashing media
 - `/health` — cached live Vertex and MCP/ClickHouse round-trips
+- `/v1/catalogue/shape` — size of the corpus, read live
+- `/v1/catalogue/sweep` — both rules evaluated across the whole catalogue
+- `/v1/catalogue/regressions` — SQL/MCP verdict for one asset pair
 - `/v1/samples` — self-authored exact pass/fail metric pair
+- `/v1/scan` — submit raw transition metrics for a parent/child pair
 - `/v1/integrations/clickhouse/evidence` — advertised MCP tools and live query
-- `/v1/catalogue/regressions` — SQL/MCP verdict for an asset pair
 - `/v1/explain` — ADK explanation grounded in MCP evidence
 - `/docs` — complete OpenAPI surface
 
 ## Verification
 
 ```powershell
-python -m pip install -r requirements.txt pytest httpx
+python -m pip install -r requirements-dev.txt
 python -m pytest -q
 python -m uvicorn safe_frame.main:app --reload
 ```
+
+`tests/test_sql_parity.py` runs the reference Python detector and the ClickHouse
+criteria SQL over identical randomized rows and requires exact agreement on both
+rules. It executes real SQL, so it is skipped unless `MCP_CLICKHOUSE_COMMAND` and
+the ClickHouse connection variables point at a reachable cluster; the structural
+guards in `tests/test_clickhouse_mcp.py` catch threshold drift without one.
 
 The fixtures are self-authored synthetic measurements with known boundaries.
 They are engineering evidence, not clinical validation or certification. See
