@@ -1,6 +1,6 @@
 # Safe Frame implementation status
 
-Updated: 2026-08-20
+Updated: 2026-08-28
 
 ## Complete
 
@@ -17,6 +17,11 @@ Updated: 2026-08-20
 - [x] Self-authored constructed judge sample
 - [x] Public Cloud Run revision `safe-frame-regression-00008-q4v`
 - [x] Live acceptance: official MCP anti-join returned one regression and ADK explanation completed
+- [x] Catalogue corpus at scale: 9,600,000 transition rows, 3,200 renditions, 400 titles
+- [x] Published criteria evaluated inside ClickHouse in one pass (`sql/006_catalogue_regression.sql`)
+- [x] Catalogue sweep isolates 31 introduced regressions and excludes 28 inherited ones
+- [x] SQL/Python parity suite: 42 cases agree exactly with the reference detector
+- [x] Persistent official mcp-clickhouse session, warmed at startup (sweep 1.6s end to end)
 
 ## Release tasks
 
