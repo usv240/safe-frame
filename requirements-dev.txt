@@ -1,6 +1,11 @@
-# Verification-only dependencies. Deliberately not in requirements.txt so the
-# published container carries nothing it does not run.
+# Verification-only dependencies. Deliberately kept out of requirements.txt so
+# the published container carries nothing it does not run.
+#
+# pytest-asyncio is not optional: pyproject sets `required_plugins`, because
+# without the plugin every async parity test is silently skipped rather than
+# failed, and "the SQL agrees with the detector" would go unverified while
+# still appearing green.
 -r requirements.txt
-pytest==9.0.1
-pytest-asyncio==1.3.0
-httpx==0.29.2
+pytest>=9.0,<10
+pytest-asyncio>=1.3,<2
+httpx>=0.28,<1
