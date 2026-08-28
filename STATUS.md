@@ -22,6 +22,7 @@ Updated: 2026-08-28
 - [x] Catalogue sweep isolates 31 introduced regressions and excludes 28 inherited ones
 - [x] SQL/Python parity suite: 42 cases agree exactly with the reference detector
 - [x] Persistent official mcp-clickhouse session, warmed at startup (sweep 1.6s end to end)
+- [x] Official ClickHouse Agent Skills applied to schema and catalogue query; findings and two measured declines in docs/CLICKHOUSE-SKILLS-REVIEW.md
 
 ## Release tasks
 
