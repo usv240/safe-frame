@@ -18,15 +18,22 @@ def detect_general_flashes(
     Thresholds are explicit and independently testable.
     """
     ordered = sorted(metrics, key=lambda item: item.pts_ms)
-    violations: list[Violation] = []
-    for index, start in enumerate(ordered):
-        window = [
-            item
-            for item in ordered[index:]
-            if item.pts_ms < start.pts_ms + 1_000
-            and item.luma_delta >= luma_delta_floor
+
+    def qualifies(item: TransitionMetric) -> bool:
+        return (
+            item.luma_delta >= luma_delta_floor
             and item.changed_area_fraction >= area_floor
             and item.direction != "flat"
+        )
+
+    # A window is anchored on a qualifying transition, never on a sample that
+    # does not itself count toward the criterion. `sql/006_catalogue_regression.sql`
+    # anchors identically; tests/test_sql_parity.py asserts the two agree.
+    qualified = [item for item in ordered if qualifies(item)]
+    violations: list[Violation] = []
+    for index, start in enumerate(qualified):
+        window = [
+            item for item in qualified[index:] if item.pts_ms < start.pts_ms + 1_000
         ]
         if len(window) <= max_transitions_per_second:
             continue

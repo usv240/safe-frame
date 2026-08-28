@@ -1,24 +1,317 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Find the rendition that introduced a photosensitivity risk the approved master never had.">
   <title>Safe Frame — rendition regression pre-check</title>
   <style>
-    :root{--paper:#f8f4e9;--ink:#1e2421;--muted:#646962;--line:#d7d3c8;--amber:#b45309;--red:#a62f27;--green:#186348;--card:#fffdf7;--dark:#17211d}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 Inter,ui-sans-serif,system-ui,sans-serif}button{font:inherit;cursor:pointer}.shell{max-width:1180px;margin:auto;padding:24px}nav{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);padding:10px 0 20px}.brand{font-weight:900;letter-spacing:.18em}.mode{display:flex;border:1px solid var(--line);border-radius:99px;padding:3px}.mode button{border:0;border-radius:99px;background:transparent;padding:7px 12px}.mode .active{background:var(--ink);color:white}header{padding:68px 0 46px;display:grid;grid-template-columns:1.4fr .6fr;gap:40px;align-items:end}.eyebrow{font-size:.76rem;font-weight:850;letter-spacing:.14em;text-transform:uppercase;color:var(--amber)}h1{font:clamp(3.1rem,7vw,6.5rem)/.91 Georgia,serif;letter-spacing:-.055em;margin:14px 0 24px;max-width:890px}.lead{font-size:1.2rem;color:var(--muted);max-width:760px}.boundary{background:var(--dark);color:white;padding:24px}.boundary p{color:#d9e2dc;margin:8px 0}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#54d39c;margin-right:8px}.dot.warn{background:#efb15d}.timeline{background:var(--card);border:1px solid var(--line);padding:28px;margin:10px 0 28px}.track{margin:22px 0}.track-head{display:flex;justify-content:space-between}.bars{height:68px;display:flex;align-items:end;gap:7px;border-bottom:2px solid var(--line);position:relative}.bars:after{content:'threshold';position:absolute;right:0;top:20px;border-top:1px dashed var(--amber);width:100%;color:var(--amber);font-size:.68rem;text-align:right}.bar{flex:1;background:var(--green);height:34%}.child .bar{background:var(--amber)}.child .bar:last-child{height:72%;background:var(--red)}.controls{display:flex;gap:10px;flex-wrap:wrap;margin:22px 0}.primary,.secondary{border:0;padding:12px 18px;background:var(--ink);color:white}.secondary{background:var(--card);color:var(--ink);border:1px solid var(--line)}.primary:disabled{opacity:.55}.result{background:var(--dark);color:#bdebd8;padding:22px;min-height:130px;max-height:430px;overflow:auto;white-space:pre-wrap;font:13px/1.55 ui-monospace,Consolas,monospace}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:42px 0}.card{background:var(--card);border:1px solid var(--line);padding:22px}.card h3{margin:8px 0}.tag{color:var(--amber);font-size:.72rem;font-weight:900;letter-spacing:.1em}.gate{display:grid;grid-template-columns:.75fr 1.25fr;gap:30px;background:var(--ink);color:white;padding:32px;margin:48px 0}.sql{background:#0d1411;padding:18px;color:#bdebd8;font:13px/1.65 ui-monospace,Consolas,monospace}.technical{display:none}body.tech .plain{display:none}body.tech .technical{display:block}footer{display:flex;justify-content:space-between;border-top:1px solid var(--line);padding:28px 0;color:var(--muted);font-size:.84rem}a{color:inherit}@media(max-width:800px){header,.gate,.grid{grid-template-columns:1fr}h1{font-size:3.8rem}}
-    body.dark{--paper:#111714;--ink:#eef3ed;--muted:#aab4ac;--line:#39443d;--card:#1b241f;--dark:#080d0b}
+    :root{color-scheme:light;--paper:#f8f4e9;--ink:#1e2421;--muted:#646962;--line:#d7d3c8;--amber:#b45309;--red:#a62f27;--green:#186348;--card:#fffdf7;--dark:#17211d;--shadow:0 16px 44px rgba(30,36,33,.09)}
+    html[data-theme="dark"]{color-scheme:dark;--paper:#111714;--ink:#eef3ed;--muted:#a9b3ab;--line:#39443d;--card:#1b241f;--dark:#080d0b;--amber:#f0a758;--red:#f08a80;--green:#6fd7ab;--shadow:none}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}
+    button{font:inherit;cursor:pointer}
+    .shell{width:min(1180px,calc(100% - 2rem));margin:auto}
+    a{color:var(--amber)}
+    nav{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);padding:14px 0 20px;gap:1rem;flex-wrap:wrap}
+    .brand{font-weight:900;letter-spacing:.18em}
+    .mode{display:flex;border:1px solid var(--line);border-radius:99px;padding:3px;background:var(--card)}
+    .mode button{border:0;border-radius:99px;background:transparent;padding:7px 13px;color:var(--muted)}
+    .mode button.active{background:var(--ink);color:var(--paper)}
+    header{padding:62px 0 42px;display:grid;grid-template-columns:1.4fr .6fr;gap:40px;align-items:end}
+    .eyebrow{font-size:.76rem;font-weight:850;letter-spacing:.14em;text-transform:uppercase;color:var(--amber)}
+    h1{font:clamp(2.8rem,6.4vw,5.6rem)/.94 Georgia,serif;letter-spacing:-.05em;margin:14px 0 22px;max-width:16ch}
+    .lead{font-size:1.16rem;color:var(--muted);max-width:60ch}
+    .boundary{background:var(--dark);color:#f3f8f5;padding:22px;border-radius:14px;box-shadow:var(--shadow)}
+    .boundary strong{display:block;margin-bottom:.5rem}
+    .boundary p{color:#cfdcd5;margin:7px 0;font-size:.9rem}
+    .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#54d39c;margin-right:8px}
+    .dot.warn{background:#efb15d}
+
+    h2{font:clamp(1.8rem,3.6vw,3rem)/1.08 Georgia,serif;letter-spacing:-.03em;margin:.3rem 0 1rem}
+    section.block{padding:46px 0}
+    .scale{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin:8px 0 26px}
+    .scale div{background:var(--card);padding:1rem 1.1rem}
+    .scale b{display:block;font:1.75rem/1.1 Georgia,serif}
+    .scale span{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+
+    .controls{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}
+    .primary,.secondary{border:1px solid var(--line);border-radius:8px;padding:11px 17px;background:var(--card);color:var(--ink);text-decoration:none;display:inline-block}
+    .primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+    .primary:disabled{opacity:.55;cursor:default}
+
+    .sweepwrap{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+    .sweephead{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:1rem 1.2rem;border-bottom:1px solid var(--line);flex-wrap:wrap}
+    .sweephead h3{margin:0;font-size:1rem}
+    .qstat{display:flex;gap:1.2rem;flex-wrap:wrap;font-size:.78rem;color:var(--muted)}
+    .qstat b{color:var(--ink);font-variant-numeric:tabular-nums}
+    .tablewrap{overflow-x:auto;max-height:420px;overflow-y:auto}
+    table{border-collapse:collapse;width:100%;font-size:.86rem}
+    th{position:sticky;top:0;background:var(--card);text-align:left;font-size:.7rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);padding:.7rem 1rem;border-bottom:1px solid var(--line);white-space:nowrap;z-index:1}
+    td{padding:.62rem 1rem;border-bottom:1px solid var(--line);white-space:nowrap;font-variant-numeric:tabular-nums}
+    tbody tr{cursor:pointer}
+    tbody tr:hover{background:color-mix(in srgb,var(--amber) 8%,transparent)}
+    tbody tr.sel{background:color-mix(in srgb,var(--amber) 15%,transparent)}
+    .tf{font-weight:750;color:var(--red)}
+    .mono{font-family:ui-monospace,Consolas,monospace;font-size:.8rem}
+    .empty{padding:2.6rem 1.2rem;color:var(--muted);text-align:center}
+
+    .detail{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem}
+    .panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:1.2rem;box-shadow:var(--shadow)}
+    .panel h4{margin:0 0 .2rem;font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+    .panel .big{font:1.5rem/1.2 Georgia,serif;margin:.15rem 0 .6rem}
+    .track{margin:1rem 0 .3rem}
+    .trackhead{display:flex;justify-content:space-between;font-size:.78rem;color:var(--muted);margin-bottom:.35rem}
+    .trackhead b{color:var(--ink)}
+    .bars{height:56px;display:flex;align-items:flex-end;gap:3px;border-bottom:2px solid var(--line);padding-bottom:2px}
+    .bars i{flex:1;background:var(--green);border-radius:1px 1px 0 0;min-height:3px}
+    .bars.fail i.hot{background:var(--red)}
+    .bars.fail i.warm{background:var(--amber)}
+    .caption{font-size:.76rem;color:var(--muted);margin-top:.45rem}
+    .verdict{display:inline-block;font-size:.7rem;font-weight:850;letter-spacing:.09em;text-transform:uppercase;padding:.3rem .65rem;border-radius:999px}
+    .verdict.pass{background:color-mix(in srgb,var(--green) 18%,transparent);color:var(--green)}
+    .verdict.fail{background:color-mix(in srgb,var(--red) 18%,transparent);color:var(--red)}
+
+    .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:34px 0}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px}
+    .card h3{margin:8px 0 .4rem}
+    .card p{margin:0;color:var(--muted);font-size:.92rem}
+    .tag{color:var(--amber);font-size:.7rem;font-weight:900;letter-spacing:.1em}
+
+    .gate{display:grid;grid-template-columns:.8fr 1.2fr;gap:30px;background:var(--ink);color:var(--paper);padding:32px;border-radius:16px;margin:44px 0}
+    html[data-theme="dark"] .gate{background:#080d0b}
+    .gate h2{color:var(--paper);margin-top:.2rem}
+    .gate p{color:#c6d2cb}
+    .sql{background:#0d1411;padding:18px;border-radius:10px;color:#bdebd8;font:12.5px/1.65 ui-monospace,Consolas,monospace;overflow-x:auto}
+    .sql .kw{color:#7fd4ff}.sql .st{color:#f3c078}
+
+    pre.result{background:var(--dark);color:#bdebd8;padding:18px;border-radius:12px;max-height:340px;overflow:auto;white-space:pre-wrap;font:12px/1.55 ui-monospace,Consolas,monospace;margin-top:1rem}
+    pre.result[hidden]{display:none}
+    .technical{display:none}
+    body.tech .plain{display:none}
+    body.tech .technical{display:block}
+    footer{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;border-top:1px solid var(--line);padding:26px 0;color:var(--muted);font-size:.84rem}
+    @media(max-width:900px){header,.gate,.grid3,.detail{grid-template-columns:1fr}.scale{grid-template-columns:1fr 1fr}h1{font-size:2.8rem}}
   </style>
 </head>
-<body><main class="shell">
-  <nav><span class="brand">SAFE FRAME</span><div class="mode"><button id="plain" class="active">Plain</button><button id="tech">Technical</button><button id="dark">Dark</button></div></nav>
-  <header><div><div class="eyebrow">ClickHouse track · version lineage safety</div><h1>The master passed. The version people watched was never checked.</h1><p class="lead plain">One film becomes dozens of cuts, grades and frame rates. Safe Frame finds a danger introduced by the conversion—even when the approved master was safe.</p><p class="lead technical">Deterministic transition metrics are aligned on presentation time, written to ClickHouse, and anti-joined across the version tree through official mcp-clickhouse. Gemini explains; SQL decides.</p></div><aside class="boundary"><strong>Evidence boundary</strong><p><i class="dot"></i>SQL verdict through official MCP</p><p><i class="dot"></i>Gemini on Vertex via Google ADK</p><p><i class="dot warn"></i>Open pre-check, not a certified device</p><p><i class="dot"></i>This page contains no flashing media</p></aside></header>
-  <section class="timeline"><div class="eyebrow">Constructed ground truth · no flashing playback</div><div class="track"><div class="track-head"><b>Approved master</b><span>6 transitions · pass boundary</span></div><div class="bars"><i class="bar"></i><i class="bar"></i><i class="bar"></i><i class="bar"></i><i class="bar"></i><i class="bar"></i></div></div><div class="track child"><div class="track-head"><b>60fps social rendition</b><span>7 transitions · introduced regression</span></div><div class="bars"><i class="bar"></i><i class="bar"></i><i class="bar"></i><i class="bar"></i><i class="bar"></i><i class="bar"></i><i class="bar"></i></div></div><div class="controls"><button class="primary" id="run">Run real ClickHouse proof</button><button class="secondary" id="explain" disabled>Ask the ADK agent</button><a class="secondary" href="/v1/integrations/clickhouse/evidence" target="_blank">Inspect MCP evidence</a><a class="secondary" href="/docs" target="_blank">API</a></div><pre class="result" id="result">Ready. The sample uses exact constructed metrics at the six-transition pass / seven-transition fail boundary.</pre></section>
-  <section class="grid"><article class="card"><span class="tag">01 · MEASURE</span><h3>Area before tiles</h3><p>Direct pixel change preserves a 100% checkerboard reversal that an 8×8 average erases.</p></article><article class="card"><span class="tag">02 · ALIGN</span><h3>Presentation time</h3><p>Frame-rate conversion breaks frame-index matching. Millisecond timestamps preserve lineage.</p></article><article class="card"><span class="tag">03 · PROVE</span><h3>Child minus parent</h3><p>ClickHouse isolates violations present in the rendition and absent from its approved source.</p></article></section>
-  <section class="gate"><div><div class="eyebrow">Decision boundary</div><h2>Arithmetic owns the verdict.</h2><p class="plain">The AI cannot declare a video safe. It only explains the exact rows returned by the database and asks a human QC operator to act.</p><p class="technical">If the MCP/SQL query fails or its count cannot be parsed, the API returns 502. It never substitutes Gemini or a local guess in the live path.</p></div><div class="sql">SELECT child.*<br>FROM child<br>LEFT ANTI JOIN parent<br>&nbsp; ON child.lineage_id = parent.lineage_id<br>&nbsp;AND child.rule = parent.rule<br>&nbsp;AND abs(child.pts_ms - parent.pts_ms) &lt;= 100<br><br>DECISION_SOURCE = clickhouse_sql_via_official_mcp</div></section>
-  <footer><span>Self-authored synthetic metrics · Apache-2.0</span><span><a href="/health">Live health</a> · Safe Frame 0.2</span></footer>
-</main><script>
-const $=s=>document.querySelector(s);let pair=null;
-$('#plain').onclick=()=>{document.body.classList.remove('tech');$('#plain').classList.add('active');$('#tech').classList.remove('active')};$('#tech').onclick=()=>{document.body.classList.add('tech');$('#tech').classList.add('active');$('#plain').classList.remove('active')};
-$('#dark').onclick=()=>{document.body.classList.toggle('dark');$('#dark').classList.toggle('active')};
-$('#run').onclick=async()=>{const b=$('#run');b.disabled=true;b.textContent='Querying ClickHouse…';try{pair=(await fetch('/v1/samples').then(r=>r.json())).data;const payload={parent_metrics:pair.parent_metrics,rendition_metrics:pair.rendition_metrics};const response=await fetch('/v1/scan',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});const data=await response.json();$('#result').textContent=JSON.stringify(data,null,2);$('#explain').disabled=!response.ok}catch(e){$('#result').textContent=e.message}finally{b.disabled=false;b.textContent='Run real ClickHouse proof'}};
-$('#explain').onclick=async()=>{const b=$('#explain');b.disabled=true;b.textContent='Agent reading MCP…';const response=await fetch('/v1/explain',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({parent_asset:pair.parent_metrics[0].asset_id,child_asset:pair.rendition_metrics[0].asset_id,operator_id:'web-judge'})});const data=await response.json();$('#result').textContent=JSON.stringify(data,null,2);b.disabled=false;b.textContent='Ask the ADK agent'};
-  </script></body></html>
+<body>
+<main class="shell">
+  <nav>
+    <span class="brand">SAFE FRAME</span>
+    <div class="mode">
+      <button id="plain" class="active">Plain</button>
+      <button id="tech">Technical</button>
+      <button id="dark">Dark</button>
+    </div>
+  </nav>
+
+  <header>
+    <div>
+      <div class="eyebrow">ClickHouse track · version lineage safety</div>
+      <h1>The master passed. The version people watched was never checked.</h1>
+      <p class="lead plain">One film becomes dozens of cuts, grades and frame rates. Safe Frame searches the whole catalogue for a photosensitivity risk that a conversion introduced — even when the approved master was clean.</p>
+      <p class="lead technical">Transition metrics are aligned on presentation time and stored in ClickHouse. The published criteria are evaluated across every rendition in one pass through official <code>mcp-clickhouse</code>, and master/rendition isolation happens inside the same query. Gemini explains; SQL decides.</p>
+    </div>
+    <aside class="boundary">
+      <strong>Evidence boundary</strong>
+      <p><i class="dot"></i>SQL verdict through official MCP</p>
+      <p><i class="dot"></i>Gemini on Vertex via Google ADK</p>
+      <p><i class="dot"></i>SQL held to the reference detector by test</p>
+      <p><i class="dot warn"></i>Open pre-check, not a certified device</p>
+      <p><i class="dot"></i>This page contains no flashing media</p>
+    </aside>
+  </header>
+
+  <section class="block">
+    <div class="eyebrow">Catalogue sweep</div>
+    <h2>Every title. Every rendition. One question.</h2>
+    <p class="lead plain">Which renditions about to ship introduced a flash their approved master never had?</p>
+    <p class="lead technical">The criteria are computed live over the corpus below — nothing on this page is a pre-computed answer.</p>
+
+    <div class="scale" id="scale">
+      <div><b id="s-tr">—</b><span>transition rows</span></div>
+      <div><b id="s-as">—</b><span>renditions</span></div>
+      <div><b id="s-ti">—</b><span>titles</span></div>
+      <div><b id="s-tf">—</b><span>transform types</span></div>
+    </div>
+
+    <div class="controls">
+      <button class="primary" id="run">Sweep the catalogue</button>
+      <button class="secondary" id="explain" disabled>Ask the ADK agent about the selection</button>
+      <a class="secondary" href="/v1/integrations/clickhouse/evidence" target="_blank" rel="noreferrer">Inspect MCP evidence</a>
+      <a class="secondary" href="/docs" target="_blank" rel="noreferrer">API</a>
+    </div>
+
+    <div class="sweepwrap">
+      <div class="sweephead">
+        <h3 id="sweeptitle">Ready — press “Sweep the catalogue”.</h3>
+        <div class="qstat" id="qstat"></div>
+      </div>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Title</th><th>Rendition</th><th>Introduced by</th><th>Window</th><th>Transitions</th><th>Peak area</th></tr></thead>
+          <tbody id="rows"><tr><td colspan="6"><div class="empty">No sweep has been run in this browser session.</div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="detail" id="detail" hidden>
+      <article class="panel">
+        <h4>Approved master</h4>
+        <div class="big" id="d-parent">—</div>
+        <span class="verdict pass">no violation at this window</span>
+        <div class="track">
+          <div class="trackhead"><b>Qualifying transitions per second</b><span id="d-parent-n">—</span></div>
+          <div class="bars" id="bars-parent"></div>
+          <p class="caption">Baseline content stays under the criterion. Bars are drawn from the returned counts, not from playback.</p>
+        </div>
+      </article>
+      <article class="panel">
+        <h4>Rendition that shipped</h4>
+        <div class="big" id="d-child">—</div>
+        <span class="verdict fail" id="d-verdict">introduced violation</span>
+        <div class="track">
+          <div class="trackhead"><b>Qualifying transitions in the flagged second</b><span id="d-child-n">—</span></div>
+          <div class="bars fail" id="bars-child"></div>
+          <p class="caption" id="d-caption">—</p>
+        </div>
+      </article>
+    </div>
+
+    <pre class="result" id="result" hidden></pre>
+  </section>
+
+  <section class="block">
+    <div class="grid3">
+      <article class="card"><span class="tag">01 · MEASURE</span><h3>Area before tiles</h3><p>Direct pixel change preserves a 100% checkerboard reversal that an 8×8 average erases entirely.</p></article>
+      <article class="card"><span class="tag">02 · ALIGN</span><h3>Presentation time</h3><p>Frame-rate conversion renumbers every frame. Millisecond timestamps survive it; frame indices do not.</p></article>
+      <article class="card"><span class="tag">03 · ISOLATE</span><h3>Child minus parent</h3><p>A violation the master already had is not a regression. The sweep excludes inherited ones by construction.</p></article>
+    </div>
+  </section>
+
+  <section class="gate">
+    <div>
+      <div class="eyebrow">Decision boundary</div>
+      <h2>Arithmetic owns the verdict.</h2>
+      <p class="plain">The AI cannot declare a video safe. It explains rows the database returned, and asks a human QC operator to act.</p>
+      <p class="technical">If the MCP query fails or its rows cannot be parsed, the endpoint returns 502. It never substitutes Gemini or a local guess in the live path.</p>
+      <p class="technical"><code>tests/test_sql_parity.py</code> runs the reference Python detector and this SQL over identical randomized inputs and requires exact agreement, so the catalogue sweep cannot silently drift from the per-file pre-check.</p>
+    </div>
+    <div class="sql"><span class="kw">WHERE</span> luma_delta &gt;= 0.10<br>&nbsp;&nbsp;<span class="kw">AND</span> changed_area_fraction &gt;= 0.25<br>&nbsp;&nbsp;<span class="kw">AND</span> direction != <span class="st">'flat'</span><br><br><span class="kw">WINDOW</span> w <span class="kw">AS</span> (<span class="kw">PARTITION BY</span> asset_id<br>&nbsp;&nbsp;<span class="kw">ORDER BY</span> pts_ms<br>&nbsp;&nbsp;<span class="kw">RANGE BETWEEN CURRENT ROW AND</span> 999 <span class="kw">FOLLOWING</span>)<br><br><span class="kw">WHERE</span> win_transitions &gt; 6<br>&nbsp;&nbsp;<span class="kw">AND</span> win_dir_min != win_dir_max<br><br>DECISION_SOURCE = clickhouse_sql_via_official_mcp</div>
+  </section>
+
+  <footer>
+    <span>Self-authored synthetic catalogue · Apache-2.0 · <code>certified: false</code></span>
+    <span><a href="/health">Live health</a> · <a href="https://github.com/usv240/safe-frame">Source</a> · Safe Frame 0.3</span>
+  </footer>
+</main>
+
+<script>
+const $=s=>document.querySelector(s);
+let sweepData=null,selected=null;
+
+$('#plain').onclick=()=>{document.body.classList.remove('tech');$('#plain').classList.add('active');$('#tech').classList.remove('active')};
+$('#tech').onclick=()=>{document.body.classList.add('tech');$('#tech').classList.add('active');$('#plain').classList.remove('active')};
+$('#dark').onclick=()=>{const d=document.documentElement.dataset.theme!=='dark';document.documentElement.dataset.theme=d?'dark':'';$('#dark').textContent=d?'Light':'Dark';$('#dark').classList.toggle('active',d)};
+
+const nf=n=>Number(n).toLocaleString();
+
+async function loadScale(){
+  try{
+    const r=await fetch('/v1/catalogue/shape');
+    if(!r.ok)return;
+    const c=(await r.json()).data;
+    $('#s-tr').textContent=nf(c.transitions);$('#s-as').textContent=nf(c.assets);
+    $('#s-ti').textContent=nf(c.titles);$('#s-tf').textContent=nf(c.transforms);
+  }catch(e){/* the sweep will report the corpus too */}
+}
+
+function bars(host,count,hot){
+  host.replaceChildren();
+  for(let i=0;i<25;i++){
+    const b=document.createElement('i');
+    const inBurst=hot&&i<count;
+    b.style.height=(inBurst?(58+((i*13)%38)):(10+((i*7)%22)))+'%';
+    if(inBurst)b.className=(i%2===0)?'hot':'warm';
+    host.append(b);
+  }
+}
+
+function select(row,tr){
+  selected=row;
+  document.querySelectorAll('#rows tr').forEach(x=>x.classList.remove('sel'));
+  if(tr)tr.classList.add('sel');
+  $('#detail').hidden=false;
+  $('#d-parent').textContent=row.parent_id;
+  $('#d-child').textContent=row.asset_id;
+  $('#d-parent-n').textContent='under the 6-per-second criterion';
+  $('#d-child-n').textContent=row.transitions+' in 1000 ms';
+  $('#d-caption').textContent='Flagged window '+row.window_start_ms+'–'+row.window_end_ms+' ms · peak changed area '+
+    Math.round(row.peak_changed_area_fraction*100)+'% · introduced by '+row.transform+'.';
+  bars($('#bars-parent'),0,false);
+  bars($('#bars-child'),Math.min(row.transitions,25),true);
+  $('#explain').disabled=false;
+  $('#detail').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function renderSweep(d){
+  sweepData=d;
+  const c=d.corpus||{};
+  if(c.transitions){$('#s-tr').textContent=nf(c.transitions);$('#s-as').textContent=nf(c.assets);$('#s-ti').textContent=nf(c.titles);$('#s-tf').textContent=nf(c.transforms)}
+  $('#sweeptitle').textContent=d.regression_count+' rendition'+(d.regression_count===1?'':'s')+
+    ' introduced a violation across '+nf(c.titles||0)+' titles';
+  const parts=[];
+  parts.push('<span>scanned <b>'+nf(c.transitions||0)+'</b> rows</span>');
+  parts.push('<span>returned <b>'+d.regression_count+'</b></span>');
+  const t=d.timing||{};
+  if(t.query_ms!=null)parts.push('<span>ClickHouse <b>'+t.query_ms+' ms</b></span>');
+  if(t.mcp_setup_ms!=null)parts.push('<span>MCP handshake <b>'+t.mcp_setup_ms+' ms</b></span>');
+  Object.entries(d.by_transform||{}).forEach(([k,v])=>parts.push('<span>'+k+' <b>'+v+'</b></span>'));
+  $('#qstat').innerHTML=parts.join('');
+  const body=$('#rows');body.replaceChildren();
+  if(!d.regressions.length){
+    body.innerHTML='<tr><td colspan="6"><div class="empty">No rendition in the catalogue introduced a violation its master did not already have.</div></td></tr>';
+    return;
+  }
+  d.regressions.forEach(row=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML='<td class="mono">'+row.lineage_id+'</td><td class="mono">'+row.asset_id+
+      '</td><td class="tf">'+row.transform+'</td><td>'+row.window_start_ms+'–'+row.window_end_ms+' ms</td><td>'+
+      row.transitions+'</td><td>'+Math.round(row.peak_changed_area_fraction*100)+'%</td>';
+    tr.onclick=()=>select(row,tr);
+    body.append(tr);
+  });
+  select(d.regressions[0],body.firstElementChild);
+}
+
+$('#run').onclick=async()=>{
+  const b=$('#run');b.disabled=true;b.textContent='Evaluating criteria in ClickHouse…';
+  $('#result').hidden=true;
+  try{
+    const r=await fetch('/v1/catalogue/sweep');
+    const p=await r.json();
+    if(!r.ok)throw new Error(p.detail?.message||'The sweep failed closed.');
+    renderSweep(p.data);
+  }catch(e){
+    $('#sweeptitle').textContent='The sweep failed closed. No regression list was invented.';
+    $('#result').hidden=false;$('#result').textContent=e.message;
+  }finally{b.disabled=false;b.textContent='Sweep the catalogue'}
+};
+
+$('#explain').onclick=async()=>{
+  if(!selected)return;
+  const b=$('#explain');b.disabled=true;b.textContent='Agent reading MCP evidence…';
+  const out=$('#result');out.hidden=false;out.textContent='Google ADK agent is reading the returned rows…';
+  try{
+    const r=await fetch('/v1/explain',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({parent_asset:selected.parent_id,child_asset:selected.asset_id,operator_id:'web-judge'})});
+    const p=await r.json();
+    out.textContent=JSON.stringify(p,null,2);
+  }catch(e){out.textContent='The explanation failed closed: '+e.message}
+  finally{b.disabled=false;b.textContent='Ask the ADK agent about the selection'}
+};
+
+loadScale();
+</script>
+</body>
+</html>

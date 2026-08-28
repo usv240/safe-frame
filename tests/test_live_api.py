@@ -23,11 +23,15 @@ def burst(asset: str, transform: str, count: int):
 def test_landing_page_has_no_flashing_media_and_exposes_judge_proof():
     response = TestClient(app).get("/")
     assert response.status_code == 200
-    assert "Run real ClickHouse proof" in response.text
+    assert "Sweep the catalogue" in response.text
     assert "This page contains no flashing media" in response.text
     assert "<video" not in response.text
     assert "prefers-color-scheme" not in response.text
     assert "Dark" in response.text
+    # The catalogue result must never be baked into the page: the judge has to
+    # see the sweep actually query ClickHouse.
+    assert "No sweep has been run in this browser session." in response.text
+    assert "certified: false" in response.text
 
 
 def test_local_scan_is_honest_when_live_catalogue_is_not_configured(monkeypatch):
