@@ -1,107 +1,109 @@
-# Demo video script — 2:48
+# Demo video script — 2:50
 
-Hard limit is 3:00; only the first 3:00 is evaluated. This is timed to 2:48 to
-leave room for natural pacing.
+Hard limit is 3:00; only the first 3:00 is evaluated.
 
 **Rules to honour while recording**
 
 - Show the product *executing*, not slides pretending to be execution.
 - No third-party logos, music, advertising, or footage. Everything on screen is
-  this app, this repository, and this terminal.
+  this app, this repository, this terminal.
 - English narration, or English subtitles.
 - Upload Public to YouTube or Vimeo before submitting.
-- Nothing in this demo flashes. Say so on camera — it is the point.
+- Nothing in this demo flashes. Say so — it is the point.
 
 **Setup before you hit record**
 
 - Browser at 1440×900, zoom 100%, signed out, no extensions visible.
-- Have the sweep already run once so the ClickHouse MCP session is warm; then
-  reload the page so the recording shows a genuine cold press of the button.
+- Run the sweep once to warm the MCP session, then reload so the recording
+  shows a genuine cold press of the button.
+- The triage agent takes ~20s. Do not cut it — the wait is the proof it is
+  really running four queries. Narrate over it.
 - Second tab: the GitHub repository at the root.
-- Have `title_0022__subtitle_burnin` (or any `red_flash` row) in mind.
 
 ---
 
-## 0:00–0:18 — The problem, in one sentence
+## 0:00–0:15 — The problem, one sentence
 
-> *On screen: the hero. Do not scroll yet.*
+> *Hero on screen. Do not scroll.*
 
-"A film is approved once. Then it becomes dozens of versions — different frame
-rates, different grades, social crops, ad-break inserts, burnt-in subtitles.
-Photosensitivity QC runs on the master, before all of that. So when a
-conversion *introduces* a flash the approved master never had, nothing is
-looking."
+"A film is approved once. Then it becomes dozens of versions — frame rates,
+grades, social crops, ad-break inserts, burnt-in subtitles. Photosensitivity QC
+runs on the master, before all of that. When a conversion *introduces* a flash
+the approved master never had, nothing is looking."
 
-## 0:18–0:38 — Why it matters
+## 0:15–0:35 — Why it matters
 
-> *Scroll to the three fact cards. Let them sit on screen while you talk.*
+> *Scroll to the three fact cards.*
 
 "Photosensitive epilepsy affects about one in four thousand people. In 1997 a
-single broadcast sent six hundred and eighty-five children to hospital in Japan.
-Ofcom Rule 2.12 and WCAG 2.3.1 both set thresholds. All of those standards judge
-*a file* against *a standard* — none of them judges a file against the version
-that was already signed off."
+single broadcast sent six hundred and eighty-five children to hospital. Ofcom
+Rule 2.12 and WCAG 2.3.1 both set thresholds — and every one of them judges *a
+file* against *a standard*. None judges a file against the version already
+signed off."
 
-## 0:38–1:15 — The sweep, live
+## 0:35–1:05 — The sweep, live
 
-> *Scroll to the sweep. Point at the corpus counters, then press the button.*
+> *Scroll to the sweep. Point at the counters, press the button, wait.*
 
-"This catalogue is four hundred titles, thirty-two hundred renditions, nine
-point six million transition measurements, in ClickHouse. I press this, and both
-published flash rules are evaluated across every single one of those rows in one
-pass, through the official ClickHouse MCP server."
+"Four hundred titles, thirty-two hundred renditions, nine point six million
+transition measurements in ClickHouse. Both published flash rules evaluated
+across every row in one pass, through the official ClickHouse MCP server."
 
-> *Press **Sweep the catalogue**. Wait for the real result. Do not cut.*
+> *Result lands.*
 
-"Forty-four renditions introduced a violation their approved master never had.
-One point seven seconds. Thirty-one general flash, thirteen red flash — and the
-red ones came from different transforms than the luminance ones."
+"Forty-four renditions introduced a violation their master never had. Under two
+seconds. Thirty-one general flash, thirteen red flash."
 
-## 1:15–1:55 — The evidence, and the case a luminance check misses
+## 1:05–1:40 — The case a luminance checker misses
 
-> *Click a **red flash** row. Wait for the chart to draw.*
+> *Click a **red flash** row. Wait for the chart.*
 
-"Both of these tracks come from the same query over the same table, on the same
-scale. Top is the approved master — under the criterion for its entire runtime.
-Bottom is the rendition that shipped. One second, twenty-five qualifying
-transitions, well past the limit."
+"Both tracks, same query, same scale. Top is the approved master — under the
+criterion for its whole runtime. Bottom is the rendition that shipped: one
+second, twenty-five qualifying transitions."
 
-> *Point at the blue series on the child track — it stays flat.*
+> *Point at the blue series on the bottom track — it is flat.*
 
-"And look at this: the general-flash track on the rendition never moves.
-Luminance barely changed. WCAG gives saturated red its own test precisely
-because red flashing is more provocative, and it deliberately carries no
-luminance condition. A checker that only tests luminance passes this file. We
-catch it because we implement the red rule as it is actually written."
+"And the luminance track on that rendition never moves. WCAG gives saturated red
+its own test, deliberately with no luminance condition, because red flashing is
+more provocative. A checker that only tests luminance passes this file."
 
-## 1:55–2:20 — Who decides
+## 1:40–2:05 — The systemic answer
 
-> *Press **Ask the ADK agent**. Show the JSON.*
+> *Scroll to Systemic cause. Press **Profile every transform**.*
 
-"Now the Gemini agent. It runs on Vertex through Google's ADK, and it cannot
-reach a verdict of its own — it has to retrieve the rows through MCP. Look at
-the response: `decision_source` is `clickhouse_sql`, and `requires_human` is
-true. The arithmetic decides. The model explains. A human acts. If the MCP query
-fails, this endpoint returns 502 rather than substitute a guess."
+"Forty-four findings sounds like forty-four problems. It isn't. Four encoder
+profiles account for all of them, and three transforms introduce nothing.
+Frame-rate interpolation and ad-break insertion produce every luminance
+regression; subtitle burn-in and social crop produce every red one. That is two
+different root causes with two different owners — and thirteen of the
+forty-four are invisible to a luminance-only check."
 
-## 2:20–2:38 — Restraint
+## 2:05–2:35 — The agent's mission
 
-> *Scroll to the criteria provenance table.*
+> *Scroll to the brief. Press **Run the triage agent**. Talk while it works.*
 
-"Every threshold here is quoted from WCAG 2.3.1 — ten percent luminance,
-saturated red with no luminance floor, twenty-five percent of the visual field,
-more than three flashes a second. And the rule we have *not* implemented,
-spatial pattern, is named right here rather than left implied. This is an open
-pre-check. It is not certified, it is not a medical device, and the catalogue is
-synthetic data we authored."
+"Now the Gemini agent, on Vertex through Google's ADK. It has four tools, every
+one a live ClickHouse query through MCP, and it sequences them itself — survey
+the sweep, profile the transforms, size the blind spot, then go deep on the one
+case it ranks first."
 
-## 2:38–2:48 — Close
+> *Brief lands. Point at the numbered trace.*
 
-> *Cut to the repository, then back to the URL bar.*
+"Those are the calls it actually made, recorded from the run. Every figure in
+the brief came back from SQL. And look at the boundary: decision source is
+`clickhouse_sql`, human required is `true`. The arithmetic decides, the model
+explains, a person acts."
 
-"Everything is Apache-2.0 and public. The hosted app and the repo are in the
-description. Safe Frame — find the version that introduced the risk, before an
-audience does."
+## 2:35–2:50 — Restraint, and close
+
+> *Scroll to the criteria table, then cut to the repo.*
+
+"Every threshold here is quoted from WCAG 2.3.1 — and the rule we have *not*
+implemented, spatial pattern, is named right there rather than hidden. This is
+an open pre-check, not a certified device, on a synthetic catalogue we authored.
+Apache-2.0, public repo, hosted app in the description. Safe Frame — find the
+version that introduced the risk, before an audience does."
 
 ---
 
@@ -109,9 +111,10 @@ audience does."
 
 - [ ] Sweep pressed live, result not cut
 - [ ] A `red_flash` row selected, chart drawn on camera
-- [ ] The flat general-flash track on that rendition pointed out explicitly
-- [ ] ADK response showing `decision_source` and `requires_human`
-- [ ] Criteria provenance table including the "not implemented" row
+- [ ] The flat luminance track on that rendition pointed out explicitly
+- [ ] Transform profile run live, the four-profiles point made
+- [ ] Triage agent run live, numbered tool trace visible
+- [ ] `decision_source` and `requires_human` shown on screen
+- [ ] Criteria table including the "not implemented" row
 - [ ] Public URL and repo URL legible at normal playback size
-- [ ] Total runtime under 3:00
-- [ ] Uploaded Public, English audio or subtitles
+- [ ] Under 3:00, uploaded Public, English audio or subtitles

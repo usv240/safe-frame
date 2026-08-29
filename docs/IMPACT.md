@@ -58,6 +58,36 @@ invalidates), evaluates the published criteria across the whole catalogue in
 ClickHouse, and returns only the child-only violations, attributed to the
 transform that produced them.
 
+## What the demonstration actually produces
+
+On the public corpus the sweep returns 44 renditions that introduced a violation
+their approved master never had. The number that matters operationally is the
+next one: those 44 come from **four** encoder profiles out of eight, and three
+transforms introduce nothing at all.
+
+| Transform | Renditions | Regressed | Rule |
+|---|---|---|---|
+| `60fps_interp` | 400 | 16 (4.00%) | general flash |
+| `adbreak_insert` | 400 | 15 (3.75%) | general flash |
+| `subtitle_burnin` | 400 | 7 (1.75%) | red flash |
+| `social_crop_v` | 400 | 6 (1.50%) | red flash |
+| three others | 1,200 | 0 | — |
+
+Two consequences follow, and both are the kind of thing a QC lead can act on:
+
+1. **This is a handful of upstream fixes, not 44 patches.** The failures cluster
+   by profile, and the two rules cluster by *different* profiles — the
+   frame-rate and ad-break paths introduce luminance flashes, the crop and
+   subtitle-burn paths introduce saturated-red ones. Those are two separate
+   conversations with two separate owners.
+2. **13 of the 44 are invisible to a luminance-only check.** They come from
+   profiles whose only failure mode is red flash, which holds luminance under
+   the general-flash floor by construction.
+
+This is measured on a synthetic corpus we authored, so it demonstrates that the
+analysis produces an actionable answer at catalogue scale. It is not a claim
+about the real-world rate of these defects.
+
 ## What we have not shown
 
 - **No clinical or population validation.** Nothing here demonstrates that

@@ -51,6 +51,12 @@ Updated: 2026-08-28
       rings, skip link, keyboard-selectable rows, all motion disabled under
       `prefers-reduced-motion`
 
+- [x] Multi-step ADK agent (`QcTriageAgent`): four read-only MCP tools it
+      sequences itself, with the tool-call trace recorded and shown on the page
+- [x] Systemic root-cause analysis: per-transform regression rates turn 44
+      findings into four implicated encoder profiles and three clean ones
+- [x] Impact stated on the product surface with sources, not only in the repo
+
 ## Release tasks
 
 - [ ] Record and publish the under-three-minute demo — script ready in

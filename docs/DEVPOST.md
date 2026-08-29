@@ -45,12 +45,38 @@ Safe Frame is a master-to-rendition photosensitivity **regression** pre-check.
 - It draws the two tracks — approved master and shipped rendition — on one
   shared scale, so "the master stayed under the criterion for its whole runtime
   and the rendition did not" is read off measurements rather than asserted.
-- A Google ADK agent on Gemini explains the finding, but **cannot decide it**.
+- A **multi-step** Google ADK agent on Gemini turns the findings into a QC brief,
+  but **cannot decide anything**. It has four tools, every one a live ClickHouse
+  query through the official MCP server, and it sequences them itself: survey the
+  sweep, profile every transform to find the systemic cause, size the luminance
+  blind spot, then inspect the single pair it ranks first. The tool-call sequence
+  is returned with the brief so it can be checked rather than trusted.
 
 On the live corpus (400 titles, 3,200 renditions, 9,600,000 transition rows) the
 sweep returns 44 renditions that introduced a violation — 31 general flash, 13
 red flash — in about 1.7 seconds, and correctly excludes the control cohorts
 whose *master* already violated.
+
+## Findings become an action
+
+44 failures is not an operational answer. The next query is the one that matters:
+of every transform in the catalogue, how many renditions did it produce and how
+many did it break?
+
+| Transform | Renditions | Regressed | Rule |
+|---|---|---|---|
+| `60fps_interp` | 400 | 16 (4.00%) | general flash |
+| `adbreak_insert` | 400 | 15 (3.75%) | general flash |
+| `subtitle_burnin` | 400 | 7 (1.75%) | red flash |
+| `social_crop_v` | 400 | 6 (1.50%) | red flash |
+| three others | 1,200 | 0 | — |
+
+Four profiles out of eight account for everything, and the two rules cluster on
+*different* profiles — the frame-rate and ad-break paths introduce luminance
+flashes, the crop and subtitle paths introduce saturated-red ones. Two root
+causes, two owners, a handful of upstream fixes instead of 44 patches. And 13 of
+the 44 come from profiles whose only failure mode is red flash, so a
+luminance-only checker passes every one of them.
 
 ## Two rules, and why the second one matters
 
@@ -83,9 +109,10 @@ invent a violation that neither published test supports.
 ## How we built it
 
 **Google Cloud**
-- **Google ADK** (`google-adk`) — a real `LlmAgent` + `Runner` whose only tool
-  retrieves ClickHouse evidence through MCP, bound to the validated asset pair.
-- **Gemini 2.5 Flash on Vertex AI** (`google-genai`) — explanation only.
+- **Google ADK** (`google-adk`) — real `LlmAgent` + `Runner`; every tool either
+  is bound to a validated asset pair or runs a fixed ClickHouse query through MCP.
+- **Gemini 2.5 Flash on Vertex AI** (`google-genai`) — orchestration and
+  narration only; it never produces a verdict.
 - **Cloud Run** — the public app, on a dedicated `safe-frame-runtime` identity.
 - **Secret Manager** — two database passwords, nothing else.
 
@@ -102,6 +129,11 @@ invent a violation that neither published test supports.
 - The official **ClickHouse Agent Skills** were applied to the schema and the
   catalogue query; findings and three measured declines are written up in
   `docs/CLICKHOUSE-SKILLS-REVIEW.md`.
+
+**The agent**
+Two ADK agents on Gemini 2.5 Flash. `RegressionExplainer` is single-step, bound
+to one validated pair. `QcTriageAgent` is the multi-step one described above.
+Neither can reach a verdict; both end by handing the decision to a human.
 
 **The decision boundary**
 `/v1/scan` computes violations, persists them, then asks ClickHouse through

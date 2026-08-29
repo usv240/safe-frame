@@ -78,9 +78,29 @@ measures a swing below 0.01 and stays silent while the red rule fires.
   receives only ClickHouse credentials; it cannot access Google credentials.
 - The deployed ClickHouse 26.3 LTS cluster is self-hosted on a dedicated GCP VM,
   exposed only through HTTPS, and uses a separate SELECT-only MCP user.
-- `RegressionExplainer` is a real Google ADK agent using Gemini 2.5 Flash on
-  Vertex AI. It must retrieve evidence through MCP and always requires human QC.
+- Two real Google ADK agents on Gemini 2.5 Flash via Vertex AI, both of which
+  must retrieve evidence through MCP and always require human QC.
+  `RegressionExplainer` is single-step: one validated pair, one tool.
+  `QcTriageAgent` is the multi-step one — it has four tools over the same
+  read-only MCP transport and sequences them itself: survey the sweep, profile
+  every transform to find the systemic cause, size the luminance blind spot,
+  then go deep on the one pair it ranks first. The tool-call sequence is
+  recorded and returned with the brief, so the multi-step work is checkable
+  rather than asserted.
 - Cloud Run uses a dedicated `safe-frame-runtime` identity and Secret Manager.
+
+## From findings to an action
+
+A count of failures is not an operational answer. `/v1/catalogue/transform-risk`
+asks the next question: of every transform in the catalogue, how many renditions
+did it produce and how many did it break?
+
+On the live corpus that turns 44 findings into four implicated encoder profiles
+and three clean ones — `60fps_interp` and `adbreak_insert` produce every
+luminance regression between them, `subtitle_burnin` and `social_crop_v` produce
+every red one. That is a small number of upstream configurations to fix rather
+than 44 renditions to patch, and 13 of the 44 come from profiles whose only
+failure mode is red flash, so a luminance-only checker passes all of them.
 
 ## Decision boundary
 
@@ -97,6 +117,8 @@ Useful judge endpoints:
 - `/v1/catalogue/shape` — size of the corpus, read live
 - `/v1/catalogue/sweep` — both rules evaluated across the whole catalogue
 - `/v1/catalogue/regressions` — SQL/MCP verdict for one asset pair
+- `/v1/catalogue/transform-risk` — per-transform regression rates: the systemic view
+- `/v1/triage` — the multi-step agent brief, with its tool-call sequence
 - `/v1/samples` — self-authored exact pass/fail metric pair
 - `/v1/scan` — submit raw transition metrics for a parent/child pair
 - `/v1/integrations/clickhouse/evidence` — advertised MCP tools and live query
