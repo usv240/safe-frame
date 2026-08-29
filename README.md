@@ -88,6 +88,15 @@ measures a swing below 0.01 and stays silent while the red rule fires.
   recorded and returned with the brief, so the multi-step work is checkable
   rather than asserted.
 - Cloud Run uses a dedicated `safe-frame-runtime` identity and Secret Manager.
+- Every agent run and every fail-closed refusal emits a structured entry that
+  Cloud Logging lifts into `jsonPayload`, recording which tools ran in what
+  order and that the decision stayed with SQL. An agent that reaches conclusions
+  from a database is only trustworthy if you can reconstruct afterwards which
+  queries it actually ran. No submitted metrics and no model prose are logged.
+
+  ```
+  gcloud logging read 'jsonPayload.event="agent_run"' --limit 20 --format json
+  ```
 
 ## From findings to an action
 

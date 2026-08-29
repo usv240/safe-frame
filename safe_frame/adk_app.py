@@ -29,6 +29,7 @@ check the brief against them.
 from __future__ import annotations
 
 import os
+import time
 import uuid
 from typing import Any
 
@@ -38,6 +39,7 @@ from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
 from .clickhouse_mcp import catalogue_regression_evidence
+from .telemetry import log_event
 
 
 MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
@@ -52,7 +54,12 @@ _BOUNDARY = (
 
 
 async def _run(agent: LlmAgent, operator_id: str, prompt: str) -> dict[str, Any]:
-    """Run one agent turn and record which tools it actually called."""
+    """Run one agent turn, record which tools it called, and log the run.
+
+    The tool sequence is the audit trail: it is what lets a reader confirm the
+    figures in the output came back from a query rather than from the model.
+    """
+    started = time.perf_counter()
     service = InMemorySessionService()
     session_id = f"safe_frame_{uuid.uuid4().hex[:12]}"
     await service.create_session(app_name=APP_NAME, user_id=operator_id, session_id=session_id)
@@ -70,7 +77,21 @@ async def _run(agent: LlmAgent, operator_id: str, prompt: str) -> dict[str, Any]
                 trace.append({"step": len(trace) + 1, "tool": call.name})
             if getattr(part, "text", None):
                 transcript.append(part.text)
-    return {"text": transcript[-1] if transcript else "", "tool_calls": trace}
+    elapsed_ms = round((time.perf_counter() - started) * 1000, 1)
+    log_event(
+        "agent_run",
+        agent=agent.name,
+        model=MODEL,
+        operator_id=operator_id,
+        tools_called=[step["tool"] for step in trace],
+        steps=len(trace),
+        elapsed_ms=elapsed_ms,
+        decision_source="clickhouse_sql",
+        requires_human=True,
+        produced_text=bool(transcript),
+        message=f"{agent.name} completed {len(trace)} tool call(s) in {elapsed_ms}ms",
+    )
+    return {"text": transcript[-1] if transcript else "", "tool_calls": trace, "elapsed_ms": elapsed_ms}
 
 
 async def explain_regression(parent_asset: str, child_asset: str, operator_id: str) -> dict[str, object]:
@@ -101,6 +122,7 @@ async def explain_regression(parent_asset: str, child_asset: str, operator_id: s
         "evidence_transport": "official_mcp_clickhouse_stdio",
         "requires_human": True,
         "tool_calls": result["tool_calls"],
+        "elapsed_ms": result["elapsed_ms"],
         "text": result["text"],
     }
 
@@ -241,5 +263,6 @@ async def triage_catalogue(operator_id: str) -> dict[str, object]:
         ],
         "tool_calls": result["tool_calls"],
         "steps": len(result["tool_calls"]),
+        "elapsed_ms": result["elapsed_ms"],
         "text": result["text"],
     }

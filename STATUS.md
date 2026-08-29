@@ -75,6 +75,9 @@ Updated: 2026-08-28
       targets, per-request sample lineages, rate limits on the endpoints that
       spend model tokens or write, and no cap on any read
 
+- [x] Structured run telemetry: every agent run logs its tool sequence and
+      decision source, every fail-closed refusal logs why, in Cloud Logging shape
+
 ## Release tasks
 
 - [ ] Record and publish the under-three-minute demo — script ready in

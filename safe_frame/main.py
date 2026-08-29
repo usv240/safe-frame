@@ -19,6 +19,7 @@ from .clickhouse_mcp import (
 from .detector import detect_violations
 from .lineage import regressions
 from .models import TransitionMetric
+from .telemetry import log_event
 
 
 # The catalogue is generated and read-only to the public API. These are the
@@ -259,6 +260,9 @@ async def scan(request: ScanRequest) -> dict[str, object]:
         try:
             introduced_count, sql_proof = await regression_count(parent_asset, child_asset)
         except Exception as exc:
+            log_event("fail_closed", severity="ERROR", endpoint="/v1/scan",
+                      code="clickhouse_mcp_verdict_failed", reason=type(exc).__name__,
+                      message="refused to substitute a verdict after the MCP/SQL path failed")
             raise HTTPException(
                 502,
                 detail={
@@ -365,6 +369,11 @@ async def catalogue_sweep() -> dict[str, object]:
             },
         ) from exc
     result["elapsed_ms"] = round((time.perf_counter() - started) * 1000, 1)
+    log_event("catalogue_sweep", regressions=result["regression_count"],
+              by_rule=result["by_rule"], corpus_rows=result["corpus"]["transitions"],
+              clickhouse_ms=result["timing"].get("query_ms"),
+              elapsed_ms=result["elapsed_ms"], decision_source=result["decision_source"],
+              message=f"swept {result['corpus']['transitions']} rows, {result['regression_count']} regressions")
     return {"data": result}
 
 
@@ -434,6 +443,9 @@ async def triage(request: TriageRequest) -> dict[str, object]:
 
         result = await triage_catalogue(request.operator_id)
     except Exception as exc:
+        log_event("fail_closed", severity="ERROR", endpoint="/v1/triage",
+                  code="agent_triage_failed", reason=type(exc).__name__,
+                  message="the triage agent could not complete")
         raise HTTPException(
             502,
             detail={
@@ -474,6 +486,9 @@ async def explain(request: ExplanationRequest) -> dict[str, object]:
 
         result = await explain_regression(request.parent_asset, request.child_asset, request.operator_id)
     except Exception as exc:
+        log_event("fail_closed", severity="ERROR", endpoint="/v1/explain",
+                  code="agent_explanation_failed", reason=type(exc).__name__,
+                  message="the explanation agent could not complete")
         raise HTTPException(
             502,
             detail={"code": "agent_explanation_failed", "message": "ADK could not complete the MCP-grounded explanation."},

@@ -202,3 +202,37 @@ def test_expensive_endpoints_are_capped_and_reads_are_not(monkeypatch):
     monkeypatch.setattr(main, "_CALLS", {})
     assert all(client.get("/v1/samples").status_code == 200 for _ in range(40))
     assert client.get("/health").status_code == 200
+
+
+def test_run_logs_are_cloud_logging_shaped_and_carry_no_payload(capsys):
+    """An agent that reads a database is only trustworthy if its runs are reconstructable.
+
+    Cloud Run lifts `severity` and `message` out of JSON on stdout and puts the
+    rest in `jsonPayload`, so the shape is what makes these queryable. The tool
+    sequence is the audit trail; the submitted metrics and the model's prose are
+    deliberately not logged.
+    """
+    import json as _json
+
+    from safe_frame.telemetry import log_event
+
+    log_event("agent_run", agent="QcTriageAgent", tools_called=["survey_regressions"],
+              steps=1, elapsed_ms=12.3, decision_source="clickhouse_sql")
+    entry = _json.loads(capsys.readouterr().out.strip().splitlines()[-1])
+
+    assert entry["severity"] == "INFO"
+    assert entry["message"] == "agent_run"
+    assert entry["event"] == "agent_run"
+    assert entry["tools_called"] == ["survey_regressions"]
+    assert entry["decision_source"] == "clickhouse_sql"
+
+
+def test_telemetry_never_breaks_a_request():
+    """A logging failure must not take down the endpoint it is describing."""
+    from safe_frame.telemetry import log_event
+
+    class Unserialisable:
+        def __repr__(self):
+            raise RuntimeError("boom")
+
+    log_event("agent_run", payload=Unserialisable())  # must not raise
