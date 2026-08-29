@@ -581,6 +581,12 @@ const RULE = {
 };
 const ruleLabel = (r) => (RULE[r] || { label: r }).label;
 
+/* Declared before the theme restore below, which reads `selected` to decide
+   whether a chart needs repainting. Leaving these further down put them in the
+   temporal dead zone at init: the restore threw, and every listener after it
+   was never attached. */
+let selected = null, timelineData = null;
+
 /* ---------- reading mode + theme -------------------------------------- */
 function setMode(tech) {
   document.body.classList.toggle("tech", tech);
@@ -621,8 +627,6 @@ async function loadScale() {
 }
 
 /* ---------- sweep ------------------------------------------------------ */
-let selected = null, timelineData = null;
-
 function renderSweep(d) {
   const c = d.corpus || {};
   if (c.transitions) {
