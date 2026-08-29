@@ -111,6 +111,22 @@ python -m pytest -q
 python -m uvicorn safe_frame.main:app --reload
 ```
 
+```powershell
+python -m pip install playwright
+python -m playwright install chromium
+python scripts/visual_check.py --offline
+```
+
+`scripts/visual_check.py` drives a real browser against the page. `--offline`
+serves the web directory with no backend, so every fetch fails, and requires
+that initialisation completes with zero page errors, the toggles respond, and a
+failing sweep reports failing closed; it then stubs the endpoints and drives the
+whole evidence path. It exists because a script that throws at init detaches
+every listener while every assertion about page *content* still passes, and that
+has happened twice. `--url` drives the judge path against a deployment and fails
+on horizontal overflow or console errors at phone, laptop and desktop widths in
+both themes.
+
 `tests/test_sql_parity.py` runs the reference Python detector and the ClickHouse
 criteria SQL over identical randomized rows and requires exact agreement on both
 rules. It executes real SQL, so it is skipped unless `MCP_CLICKHOUSE_COMMAND` and
