@@ -63,6 +63,11 @@ def _case(seed: int) -> list[dict[str, object]]:
                 "pts_ms": pts,
                 # straddle the 0.10 luma floor and the 0.25 area floor
                 "luma_delta": round(rng.choice([0.0, 0.05, 0.09, 0.10, 0.11, 0.4, 0.8, 0.8]), 4),
+                # straddle the 0.80 darker-image ceiling, so cases arise where a
+                # large luminance swing is correctly NOT a general flash
+                # weighted toward dark, as content is: the ceiling should bite
+                # sometimes, not dominate, or the general rule stops being tested
+                "luma_min": round(rng.choice([0.0, 0.02, 0.05, 0.1, 0.1, 0.2, 0.79, 0.90]), 4),
                 # straddle the 0.20 red floor independently, so cases arise where
                 # one rule fires and the other does not
                 "red_delta": round(rng.choice([0.0, 0.05, 0.19, 0.20, 0.21, 0.5, 0.9, 0.9]), 4),
@@ -78,16 +83,29 @@ def _case(seed: int) -> list[dict[str, object]]:
 def test_fixtures_exercise_both_rules() -> None:
     """Agreement is only evidence if the fixtures actually trip the criteria.
 
-    Needs no cluster: it checks the reference detector alone, so a fixture
-    change that quietly stops producing violations fails here rather than
-    silently weakening every parity assertion above.
+    Needs no cluster -- it checks the reference detector alone -- so it samples a
+    wider seed range than the parametrised tests can afford in cluster
+    round-trips. A fixture change that quietly stops producing violations fails
+    here rather than silently weakening every parity assertion above.
+
+    Each rule now carries four independent conditions, so the joint probability
+    of a randomly drawn second satisfying all of them more than six times is
+    genuinely low. The sample is widened rather than the floor lowered.
     """
     fired: dict[str, int] = {}
-    for seed in range(40):
-        for violation in _reference(_case(seed)):
+    ceiling_excluded = 0
+    for seed in range(200):
+        rows = _case(seed)
+        for violation in _reference(rows):
             fired[str(violation["rule"])] = fired.get(str(violation["rule"]), 0) + 1
-    assert fired.get("general_flash", 0) >= 5, f"general_flash barely fires: {fired}"
-    assert fired.get("red_flash", 0) >= 5, f"red_flash barely fires: {fired}"
+        ceiling_excluded += sum(
+            1 for row in rows
+            if float(row["luma_min"]) >= 0.80 and float(row["luma_delta"]) >= 0.10
+        )
+    assert fired.get("general_flash", 0) >= 10, f"general_flash barely fires: {fired}"
+    assert fired.get("red_flash", 0) >= 10, f"red_flash barely fires: {fired}"
+    # and the darker-image ceiling must actually be exercised, not just present
+    assert ceiling_excluded >= 50, "the fixtures never test the darker-image ceiling"
 
 
 def _reference(rows: list[dict[str, object]]) -> dict[str, object] | None:
@@ -99,6 +117,7 @@ def _reference(rows: list[dict[str, object]]) -> dict[str, object] | None:
             transform="master",
             pts_ms=int(row["pts_ms"]),
             luma_delta=float(row["luma_delta"]),
+            luma_min=float(row.get("luma_min", 0.0)),
             red_delta=float(row.get("red_delta", 0.0)),
             changed_area_fraction=float(row["changed_area_fraction"]),
             direction=str(row["direction"]),
@@ -253,3 +272,31 @@ async def test_rules_are_windowed_independently() -> None:
     rows = red + luma
     assert _reference(rows) == []
     assert await parity_violations(rows) == []
+
+
+@requires_cluster
+@pytest.mark.asyncio
+async def test_darker_image_ceiling_agrees() -> None:
+    """A bright-on-bright alternation is not a general flash, in both implementations.
+
+    Every other condition is met: the delta clears 0.10, the area clears 0.25,
+    the directions oppose, and there are more than six of them in a second. Only
+    the darker image is above 0.80. The published test does not apply, and
+    neither implementation may report it.
+    """
+    for luma_min, should_violate in ((0.79, True), (0.80, False), (0.95, False)):
+        rows = [
+            {
+                "asset_id": f"ceiling_{int(luma_min * 100)}",
+                "pts_ms": index * 100,
+                "luma_delta": 0.5,
+                "luma_min": luma_min,
+                "red_delta": 0.0,
+                "changed_area_fraction": 0.9,
+                "direction": "up" if index % 2 == 0 else "down",
+            }
+            for index in range(9)
+        ]
+        expected = _reference(rows)
+        assert (len(expected) > 0) is should_violate, f"python disagreed at {luma_min}"
+        assert _normalise(await parity_violations(rows)) == expected

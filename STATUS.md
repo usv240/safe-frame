@@ -62,11 +62,20 @@ Updated: 2026-08-28
 - [x] Audience named explicitly (distribution QC and encoding teams)
 - [x] Findings can leave the page as a report carrying its own limitations
 
+- [x] Standards audit against the primary W3C texts, with the three defects it
+      found written up and the surviving deviations named (`docs/CRITERIA.md`)
+- [x] Darker-image condition implemented; bright-on-bright control cohort added
+      so it cannot silently regress (13 false positives removed)
+- [x] Relative luminance linearised per the WCAG definition
+- [x] Saturated red implemented as published, not as a proxy
+
 ## Release tasks
 
 - [ ] Record and publish the under-three-minute demo — script ready in
       `docs/DEMO-SCRIPT.md`
 - [ ] Complete Devpost submission — paste-ready copy in `docs/DEVPOST.md`
 - [ ] Obtain qualified external review before making any stronger efficacy claim
+      (not obtained; the standards audit in `docs/CRITERIA.md` is a checkable
+      substitute, not an equivalent)
 
 Machine-readable proof is captured in `docs/LIVE-ACCEPTANCE.json`. It contains no credentials.

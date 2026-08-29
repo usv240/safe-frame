@@ -13,6 +13,9 @@ from .models import TransitionMetric, Violation
 # luminance-only detector misses. Both are evaluated; the anti-join is already
 # keyed on `rule`, so a rendition that introduces either is isolated.
 GENERAL_LUMA_FLOOR = 0.10
+# "where the relative luminance of the darker image is below 0.80" -- a swing
+# between two bright images is not a general flash, however large it is.
+DARKER_IMAGE_CEILING = 0.80
 RED_DELTA_FLOOR = 0.20
 AREA_FLOOR = 0.25
 MAX_TRANSITIONS_PER_SECOND = 6
@@ -61,17 +64,23 @@ def detect_general_flashes(
     max_transitions_per_second: int = MAX_TRANSITIONS_PER_SECOND,
     luma_delta_floor: float = GENERAL_LUMA_FLOOR,
     area_floor: float = AREA_FLOOR,
+    darker_image_ceiling: float = DARKER_IMAGE_CEILING,
 ) -> list[Violation]:
     """Detect more than three opposing luminance flash pairs in a rolling second.
 
-    This is an open pre-check, not a certified implementation of ITU-R BT.1702.
-    Thresholds are explicit and independently testable.
+    Three conditions, all from the published definition: the luminance change is
+    at least 10% of maximum, the darker of the two states is below 0.80 relative
+    luminance, and the affected area clears the area floor.
+
+    This is an open pre-check, not a certified implementation. Thresholds are
+    explicit and independently testable.
     """
     return _window_violations(
         metrics,
         rule="general_flash",
         qualifies=lambda item: (
             item.luma_delta >= luma_delta_floor
+            and item.luma_min < darker_image_ceiling
             and item.changed_area_fraction >= area_floor
             and item.direction != "flat"
         ),

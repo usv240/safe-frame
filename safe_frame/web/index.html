@@ -643,19 +643,29 @@ body.tech .technical{display:block}
             <thead><tr><th scope="col">What is tested</th><th scope="col">Threshold in Safe Frame</th><th scope="col">Published definition</th></tr></thead>
             <tbody>
               <tr>
-                <td>General flash</td>
+                <td>General flash &mdash; amplitude</td>
                 <td class="mono">luma_delta &ge; 0.10</td>
-                <td>&ldquo;a pair of opposing changes in relative luminance of 10% or more of the maximum relative luminance&rdquo; &mdash; WCAG 2.3.1</td>
+                <td>&ldquo;a pair of opposing changes in relative luminance of 10% or more of the maximum relative luminance&hellip;&rdquo; &mdash; WCAG 2.3.1</td>
+              </tr>
+              <tr>
+                <td>General flash &mdash; darker image</td>
+                <td class="mono">luma_min &lt; 0.80</td>
+                <td>&ldquo;&hellip;<strong>where the relative luminance of the darker image is below 0.80</strong>&rdquo;. A swing between two bright states is not a general flash, however large. We were missing this until we audited against the published text &mdash; it was producing false positives. &mdash; WCAG 2.3.1</td>
               </tr>
               <tr>
                 <td>Red flash</td>
-                <td class="mono">red_delta &ge; 0.20<br><span class="muted">no luminance floor</span></td>
-                <td>&ldquo;any pair of opposing transitions involving a saturated red&rdquo;. People are more sensitive to red flashing than other colours, so it gets its own test &mdash; and deliberately no luminance condition &mdash; WCAG 2.3.1</td>
+                <td class="mono">R/(R+G+B) &ge; 0.8<br>and |&Delta;(R&minus;G&minus;B)&times;320| &gt; 20<br><span class="muted">no luminance condition</span></td>
+                <td>&ldquo;any pair of opposing transitions involving a saturated red&rdquo;, where &ldquo;for either or both states&hellip; R/(R+G+B) &gt;= 0.8, and the change in the value of (R-G-B)x320 is &gt; 20&rdquo;. People are more sensitive to red flashing, so it gets its own test &mdash; deliberately with no luminance condition. &mdash; WCAG 2.3.1</td>
+              </tr>
+              <tr>
+                <td>Relative luminance</td>
+                <td class="mono">0.2126R + 0.7152G + 0.0722B<br><span class="muted">over linearised sRGB</span></td>
+                <td>&ldquo;if RsRGB &lt;= 0.04045 then R = RsRGB/12.92 else R = ((RsRGB+0.055)/1.055) ^ 2.4&rdquo;. We were weighting the gamma-encoded values without linearising them. &mdash; W3C</td>
               </tr>
               <tr>
                 <td>Affected area</td>
-                <td class="mono">changed_area_fraction &ge; 0.25</td>
-                <td>flashes occupying more than &ldquo;25% of any 10 degree visual field on the screen&rdquo; at typical viewing distance &mdash; WCAG 2.3.1</td>
+                <td class="mono">changed_area_fraction &ge; 0.25<br><span class="muted">approximated</span></td>
+                <td>flashes occupying more than &ldquo;25% of any 10 degree visual field on the screen&rdquo; at typical viewing distance. That is an <em>angular</em> measure and depends on screen size and viewing distance, which a file does not carry; we use the fraction of the frame, which can under-report on a large screen viewed closely. &mdash; WCAG 2.3.1</td>
               </tr>
               <tr>
                 <td>Rate</td>
@@ -671,7 +681,17 @@ body.tech .technical{display:block}
           </table>
         </div>
       </div>
-      <p class="muted" style="font-size:var(--t-sm);margin-top:var(--s-3);max-width:70ch">Safe Frame is an open pre-check implementing published criteria. It is not certified, not broadcaster-approved, and not a medical device. It does not replace certified delivery testing.</p>
+      <div class="grid g-2" style="margin-top:var(--s-4)">
+        <div class="card">
+          <h3>What auditing against the source found</h3>
+          <p class="muted" style="margin-top:var(--s-2);font-size:var(--t-sm)">We could not obtain review by a qualified photosensitive-epilepsy professional, so we audited the implementation against the published texts instead and wrote down what was wrong. Three defects, all of which changed results: relative luminance was never linearised; the darker-image condition was missing entirely; and saturated red was a plausible-looking proxy rather than the published test.</p>
+        </div>
+        <div class="card">
+          <h3>What that was worth</h3>
+          <p class="muted" style="margin-top:var(--s-2);font-size:var(--t-sm)">On this catalogue the missing darker-image condition alone produced <strong>13 false positives</strong> &mdash; renditions reported as general flashes where both states were above the 0.80 ceiling the published test sets. The sweep returns 44 with the condition and 57 without it. The corpus now carries a bright-on-bright control cohort so the condition cannot quietly go missing again.</p>
+        </div>
+      </div>
+      <p class="muted" style="font-size:var(--t-sm);margin-top:var(--s-4);max-width:70ch">This audit is not equivalent to expert review, and it does not establish efficacy. It is written so it can be checked: every threshold above quotes the source. Safe Frame is an open pre-check implementing published criteria. It is not certified, not broadcaster-approved, and not a medical device. It does not replace certified delivery testing.</p>
     </div>
   </section>
 

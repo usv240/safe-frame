@@ -34,7 +34,7 @@ from collections.abc import Iterable, Iterator
 
 import numpy as np
 
-from .metrics import relative_luminance, saturated_red
+from .metrics import red_difference, red_flash_mask, relative_luminance
 from .models import TransitionMetric
 
 
@@ -75,20 +75,41 @@ def frames_to_transitions(
     if frame_rate <= 0:
         raise ValueError("frame_rate must be positive")
 
-    previous: np.ndarray | None = None
-    previous_red: np.ndarray | None = None
+    previous_frame: np.ndarray | None = None
+    previous_luma: np.ndarray | None = None
     for index, frame in enumerate(frames):
         luma = relative_luminance(frame)
-        red = saturated_red(frame)
-        if previous is not None and previous_red is not None:
-            luma_delta, signed, area = _step_and_area(previous, luma, luma_threshold)
-            red_delta, red_signed, red_area = _step_and_area(previous_red, red, red_threshold)
-            # A transition is described by whichever channel moved more of the
-            # screen; the rules then apply their own floors to each delta.
+        if previous_frame is not None and previous_luma is not None:
+            luma_delta, signed, area = _step_and_area(previous_luma, luma, luma_threshold)
+
+            # The darker of the two states, measured only where the change
+            # actually happened. The published general-flash test does not apply
+            # when that value is at or above 0.80.
+            changed = np.abs(luma - previous_luma) >= luma_threshold
+            darker = np.minimum(previous_luma, luma)
+            luma_min = float(darker[changed].mean()) if changed.any() else float(darker.mean())
+
+            # The published red test, not a proxy: a pixel counts when at least
+            # one state is a saturated red and (R-G-B)x320 swings by more than 20.
+            red_pixels = red_flash_mask(previous_frame, frame)
+            red_area = float(np.mean(red_pixels))
+            red_delta = red_area  # the rule is satisfied per pixel; extent is what varies
+
+            # "Opposing" for the red rule is opposing in *red*, not in luminance.
+            # A red/blue alternation at matched luminance has no luminance
+            # direction at all, and taking direction from luminance reported it
+            # as flat -- which silently disqualified the very case the red rule
+            # exists to catch.
+            red_signed = 0.0
+            if red_pixels.any():
+                red_swing = red_difference(frame) - red_difference(previous_frame)
+                red_signed = float(red_swing[red_pixels].mean())
+
             direction = "flat"
             dominant = signed if area >= red_area else red_signed
             if max(area, red_area) and dominant:
                 direction = "up" if dominant > 0 else "down"
+
             yield TransitionMetric(
                 asset_id=asset_id,
                 lineage_id=lineage_id,
@@ -96,8 +117,9 @@ def frames_to_transitions(
                 transform=transform,
                 pts_ms=first_pts_ms + int(round(index * 1000 / frame_rate)),
                 luma_delta=min(luma_delta, 1.0),
+                luma_min=min(max(luma_min, 0.0), 1.0),
                 red_delta=min(red_delta, 1.0),
                 changed_area_fraction=max(area, red_area),
                 direction=direction,
             )
-        previous, previous_red = luma, red
+        previous_frame, previous_luma = frame, luma

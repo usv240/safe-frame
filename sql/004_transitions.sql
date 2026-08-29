@@ -19,6 +19,11 @@ CREATE TABLE IF NOT EXISTS transitions
     transform LowCardinality(String),
     pts_ms UInt32,
     luma_delta Float32,
+    -- Relative luminance of the darker of the two states. The published
+    -- general-flash test applies only "where the relative luminance of the
+    -- darker image is below 0.80", so this column is part of the criterion,
+    -- not metadata.
+    luma_min Float32 DEFAULT 0,
     red_delta Float32,
     changed_area_fraction Float32,
     direction Enum8('flat' = 0, 'up' = 1, 'down' = 2)

@@ -42,6 +42,15 @@
     inherited red     ~1% of titles get the red burst in the MASTER too, as the
                       matching control for the red rule.
 
+    bright burst      ~3% of titles get a full-screen, high-amplitude luminance
+                      alternation in their `hdr10_passthrough` rendition where
+                      BOTH states are bright: luma_min sits at 0.86, above the
+                      0.80 ceiling the published general-flash test sets on the
+                      darker image. The delta, the area and the rate all clear
+                      their floors, so a detector that ignores the darker-image
+                      condition reports these as violations. They are NOT
+                      violations, and the sweep must return none of them.
+
   Re-running is safe: the INSERT is deterministic in the row index, so
   TRUNCATE + re-run reproduces byte-identical content.
 */
@@ -54,6 +63,7 @@ SELECT
     transform,
     pts_ms,
     luma_delta,
+    luma_min,
     red_delta,
     changed_area_fraction,
     direction
@@ -94,6 +104,15 @@ FROM
         intDiv(pts_ms, 1000) = red_second AS in_red_window,
         asset_has_red AND in_red_window AS red_bursting,
 
+        -- a bright-on-bright alternation: everything clears except the darker
+        -- image, which stays above the published 0.80 ceiling
+        toUInt32(10 + (sipHash64(title_index, 'bright_when') % 15)) AS bright_second,
+        transform = 'hdr10_passthrough' AS bright_capable,
+        (sipHash64(title_index, 'bright') % 100) < 3 AS introduced_bright,
+        bright_capable AND introduced_bright AS asset_has_bright,
+        intDiv(pts_ms, 1000) = bright_second AS in_bright_window,
+        asset_has_bright AND in_bright_window AS bright_bursting,
+
         -- deterministic per-sample noise
         sipHash64(title_index, transform_index, seq) AS h,
         (h % 10000) / 10000.0 AS r,
@@ -110,9 +129,17 @@ FROM
         toFloat32(multiIf(
             -- a red burst is held BELOW the 0.10 general-flash floor on purpose
             red_bursting,        0.02 + (r * 0.06),
+            bright_bursting,     0.40 + (r * 0.20),
             bursting,            0.34 + (r * 0.22),
             qualifying_baseline, 0.12 + (r * 0.30),
                                  r * 0.09)) AS luma_delta,
+        -- relative luminance of the darker of the two states. Only the bright
+        -- cohort sits above the 0.80 ceiling; everything else is well under it.
+        toFloat32(multiIf(
+            bright_bursting,     0.86,
+            bursting,            0.03 + (r * 0.12),
+            red_bursting,        0.10 + (r * 0.15),
+                                 0.08 + (r * 0.30))) AS luma_min,
         toFloat32(multiIf(
             red_bursting,        0.24 + (r * 0.16),
             bursting,            0.05 + (r * 0.10),
@@ -120,11 +147,12 @@ FROM
                                  r * 0.03)) AS red_delta,
         toFloat32(multiIf(
             red_bursting,        0.48 + (r * 0.32),
+            bright_bursting,     0.60 + (r * 0.35),
             bursting,            0.52 + (r * 0.30),
             qualifying_baseline, 0.28 + (r * 0.38),
                                  r * 0.22)) AS changed_area_fraction,
         multiIf(
-            red_bursting OR bursting OR qualifying_baseline,
+            red_bursting OR bursting OR bright_bursting OR qualifying_baseline,
                                              if((seq % 2) = 0, 'up', 'down'),
             (h % 3) = 0,                     'flat',
             if((seq % 2) = 0, 'up', 'down')) AS direction

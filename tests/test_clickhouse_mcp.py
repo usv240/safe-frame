@@ -108,3 +108,22 @@ def test_catalogue_sweep_sql_uses_the_same_published_criteria():
     assert f"win_transitions > {defaults['max_transitions_per_second'].default}" in sql
     assert "RANGE BETWEEN CURRENT ROW AND 999 FOLLOWING" in sql
     assert "frame_idx" not in sql, "lineage alignment must use presentation time"
+
+
+def test_the_darker_image_ceiling_is_applied_wherever_general_flash_is():
+    """The condition an audit found missing must not go missing again.
+
+    It belongs to the general-flash rule only: the published red-flash test
+    carries no luminance condition at all.
+    """
+    from pathlib import Path
+
+    pair = clickhouse_mcp.regression_sql("master", "child")
+    sweep = (Path(__file__).resolve().parent.parent / "sql" / "006_catalogue_regression.sql").read_text(
+        encoding="utf-8")
+
+    for sql, name in ((pair, "the per-pair query"), (sweep, "the catalogue sweep")):
+        general = sql[sql.index("general_flash_qualifying"):sql.index("red_flash_qualifying")]
+        red = sql[sql.index("red_flash_qualifying"):]
+        assert "luma_min < 0.80" in general, f"{name} lost the darker-image ceiling"
+        assert "luma_min" not in red, f"{name} applied a luminance condition to the red rule"

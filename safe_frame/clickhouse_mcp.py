@@ -107,6 +107,7 @@ general_flash_qualifying AS
     FROM safe_frame.transitions
     WHERE asset_id IN ({assets})
       AND luma_delta >= 0.10
+      AND luma_min < 0.80
       AND changed_area_fraction >= 0.25
       AND direction != 'flat'
 ),
@@ -306,6 +307,7 @@ general_flash_qualifying AS
     SELECT asset_id, pts_ms, changed_area_fraction, multiIf(direction = 'up', 1, direction = 'down', 2, 0) AS dir
     FROM src
     WHERE luma_delta >= 0.10
+      AND luma_min < 0.80
       AND changed_area_fraction >= 0.25
       AND direction != 'flat'
 ),
@@ -401,10 +403,11 @@ def parity_sql(rows: list[dict[str, Any]]) -> str:
         if row["direction"] not in ("up", "down", "flat"):
             raise ValueError(f"unknown direction {row['direction']!r}")
         literals.append(
-            "({asset}, {pts}, {luma}, {red}, {area}, {direction})".format(
+            "({asset}, {pts}, {luma}, {luma_min}, {red}, {area}, {direction})".format(
                 asset=_sql_string(str(row["asset_id"])),
                 pts=int(row["pts_ms"]),
                 luma=float(row["luma_delta"]),
+                luma_min=float(row.get("luma_min", 0.0)),
                 red=float(row.get("red_delta", 0.0)),
                 area=float(row["changed_area_fraction"]),
                 direction=_sql_string(str(row["direction"])),
@@ -416,7 +419,7 @@ WITH
 src AS
 (
     SELECT * FROM VALUES(
-        'asset_id String, pts_ms UInt32, luma_delta Float64, red_delta Float64, changed_area_fraction Float64, direction String',
+        'asset_id String, pts_ms UInt32, luma_delta Float64, luma_min Float64, red_delta Float64, changed_area_fraction Float64, direction String',
         {values}
     )
 ),

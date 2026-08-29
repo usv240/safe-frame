@@ -6,6 +6,7 @@
   `safe_frame.detector`:
 
       general_flash   luma_delta >= 0.10
+                  AND luma_min   <  0.80   -- the darker image, per the standard
                   AND changed_area_fraction >= 0.25
                   AND direction != 'flat'
 
@@ -67,6 +68,9 @@ general_flash_qualifying AS
            changed_area_fraction, toUInt8(direction) AS dir
     FROM transitions
     WHERE luma_delta >= 0.10
+      -- "where the relative luminance of the darker image is below 0.80":
+      -- a swing between two bright images is not a general flash
+      AND luma_min < 0.80
       AND changed_area_fraction >= 0.25
       AND direction != 'flat'
 ),

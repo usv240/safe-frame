@@ -5,10 +5,15 @@
 - Current public evaluation is constructed engineering data, not a clinical or
   population-level study.
 - The detector implements two of the published rules: general flash and red
-  flash. Both are held to the ClickHouse SQL by parity tests. The red rule uses
-  a single `red_delta` measure as a stand-in for a full saturated-red transition
-  test; it is a defensible pre-check threshold, not a validated reproduction of
-  any certified analyser.
+  flash, both held to the ClickHouse SQL by parity tests. Every threshold is
+  audited against the published text in `CRITERIA.md`, which also records the
+  three defects that audit found and the simplifications that remain.
+- The area condition is approximated as a fraction of the frame. The published
+  condition is angular -- 25% of any 10 degree visual field at typical viewing
+  distance -- which depends on screen size and viewing distance that a file does
+  not carry. On a large screen viewed closely this can under-report.
+- The published area test composites flashes "occurring concurrently"; Safe
+  Frame takes the peak changed area across the window instead.
 - Regular spatial pattern is **not** implemented. A striped or checkerboard
   pattern that meets the published spatial criteria will not be flagged. The
   `regular_pattern` value exists in the schema so the anti-join is already keyed

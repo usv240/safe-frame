@@ -68,10 +68,24 @@ def test_red_alternation_at_matched_luminance_is_caught_only_by_the_red_rule():
     relative luminance barely moves while saturated red swings the full range.
     A luminance-only checker sees nothing here.
     """
+    from safe_frame.metrics import relative_luminance
+
     red = solid((1.0, 0.0, 0.0))
-    # 0.2126 is red's BT.709 weight; match it with green+blue so luma is equal
-    match = 0.2126 / (0.7152 + 0.0722)
-    teal = solid((0.0, match, match))
+    # Solve for the green/blue level whose relative luminance matches saturated
+    # red. Solved numerically against the shipped implementation rather than
+    # hard-coded, because the value depends on sRGB linearisation: computing it
+    # from the raw coefficients alone gave the wrong colour and made this test
+    # pass for the wrong reason.
+    target = float(relative_luminance(red)[0, 0])
+    lo, hi = 0.0, 1.0
+    for _ in range(60):
+        mid = (lo + hi) / 2
+        if float(relative_luminance(solid((0.0, mid, mid)))[0, 0]) < target:
+            lo = mid
+        else:
+            hi = mid
+    teal = solid((0.0, (lo + hi) / 2, (lo + hi) / 2))
+    assert abs(float(relative_luminance(teal)[0, 0]) - target) < 1e-6
     metrics = measure(alternating(red, teal, 9))
 
     luma_swing = max(item.luma_delta for item in metrics)
@@ -123,8 +137,38 @@ def test_measured_metrics_survive_the_wire_contract():
         payload = item.model_dump()
         assert set(payload) == {
             "asset_id", "lineage_id", "parent_id", "transform", "pts_ms",
-            "luma_delta", "red_delta", "changed_area_fraction", "direction",
+            "luma_delta", "luma_min", "red_delta", "changed_area_fraction", "direction",
         }
+        assert 0.0 <= payload["luma_min"] <= 1.0
         assert 0.0 <= payload["luma_delta"] <= 1.0
         assert 0.0 <= payload["red_delta"] <= 1.0
         assert 0.0 <= payload["changed_area_fraction"] <= 1.0
+
+
+def test_a_flash_between_two_bright_images_is_not_a_general_flash():
+    """The condition an audit against the published text found missing.
+
+    The general-flash test applies "where the relative luminance of the darker
+    image is below 0.80". Two near-white states can differ by more than the 10%
+    delta floor across the whole screen and still not be a general flash. Before
+    the darker-image ceiling was implemented this was reported as a violation.
+    """
+    from safe_frame.metrics import relative_luminance
+
+    bright = solid((0.93, 0.93, 0.93))
+    brighter = solid((1.0, 1.0, 1.0))
+    assert float(relative_luminance(bright)[0, 0]) >= 0.80, "the darker state must be above the ceiling"
+
+    metrics = measure(alternating(bright, brighter, 9))
+    assert all(item.luma_min >= 0.80 for item in metrics)
+    assert all(item.changed_area_fraction == 1.0 for item in metrics)
+    assert detect_general_flashes(metrics) == [], "both states are above the darker-image ceiling"
+
+
+def test_the_same_swing_from_a_dark_state_does_violate():
+    """The control for the test above: only the darker state's level differs."""
+    dark = solid((0.0, 0.0, 0.0))
+    brighter = solid((1.0, 1.0, 1.0))
+    metrics = measure(alternating(dark, brighter, 9))
+    assert all(item.luma_min < 0.80 for item in metrics)
+    assert len(detect_general_flashes(metrics)) == 1

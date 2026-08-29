@@ -101,8 +101,14 @@ about the real-world rate of these defects.
   criteria, the lineage isolation and the controls at realistic scale; it is
   not evidence about real content.
 - **No external expert review.** Obtaining one from a qualified broadcast
-  accessibility or photosensitive-epilepsy professional is the single most
-  valuable thing that could be added, and it has not been done.
+  accessibility or photosensitive-epilepsy professional remains the single most
+  valuable thing that could be added, and it has not been done. In its place we
+  audited the implementation against the primary standards texts and published
+  what was wrong -- see [`CRITERIA.md`](CRITERIA.md). That audit found three
+  real defects, one of which was producing thirteen false positives on this
+  catalogue. It is a substitute for expert review only in the sense that it is
+  checkable; it is not equivalent to one, and it cannot speak to clinical
+  validity.
 - **The prior-art claim is bounded.** Our search covered public product
   documentation and found no documented master-to-rendition regression check.
   That is a documented public gap, not proof that no private integration
