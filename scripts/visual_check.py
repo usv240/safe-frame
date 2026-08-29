@@ -224,6 +224,13 @@ def offline() -> list[str]:
         if not page.eval_on_selector("#brief-text", "e => e.innerHTML.includes('<strong>')"):
             problems.append("the brief headings were not lifted")
 
+        if page.eval_on_selector("#export", "e => e.disabled"):
+            problems.append("export stayed disabled after a successful sweep")
+        with page.expect_download(timeout=10000) as dl:
+            page.click("#export")
+        if not dl.value.suggested_filename.startswith("safe-frame-findings-"):
+            problems.append(f"export filename was {dl.value.suggested_filename}")
+
         page.click("#mcp-run")
         page.wait_for_timeout(700)
         chips = page.eval_on_selector_all("#mcp-tools .toolchip", "els => els.length")

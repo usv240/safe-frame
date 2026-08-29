@@ -506,6 +506,7 @@ body.tech .technical{display:block}
       <div class="controls">
         <button class="btn btn-primary" id="run">Sweep the catalogue</button>
         <a class="btn" href="/v1/integrations/clickhouse/evidence" target="_blank" rel="noreferrer">Inspect MCP evidence</a>
+        <button class="btn" id="export" disabled>Export findings</button>
         <a class="btn" href="/docs" target="_blank" rel="noreferrer">API</a>
       </div>
 
@@ -777,7 +778,7 @@ const BRIEF_HEADINGS = new RegExp(
    whether a chart needs repainting. Leaving these further down put them in the
    temporal dead zone at init: the restore threw, and every listener after it
    was never attached. */
-let selected = null, timelineData = null, swept = false;
+let selected = null, timelineData = null, swept = false, lastSweep = null;
 
 /* ---------- reading mode + theme -------------------------------------- */
 function setMode(tech) {
@@ -834,6 +835,8 @@ function renderSweep(d) {
     $("#s-ti").textContent = nf(c.titles); $("#s-tf").textContent = nf(c.transforms);
   }
   swept = true;
+  lastSweep = d;
+  $("#export").disabled = false;
   $("#h-count").textContent = nf(d.regression_count);
   $("#h-text").textContent =
     `rendition${d.regression_count === 1 ? "" : "s"} in this catalogue introduced a violation their approved master never had.`;
@@ -1172,6 +1175,40 @@ $("#brief-run").onclick = async () => {
   } finally {
     b.disabled = false; b.removeAttribute("aria-busy"); b.textContent = "Run the triage agent";
   }
+};
+
+/* ---------- hand the findings on ---------------------------------------
+   A QC lead who cannot take the result anywhere has not been helped. This
+   serialises the sweep the page already holds -- the same rows the API
+   returned, plus what produced them -- so it can go to the encoding team as
+   it is. Nothing is recomputed here, so the file cannot disagree with the
+   screen. */
+$("#export").onclick = () => {
+  if (!lastSweep) return;
+  const payload = {
+    generated_at: new Date().toISOString(),
+    source: window.location.origin + "/v1/catalogue/sweep",
+    decision_source: lastSweep.decision_source,
+    criteria_source: lastSweep.criteria_source,
+    certified: false,
+    requires_human_qc: true,
+    corpus: lastSweep.corpus,
+    regression_count: lastSweep.regression_count,
+    affected_titles: lastSweep.affected_titles,
+    by_rule: lastSweep.by_rule,
+    by_transform: lastSweep.by_transform,
+    regressions: lastSweep.regressions,
+    limitations: "Open pre-check against published criteria. Not certified, not a medical device. Spatial-pattern rule not implemented.",
+  };
+  const url = URL.createObjectURL(
+    new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `safe-frame-findings-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
 /* ---------- live partner evidence -------------------------------------- */
