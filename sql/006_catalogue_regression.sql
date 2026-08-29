@@ -50,16 +50,21 @@
   Two measured shape decisions, both recorded in docs/CLICKHOUSE-SKILLS-REVIEW.md:
 
   * Step 4 uses a partition window rather than a self anti-join, so the
-    violations set is built once instead of twice (9.6M vs 19.2M rows read,
-    791ms vs 2,274ms, identical results).
+    violations set is built once instead of twice. Measured on the single-rule
+    sweep at 9.6M vs 19.2M rows read and 791ms vs 2,274ms, identical results.
+    Not re-measured since; the shape of the win is unchanged.
 
-  * Step 1-3 deliberately run once per rule and UNION, which does scan the table
-    twice, against the `query-join-consider-alternatives` guidance. The
-    single-scan alternative -- filter once, then fan out to matching rules with
-    ARRAY JOIN + arrayFilter -- was built and measured, and is *slower*
-    (median 1,096ms vs 703ms over five runs) because unnesting an array per
-    surviving row costs more than a second scan whose predicate is very
-    selective. Measured, so declined.
+  * Step 1-3 deliberately run once per rule and UNION, against the
+    `query-join-consider-alternatives` guidance. The single-scan alternative --
+    filter once, then fan out to matching rules with ARRAY JOIN + arrayFilter --
+    was built and measured against this exact query and is *slower*: median
+    1,064ms vs 834ms over five runs, identical 44-row results.
+
+    The rows-read column is the interesting part. Two passes over 9.6M rows
+    should read 19.2M; it reads 10.26M, because per-granule min/max lets
+    ClickHouse skip about 93% of the second scan -- no granule in most of the
+    table can satisfy `red_delta >= 0.20`. The extra scan is nearly free, and
+    unnesting a two-element array per surviving row is not.
 */
 WITH
 general_flash_qualifying AS

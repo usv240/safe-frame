@@ -177,6 +177,31 @@ five times against the two-pass `UNION ALL` form, and it was **56% slower**
 more than a second scan whose predicate is very selective. We shipped the form
 the measurement favoured and wrote up the decline.
 
+**We audited our own detector against the standard and found it wrong.**
+
+We could not get review from a qualified photosensitive-epilepsy professional, so
+we read the primary W3C texts and checked the implementation line by line. It
+found three defects, all of which changed results:
+
+- **Relative luminance was never linearised.** We applied the BT.709 coefficients
+  directly to gamma-encoded sRGB. Every threshold is expressed against WCAG's
+  definition, so the error propagated — including into the test fixture built
+  from the same wrong assumption, which was therefore passing for the wrong reason.
+- **The darker-image condition was missing entirely.** The general-flash test
+  applies only "where the relative luminance of the darker image is below 0.80".
+  On our catalogue the sweep returns **44** with that condition and **57**
+  without it: thirteen false positives, every one a rendition the published test
+  does not apply to.
+- **Saturated red was a proxy**, not the published `R/(R+G+B) >= 0.8` test.
+  Fixing it exposed a fourth bug: red-transition direction was taken from the
+  luminance signal, so a red alternation at matched luminance recorded as `flat`
+  and silently disqualified the exact case the red rule exists to catch.
+
+The corpus now carries a bright-on-bright control cohort so the darker-image
+condition cannot silently regress. `docs/CRITERIA.md` quotes every definition and
+names the deviations that remain, so the audit can be checked rather than trusted.
+It is not equivalent to expert review and does not establish efficacy.
+
 ## Accomplishments we're proud of
 
 - A verdict path where **arithmetic owns the decision** and the model is
@@ -186,6 +211,8 @@ the measurement favoured and wrote up the decline.
   product uses.
 - Every threshold traceable to a quoted published definition, and the one rule we
   did not implement named on the product surface rather than hidden.
+- Publishing our own defects rather than a clean bill of health, with the
+  measured cost of each one.
 - A product about visual safety that holds itself to the same standard: nothing
   on the page flashes, no animation loops, all motion disabled under
   `prefers-reduced-motion`, and the visitor's OS colour preference is honoured

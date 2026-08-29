@@ -1,6 +1,6 @@
 {
-  "verified_at": "2026-08-28T12:40:00Z",
-  "revision": "safe-frame-regression-00013-7sf",
+  "verified_at": "2026-08-29T02:10:00Z",
+  "revision": "safe-frame-regression-00030-8tl",
   "public_url": "https://safe-frame-regression-109051079423.us-central1.run.app",
   "note": "Every value below was read from the deployed revision or the live cluster. It contains no credentials.",
   "health": {
@@ -106,15 +106,21 @@
   "query_shape_benchmark": {
     "question": "one scan with ARRAY JOIN fan-out, or two scans unioned",
     "runs_each": 5,
+    "measured_against": "the current sweep, after the darker-image condition was added",
     "two_pass_union_shipped": {
-      "rows_read": 19200000,
-      "median_ms": 703
+      "rows_read": 10263552,
+      "median_ms": 834,
+      "min_ms": 756,
+      "max_ms": 939
     },
     "one_pass_array_join": {
       "rows_read": 9600000,
-      "median_ms": 1096
+      "median_ms": 1064,
+      "min_ms": 989,
+      "max_ms": 1353
     },
-    "result": "identical 31-row output; halving rows read was 56% slower, so the two-pass form ships"
+    "result": "identical 44-row output; the single-scan form is 27% slower",
+    "why": "two passes read 10.26M rather than 19.2M because per-granule min/max lets ClickHouse skip ~93% of the second scan, so the extra scan is nearly free"
   },
   "notes": [
     "The catalogue is self-authored synthetic measurement, not footage, and contains no flashing media.",
@@ -241,5 +247,40 @@
     "the runtime hops with the credential boundary marked",
     "every threshold traced to its published definition, including the one not implemented",
     "an export so the findings can leave the page"
-  ]
+  ],
+  "standards_audit": {
+    "why": "expert review could not be obtained; the implementation was audited against the primary texts instead",
+    "sources": [
+      "https://www.w3.org/TR/UNDERSTANDING-WCAG20/seizure-does-not-violate.html",
+      "https://www.w3.org/TR/WCAG21/relative-luminance.html",
+      "https://doi.org/10.1145/3694790"
+    ],
+    "defects_found": [
+      "relative luminance was not linearised before applying the BT.709 coefficients",
+      "the general-flash darker-image condition (<0.80) was missing entirely",
+      "saturated red used R - max(G,B) rather than the published R/(R+G+B) >= 0.8 test",
+      "red-transition direction was taken from the luminance signal, recording a matched-luminance red alternation as flat"
+    ],
+    "measured_effect": {
+      "with_darker_image_condition": 44,
+      "without_it": 57,
+      "false_positives_removed": 13,
+      "all_from_transform": "hdr10_passthrough"
+    },
+    "deviations_remaining": [
+      "area is a frame fraction, not the angular 25% of a 10 degree visual field (matches Ofcom/ITU and every guideline except WCAG)",
+      "concurrent flashes are not composited; the peak changed area across the window is used",
+      "the synthetic corpus authors its metrics rather than measuring pixels",
+      "the spatial-pattern rule is not implemented"
+    ],
+    "not_equivalent_to": "review by a qualified photosensitive-epilepsy or broadcast professional"
+  },
+  "public_api_exposure": {
+    "no_api_key": "deliberate: judging requires the product to be testable without an account",
+    "reads": "open and uncapped",
+    "writes": "/v1/scan only; identifiers belonging to the published catalogue are refused, so an anonymous write cannot suppress a documented finding",
+    "samples": "/v1/samples mints a unique lineage per request so callers cannot collide",
+    "rate_limits": "per client per minute on /v1/scan, /v1/triage and /v1/explain; no read endpoint is capped",
+    "mcp": "read-only, ClickHouse credentials only, SELECT-only database user"
+  }
 }

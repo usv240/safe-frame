@@ -15,7 +15,7 @@ Updated: 2026-08-28
 - [x] Real Google ADK + Gemini Vertex explanation path
 - [x] Light-default, opt-in dark, non-flashing public web product
 - [x] Self-authored constructed judge sample
-- [x] Public Cloud Run revision `safe-frame-regression-00013-7sf`
+- [x] Public Cloud Run revision `safe-frame-regression-00030-8tl`
 - [x] Live acceptance re-verified against the deployed revision: sweep, per-pair
       verdict and ADK explanation agree on both a general-flash and a red-flash
       pair; all four controls behave (`docs/LIVE-ACCEPTANCE.json`)
@@ -68,6 +68,10 @@ Updated: 2026-08-28
       so it cannot silently regress (13 false positives removed)
 - [x] Relative luminance linearised per the WCAG definition
 - [x] Saturated red implemented as published, not as a proxy
+
+- [x] Public API exposure bounded: catalogue identifiers refused as write
+      targets, per-request sample lineages, rate limits on the endpoints that
+      spend model tokens or write, and no cap on any read
 
 ## Release tasks
 

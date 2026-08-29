@@ -97,13 +97,16 @@ explains, a person acts."
 
 ## 2:35–2:50 — Restraint, and close
 
-> *Scroll to the criteria table, then cut to the repo.*
+> *Scroll to the criteria table. Let the "not implemented" row sit on screen.*
 
-"Every threshold here is quoted from WCAG 2.3.1 — and the rule we have *not*
-implemented, spatial pattern, is named right there rather than hidden. This is
-an open pre-check, not a certified device, on a synthetic catalogue we authored.
-Apache-2.0, public repo, hosted app in the description. Safe Frame — find the
-version that introduced the risk, before an audience does."
+"Every threshold is quoted from the standard. We couldn't get a photosensitivity
+expert to review this, so we audited it against the published texts ourselves —
+and found our own detector wrong three times. The darker-image condition was
+missing entirely; adding it removed thirteen false positives. The rule we still
+don't implement is named right there rather than hidden. Open pre-check, not a
+certified device, synthetic catalogue. Apache-2.0, repo and app in the
+description. Safe Frame — find the version that introduced the risk, before an
+audience does."
 
 ---
 
@@ -115,6 +118,6 @@ version that introduced the risk, before an audience does."
 - [ ] Transform profile run live, the four-profiles point made
 - [ ] Triage agent run live, numbered tool trace visible
 - [ ] `decision_source` and `requires_human` shown on screen
-- [ ] Criteria table including the "not implemented" row
+- [ ] Criteria table including the "not implemented" row and the audit finding
 - [ ] Public URL and repo URL legible at normal playback size
 - [ ] Under 3:00, uploaded Public, English audio or subtitles
