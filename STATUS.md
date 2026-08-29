@@ -40,11 +40,22 @@ Updated: 2026-08-28
 - [x] Dead scaffolding removed; every tracked module is reachable from the
       running product or its tests
 
+- [x] Every threshold traced to a quoted WCAG 2.3.1 definition, and the one
+      unimplemented rule named on the product surface (`docs/CRITERIA.md`)
+- [x] Impact case argued from published sources, with an explicit list of what
+      has *not* been shown (`docs/IMPACT.md`)
+- [x] Evidence chart: master and rendition tracks from one query on one shared
+      scale, series colours validated for colour-vision deficiency, table view
+      and text alternative provided
+- [x] Design system: fluid type and space scales, three-state theming, focus
+      rings, skip link, keyboard-selectable rows, all motion disabled under
+      `prefers-reduced-motion`
+
 ## Release tasks
 
-- [ ] Complete desktop/mobile visual QA when browser control is available
-- [ ] Record and publish the under-three-minute demo
-- [ ] Complete Devpost submission
+- [ ] Record and publish the under-three-minute demo — script ready in
+      `docs/DEMO-SCRIPT.md`
+- [ ] Complete Devpost submission — paste-ready copy in `docs/DEVPOST.md`
 - [ ] Obtain qualified external review before making any stronger efficacy claim
 
 Machine-readable proof is captured in `docs/LIVE-ACCEPTANCE.json`. It contains no credentials.
