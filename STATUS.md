@@ -32,8 +32,10 @@ Updated: 2026-08-28
       cluster-free guard that fails if the fixtures stop producing violations
 - [x] Persistent official mcp-clickhouse session, warmed at startup (sweep about 1.9s end to end over 9.6M rows; ~0.8s of that is the ClickHouse query, the rest MCP transport and serialisation)
 - [x] Official ClickHouse Agent Skills applied to schema and catalogue query;
-      findings and three measured declines in docs/CLICKHOUSE-SKILLS-REVIEW.md,
-      including a CRITICAL rule that benchmarking contradicted
+      all 31 rules accounted for in docs/CLICKHOUSE-SKILLS-REVIEW.md, with four
+      measured declines including a CRITICAL rule that benchmarking contradicted
+      and a refreshable Materialized View that is 158x faster than what ships
+      and still deliberately not enabled
 - [x] Every surface agrees about a pair: the sweep, `/v1/catalogue/regressions`
       and the ADK agent's evidence all read one union of the catalogue and
       persisted planes
