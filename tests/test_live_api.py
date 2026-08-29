@@ -263,6 +263,16 @@ def test_the_page_shows_the_criteria_that_actually_run():
                   str(defaults['max_transitions_per_second'].default)):
         assert shown in text, f"the page does not show {shown}"
 
-    assert "luma_min &lt; 0.80" in text or "luma_min < 0.80" in text, \
-        "the page's SQL panel lost the darker-image condition"
+    # Scope this to the SQL panel itself. Asserting the string appears anywhere
+    # on the page passed while the panel was stale, because the criteria table
+    # two sections above already carried it -- a false pass that let the page
+    # ship contradicting itself.
+    import re as _re
+
+    panel = _re.search(r'<div class="sqlbox".*?</div>', text, _re.S)
+    assert panel, "the SQL panel is gone from the page"
+    panel_text = panel.group(0)
+    for condition in ("luma_delta &gt;= 0.10", "luma_min &lt; 0.80",
+                      "changed_area_fraction &gt;= 0.25", "win_transitions &gt; 6"):
+        assert condition in panel_text, f"the SQL panel does not show {condition}"
     assert "luma_min < 0.80" in sweep, "the sweep lost the darker-image condition"

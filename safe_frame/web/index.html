@@ -745,6 +745,7 @@ body.tech .technical{display:block}
           <div class="sqlbox" aria-label="The criteria as they run in ClickHouse">
 <span class="c">-- each rule gets its own qualifying set</span><br>
 <span class="k">WHERE</span> luma_delta &gt;= 0.10<br>
+&nbsp;&nbsp;<span class="k">AND</span> luma_min &lt; 0.80 <span class="c">-- the darker image</span><br>
 &nbsp;&nbsp;<span class="k">AND</span> changed_area_fraction &gt;= 0.25<br>
 &nbsp;&nbsp;<span class="k">AND</span> direction != <span class="s">'flat'</span><br><br>
 <span class="k">WHERE</span> red_delta &gt;= 0.20 <span class="c">-- no luma floor</span><br>
