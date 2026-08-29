@@ -111,6 +111,13 @@ TRIAGE_FIXTURE = {"data": {
 }}
 
 
+EVIDENCE_FIXTURE = {"data": {
+    "transport": "official_mcp_clickhouse_stdio", "read_only": True,
+    "required_tools_advertised": {"run_query": True, "list_databases": True, "list_tables": True},
+    "query": {"tool": "run_query", "is_error": False, "content": [{"type": "text", "text": "{}"}]},
+}}
+
+
 def _stub(page) -> None:
     import json as _json
 
@@ -122,6 +129,7 @@ def _stub(page) -> None:
     page.route("**/v1/catalogue/timeline*", lambda r: reply(r, _timeline_fixture()))
     page.route("**/v1/catalogue/transform-risk", lambda r: reply(r, RISK_FIXTURE))
     page.route("**/v1/triage", lambda r: reply(r, TRIAGE_FIXTURE))
+    page.route("**/v1/integrations/clickhouse/evidence", lambda r: reply(r, EVIDENCE_FIXTURE))
 
 
 def offline() -> list[str]:
@@ -215,6 +223,14 @@ def offline() -> list[str]:
             problems.append("the brief did not render")
         if not page.eval_on_selector("#brief-text", "e => e.innerHTML.includes('<strong>')"):
             problems.append("the brief headings were not lifted")
+
+        page.click("#mcp-run")
+        page.wait_for_timeout(700)
+        chips = page.eval_on_selector_all("#mcp-tools .toolchip", "els => els.length")
+        if chips != 3:
+            problems.append(f"the MCP panel showed {chips} tool chips, expected 3")
+        if page.eval_on_selector("#mcp-out", "e => e.hidden"):
+            problems.append("the MCP evidence panel did not render")
 
         if errors2:
             problems.append(f"script threw on the evidence path: {errors2[:3]}")

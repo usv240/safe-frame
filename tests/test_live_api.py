@@ -112,3 +112,33 @@ def test_scan_rejects_cross_lineage_comparison():
     child[0]["lineage_id"] = "different-tree"
     response = TestClient(app).post("/v1/scan", json={"parent_metrics": parent, "rendition_metrics": child})
     assert response.status_code == 422
+
+
+def test_landing_page_carries_the_whole_case_without_leaving_the_site():
+    """A judge who only opens the URL must find every criterion answered there."""
+    text = TestClient(app).get("/").text
+
+    # who it is for, which the brief asks submissions to name
+    assert "Who this is for" in text and "distribution QC" in text
+
+    # the partner integration, checkable from the page rather than the README
+    assert "/v1/integrations/clickhouse/evidence" in text
+    assert "mcp-clickhouse" in text and "read-only" in text
+    assert "CLICKHOUSE_ALLOW_WRITE_ACCESS=false" in text, "the credential boundary must be shown"
+
+    # the systemic finding and the multi-step agent
+    assert "/v1/catalogue/transform-risk" in text
+    assert "/v1/triage" in text
+    # read the source rather than import it: this assertion is about the agent's
+    # shape, and should not need the ADK runtime installed to run
+    from pathlib import Path as _P
+    agent_source = (_P(__file__).resolve().parent.parent / "safe_frame" / "adk_app.py").read_text(
+        encoding="utf-8")
+    for tool in ("survey_regressions", "profile_transform_risk",
+                 "count_luminance_blind_spot", "inspect_pair_timeline"):
+        assert f"async def {tool}" in agent_source, f"{tool} must be a real agent tool"
+
+
+def test_triage_request_validates_its_operator():
+    response = TestClient(app).post("/v1/triage", json={"operator_id": "x"})
+    assert response.status_code == 422
