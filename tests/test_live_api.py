@@ -142,3 +142,63 @@ def test_landing_page_carries_the_whole_case_without_leaving_the_site():
 def test_triage_request_validates_its_operator():
     response = TestClient(app).post("/v1/triage", json={"operator_id": "x"})
     assert response.status_code == 422
+
+
+def test_scan_refuses_to_write_over_the_published_catalogue():
+    """`/v1/scan` persists what it is given, and the anti-join reads the same table.
+
+    Without this, an anonymous caller could write a violation onto an approved
+    master in the published corpus and suppress a real child-only finding —
+    turning a documented `fail` into a `pass` on a public URL.
+    """
+    for reserved in ("approved-master", "title_0022__master", "title_0001__60fps_interp"):
+        parent = burst("master-of-mine", "master", 6)
+        child = burst(reserved, "60fps", 7)
+        for row in parent + child:
+            row["lineage_id"] = "attacker-tree"
+        response = TestClient(app).post(
+            "/v1/scan", json={"parent_metrics": parent, "rendition_metrics": child})
+        assert response.status_code == 422, f"{reserved} was accepted as a write target"
+        assert "reserved" in response.text
+
+
+def test_samples_are_isolated_per_request():
+    """Two callers must not be able to collide, so identifiers cannot be fixed."""
+    client = TestClient(app)
+    first = client.get("/v1/samples").json()["data"]
+    second = client.get("/v1/samples").json()["data"]
+    assert first["parent_metrics"][0]["asset_id"] != second["parent_metrics"][0]["asset_id"]
+    assert first["parent_metrics"][0]["lineage_id"] != second["parent_metrics"][0]["lineage_id"]
+    # and what /v1/samples hands out must be something /v1/scan will accept
+    response = client.post("/v1/scan", json={
+        "parent_metrics": first["parent_metrics"],
+        "rendition_metrics": first["rendition_metrics"]})
+    assert response.status_code == 200, response.text
+    assert response.json()["verdict"] == "fail"
+
+
+def test_expensive_endpoints_are_capped_and_reads_are_not(monkeypatch):
+    """Model-spending endpoints are limited; every read stays open for judging."""
+    import safe_frame.main as main
+
+    monkeypatch.setattr(main, "_CALLS", {})
+    client = TestClient(app)
+    # /v1/scan is the write path and is capped at 20/min
+    payload = client.get("/v1/samples").json()["data"]
+    body = {"parent_metrics": payload["parent_metrics"],
+            "rendition_metrics": payload["rendition_metrics"]}
+    codes = {client.post("/v1/scan", json=body).status_code for _ in range(25)}
+    assert 429 in codes, "an unbounded loop against the write path was not capped"
+
+    # the agent endpoints are capped harder, and an import or runtime failure
+    # there must still fail closed rather than surface a stack trace
+    monkeypatch.setattr(main, "_CALLS", {})
+    agent_codes = {client.post("/v1/triage", json={"operator_id": "loop"}).status_code
+                   for _ in range(10)}
+    assert 429 in agent_codes, "an unbounded loop against the agent was not capped"
+    assert agent_codes <= {429, 502}, f"the agent leaked an unexpected status: {agent_codes}"
+
+    # reads must never be rate limited: judging requires testing without a quota
+    monkeypatch.setattr(main, "_CALLS", {})
+    assert all(client.get("/v1/samples").status_code == 200 for _ in range(40))
+    assert client.get("/health").status_code == 200

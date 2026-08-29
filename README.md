@@ -102,6 +102,27 @@ every red one. That is a small number of upstream configurations to fix rather
 than 44 renditions to patch, and 13 of the 44 come from profiles whose only
 failure mode is red flash, so a luminance-only checker passes all of them.
 
+## Using it programmatically
+
+There is no API key, deliberately. Every read endpoint is open and
+unauthenticated so the product can be judged and tested without an account, a
+quota, or a signup, and `/docs` is the full OpenAPI surface.
+
+Two consequences are handled rather than ignored:
+
+- **`/v1/scan` persists what it is given, and the per-pair anti-join reads the
+  same table.** A fixed sample identifier would therefore be shared mutable
+  state: one caller's scan could change what the next caller sees, and an
+  anonymous write onto a published master could suppress a real finding.
+  `/v1/samples` mints a fresh lineage per request, and the identifiers belonging
+  to the generated catalogue are refused as write targets.
+- **`/v1/triage` and `/v1/explain` spend model tokens.** They are capped per
+  client per minute, as is the write path. No read endpoint is capped.
+
+To check your own content, measure frames with
+`safe_frame.ingest.frames_to_transitions` and POST the rows to `/v1/scan` under
+your own asset identifiers.
+
 ## Decision boundary
 
 `POST /v1/scan` computes the parent and child violations, persists them, and then

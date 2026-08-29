@@ -3,8 +3,9 @@ from __future__ import annotations
 import asyncio
 import os
 import time
+import uuid
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, model_validator
 
@@ -18,6 +19,20 @@ from .clickhouse_mcp import (
 from .detector import detect_violations
 from .lineage import regressions
 from .models import TransitionMetric
+
+
+# The catalogue is generated and read-only to the public API. These are the
+# identifiers the constructed judge sample and the generated corpus own, and a
+# caller-supplied write must never land on them: `/v1/scan` persists the
+# asset_id it is given, and the per-pair anti-join reads the same table, so an
+# anonymous write to `approved-master` could suppress the child violation and
+# flip the documented sample from fail to pass.
+RESERVED_ASSET_PREFIXES = ("title_",)
+RESERVED_ASSET_IDS = frozenset({"approved-master", "social-60fps"})
+
+
+def _reserved(asset_id: str) -> bool:
+    return asset_id in RESERVED_ASSET_IDS or asset_id.startswith(RESERVED_ASSET_PREFIXES)
 
 
 class ScanRequest(BaseModel):
@@ -35,6 +50,12 @@ class ScanRequest(BaseModel):
             raise ValueError("parent and rendition must share one lineage_id")
         if parent_assets == child_assets:
             raise ValueError("parent and rendition asset IDs must differ")
+        for asset in parent_assets | child_assets:
+            if _reserved(asset):
+                raise ValueError(
+                    f"{asset!r} is reserved for the published catalogue and the judge sample; "
+                    "submit your own asset IDs"
+                )
         return self
 
 
@@ -46,6 +67,49 @@ class ExplanationRequest(BaseModel):
     parent_asset: str = Field(pattern=r"^[A-Za-z0-9_-]{1,80}$")
     child_asset: str = Field(pattern=r"^[A-Za-z0-9_-]{1,80}$")
     operator_id: str = Field(min_length=2, max_length=120)
+
+
+def _client_key(request: Request) -> str:
+    forwarded = request.headers.get("x-forwarded-for", "")
+    return (forwarded.split(",")[0].strip() or (request.client.host if request.client else "?"))
+
+
+_CALLS: dict[tuple[str, str], list[float]] = {}
+
+
+def rate_limit(bucket: str, limit: int, window_s: float = 60.0):
+    """Cap the endpoints that spend Gemini tokens or write to the database.
+
+    Deliberately not applied to any read endpoint: judging requires the product
+    to be testable without an account, a key, or a quota, and every read is
+    served from ClickHouse at a cost we control. This exists so a loop against
+    `/v1/triage` cannot exhaust the Vertex quota during a judging window and
+    take the demo down with it.
+
+    In-process and therefore per-instance, which is approximate under scale-out.
+    That is the right size for the problem: it stops runaway and accidental
+    repetition, and it is not an access-control mechanism.
+    """
+
+    async def guard(request: Request) -> None:
+        now = time.monotonic()
+        key = (bucket, _client_key(request))
+        recent = [t for t in _CALLS.get(key, ()) if now - t < window_s]
+        if len(recent) >= limit:
+            raise HTTPException(
+                429,
+                detail={
+                    "code": "rate_limited",
+                    "message": (
+                        f"{bucket} is limited to {limit} calls per minute per client because it "
+                        "spends model tokens or writes. Every read endpoint is unlimited."
+                    ),
+                },
+            )
+        recent.append(now)
+        _CALLS[key] = recent
+
+    return guard
 
 
 app = FastAPI(title="Safe Frame API", version="0.3.0")
@@ -76,15 +140,18 @@ def _configured(*names: str) -> bool:
     return all(bool(os.getenv(name)) for name in names)
 
 
-def _sample_burst(asset: str, transform: str, count: int) -> list[dict[str, object]]:
+def _sample_burst(asset: str, parent: str, lineage: str, transform: str, count: int) -> list[dict[str, object]]:
     return [
         {
             "asset_id": asset,
-            "lineage_id": "judge-tree",
-            "parent_id": "approved-master" if asset != "approved-master" else "",
+            "lineage_id": lineage,
+            "parent_id": parent,
             "transform": transform,
             "pts_ms": index * 100,
             "luma_delta": 0.8,
+            # below the 0.80 ceiling the published general-flash test puts on the
+            # darker image, so this pair is a genuine general flash
+            "luma_min": 0.05,
             "red_delta": 0.0,
             "changed_area_fraction": 1.0,
             "direction": "up" if index % 2 == 0 else "down",
@@ -100,12 +167,24 @@ def landing_page() -> FileResponse:
 
 @app.get("/v1/samples")
 def samples() -> dict[str, object]:
+    """A constructed pass/fail pair, minted fresh for every caller.
+
+    `/v1/scan` persists what it is given, and the per-pair anti-join reads the
+    same table, so a fixed sample identifier would be shared mutable state: one
+    caller's scan could change what the next caller sees. Each request gets its
+    own lineage, so scans are isolated from each other and from the published
+    catalogue.
+    """
+    run = uuid.uuid4().hex[:10]
+    lineage, parent, child = f"sample-{run}", f"sample-{run}-master", f"sample-{run}-60fps"
     return {
         "data": {
             "name": "constructed presentation-time boundary pair",
             "provenance": "self-authored synthetic metrics; no viewer is exposed to flashing imagery",
-            "parent_metrics": _sample_burst("approved-master", "master", 6),
-            "rendition_metrics": _sample_burst("social-60fps", "frame_rate_conversion", 7),
+            "isolation": "identifiers are unique per request, so your scan cannot collide with anyone else's",
+            "expected": {"parent": "pass (6 transitions)", "rendition": "fail (7 transitions)"},
+            "parent_metrics": _sample_burst(parent, "", lineage, "master", 6),
+            "rendition_metrics": _sample_burst(child, parent, lineage, "frame_rate_conversion", 7),
         }
     }
 
@@ -161,7 +240,7 @@ async def health() -> dict[str, object]:
     }
 
 
-@app.post("/v1/scan")
+@app.post("/v1/scan", dependencies=[Depends(rate_limit("/v1/scan", 20))])
 async def scan(request: ScanRequest) -> dict[str, object]:
     parent = detect_violations(request.parent_metrics)
     child = detect_violations(request.rendition_metrics)
@@ -343,16 +422,16 @@ async def catalogue_transform_risk() -> dict[str, object]:
     return {"data": result}
 
 
-@app.post("/v1/triage")
+@app.post("/v1/triage", dependencies=[Depends(rate_limit("/v1/triage", 6))])
 async def triage(request: TriageRequest) -> dict[str, object]:
     """The multi-step agent: survey, find the systemic cause, size the blind spot, go deep.
 
     Returns the brief together with the tool-call sequence that produced it, so
     the multi-step work can be checked rather than taken on trust.
     """
-    from .adk_app import triage_catalogue
-
     try:
+        from .adk_app import triage_catalogue
+
         result = await triage_catalogue(request.operator_id)
     except Exception as exc:
         raise HTTPException(
@@ -388,11 +467,11 @@ async def clickhouse_evidence() -> dict[str, object]:
     }
 
 
-@app.post("/v1/explain")
+@app.post("/v1/explain", dependencies=[Depends(rate_limit("/v1/explain", 12))])
 async def explain(request: ExplanationRequest) -> dict[str, object]:
-    from .adk_app import explain_regression
-
     try:
+        from .adk_app import explain_regression
+
         result = await explain_regression(request.parent_asset, request.child_asset, request.operator_id)
     except Exception as exc:
         raise HTTPException(
