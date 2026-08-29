@@ -138,6 +138,8 @@ Useful judge endpoints:
 - `/v1/catalogue/shape` — size of the corpus, read live
 - `/v1/catalogue/sweep` — both rules evaluated across the whole catalogue
 - `/v1/catalogue/regressions` — SQL/MCP verdict for one asset pair
+- `/v1/catalogue/timeline` — per-second qualifying transitions for a master and one
+  rendition, on one shared scale; this is what the evidence chart draws
 - `/v1/catalogue/transform-risk` — per-transform regression rates: the systemic view
 - `/v1/triage` — the multi-step agent brief, with its tool-call sequence
 - `/v1/samples` — self-authored exact pass/fail metric pair
