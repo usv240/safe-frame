@@ -177,6 +177,10 @@ header.top{
 
 /* ---------- generic surfaces ---------- */
 section{padding:clamp(2.6rem,6vw,4.8rem) 0;border-top:1px solid var(--line)}
+/* the header is sticky, so anything scrolled to must clear it. On a phone the
+   brand and the toggles wrap onto separate rows, so it is roughly twice as tall. */
+section,[id]{scroll-margin-top:11rem}
+@media (min-width:46rem){section,[id]{scroll-margin-top:6.5rem}}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:var(--s-4)}
 .grid{display:grid;gap:var(--s-3)}
 .g-3{grid-template-columns:repeat(auto-fit,minmax(min(100%,17rem),1fr))}
@@ -234,6 +238,36 @@ tbody tr:hover td{background:var(--surface-2)}
 tbody tr[aria-selected="true"] td{background:color-mix(in srgb,var(--accent) 12%,var(--surface))}
 tbody tr:focus-visible{outline:2.5px solid var(--focus);outline-offset:-2px}
 .empty{padding:var(--s-6) var(--s-4);text-align:center;color:var(--ink-3)}
+
+@media (max-width:46rem){
+  #sweep .scroll{max-height:none;overflow-x:hidden}
+  #sweep table,#sweep tbody,#sweep td{display:block;width:100%}
+  /* the card is a block with margins: width:100% here would add the margins on
+     top of the full width and push it past the viewport */
+  #sweep tr{display:block;width:auto}
+  #sweep thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  #sweep tbody tr{
+    border:1px solid var(--line);border-radius:var(--r-md);
+    padding:var(--s-2) var(--s-3);margin:var(--s-3);background:var(--surface)
+  }
+  #sweep tbody tr[aria-selected="true"]{
+    border-color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,var(--surface))
+  }
+  #sweep tbody tr:hover td{background:transparent}
+  #sweep td{
+    border:0;padding:.3rem 0;white-space:normal;overflow-wrap:anywhere;min-width:0;
+    display:flex;justify-content:space-between;gap:var(--s-3);align-items:baseline;
+    text-align:right
+  }
+  #sweep td::before{
+    content:attr(data-label);color:var(--ink-3);font-size:var(--t-xs);
+    text-transform:uppercase;letter-spacing:.08em;font-weight:700;
+    flex:none;text-align:left
+  }
+  #sweep td:empty{display:none}
+  #sweep td[colspan]{display:block}
+  #sweep td[colspan]::before{content:none}
+}
 
 .chip{
   display:inline-flex;align-items:center;gap:.4rem;font:700 var(--t-xs)/1 var(--sans);
@@ -347,7 +381,7 @@ body.tech .technical{display:block}
     <p class="lead technical">Transition measurements are aligned on presentation time in ClickHouse. Both published flash rules are evaluated across every rendition in a single pass through the official <code class="mono">mcp-clickhouse</code> server, and master/rendition isolation happens inside the same query. Gemini explains the rows; SQL decides.</p>
     <p class="headline-stat" id="headline">
       <b id="h-count">&mdash;</b>
-      <span>renditions in this catalogue introduced a violation their approved master never had.</span>
+      <span id="h-text">transition measurements are loaded and waiting to be searched.</span>
     </p>
   </div>
 
@@ -445,9 +479,8 @@ body.tech .technical{display:block}
               <span><svg width="16" height="8" aria-hidden="true"><line x1="0" y1="4" x2="16" y2="4" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 3"/></svg>Criterion</span>
             </div>
           </div>
-          <div id="chart" style="position:relative">
-            <p class="empty" id="chart-empty">Select a rendition above.</p>
-          </div>
+          <p class="empty" id="chart-empty">Select a rendition above.</p>
+          <div id="chart" style="position:relative"></div>
           <figcaption id="chart-cap"></figcaption>
           <details style="margin-top:var(--s-3)">
             <summary style="cursor:pointer;font-size:var(--t-sm);color:var(--ink-2)">View this chart as a table</summary>
@@ -585,7 +618,7 @@ const ruleLabel = (r) => (RULE[r] || { label: r }).label;
    whether a chart needs repainting. Leaving these further down put them in the
    temporal dead zone at init: the restore threw, and every listener after it
    was never attached. */
-let selected = null, timelineData = null;
+let selected = null, timelineData = null, swept = false;
 
 /* ---------- reading mode + theme -------------------------------------- */
 function setMode(tech) {
@@ -623,6 +656,14 @@ async function loadScale() {
     $("#s-as").textContent = nf(c.assets);
     $("#s-ti").textContent = nf(c.titles);
     $("#s-tf").textContent = nf(c.transforms);
+    // Before a sweep the headline states the corpus, which is true on load;
+    // it becomes the finding once there is one. It never shows a placeholder
+    // where a number belongs.
+    if (!swept) {
+      $("#h-count").textContent = nf(c.transitions);
+      $("#h-text").textContent =
+        `transition measurements across ${nf(c.titles)} titles, loaded and waiting to be searched.`;
+    }
   } catch (e) { /* the sweep reports the corpus too */ }
 }
 
@@ -633,7 +674,10 @@ function renderSweep(d) {
     $("#s-tr").textContent = nf(c.transitions); $("#s-as").textContent = nf(c.assets);
     $("#s-ti").textContent = nf(c.titles); $("#s-tf").textContent = nf(c.transforms);
   }
+  swept = true;
   $("#h-count").textContent = nf(d.regression_count);
+  $("#h-text").textContent =
+    `rendition${d.regression_count === 1 ? "" : "s"} in this catalogue introduced a violation their approved master never had.`;
   $("#sweeptitle").textContent =
     `${d.regression_count} rendition${d.regression_count === 1 ? "" : "s"} introduced a violation across ${nf(c.titles)} titles`;
 
@@ -654,12 +698,15 @@ function renderSweep(d) {
     const tr = document.createElement("tr");
     tr.tabIndex = 0;
     tr.setAttribute("aria-selected", "false");
+    // data-label drives the phone card layout, where the header row is hidden
     tr.innerHTML =
-      `<td class="mono">${row.lineage_id}</td><td class="mono">${row.asset_id}</td>` +
-      `<td><span class="chip ${row.rule}">${ruleLabel(row.rule)}</span></td>` +
-      `<td class="tf">${row.transform}</td>` +
-      `<td>${row.window_start_ms}&ndash;${row.window_end_ms} ms</td>` +
-      `<td>${row.transitions}</td><td>${Math.round(row.peak_changed_area_fraction * 100)}%</td>`;
+      `<td class="mono" data-label="Title">${row.lineage_id}</td>` +
+      `<td class="mono" data-label="Rendition">${row.asset_id}</td>` +
+      `<td data-label="Rule"><span class="chip ${row.rule}">${ruleLabel(row.rule)}</span></td>` +
+      `<td class="tf" data-label="Introduced by">${row.transform}</td>` +
+      `<td data-label="Window">${row.window_start_ms}&ndash;${row.window_end_ms} ms</td>` +
+      `<td data-label="Transitions">${row.transitions}</td>` +
+      `<td data-label="Peak area">${Math.round(row.peak_changed_area_fraction * 100)}%</td>`;
     const pick = () => select(row, tr);
     tr.onclick = pick;
     tr.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } };
@@ -705,8 +752,7 @@ async function select(row, tr) {
   $("#chart-title").textContent = `Qualifying transitions per second — ${row.lineage_id}`;
 
   timelineData = null;
-  $("#chart-empty").hidden = false;
-  $("#chart-empty").textContent = "Reading both tracks from ClickHouse…";
+  setStatus("Reading both tracks from ClickHouse…");
   try {
     const r = await fetch(`/v1/catalogue/timeline?parent_asset=${encodeURIComponent(row.parent_id)}&child_asset=${encodeURIComponent(row.asset_id)}`);
     const p = await r.json();
@@ -715,9 +761,18 @@ async function select(row, tr) {
     timelineData = p.data;
     drawChart();
   } catch (e) {
-    $("#chart-empty").hidden = false;
-    $("#chart-empty").textContent = "The timeline failed closed; no track was drawn.";
+    setStatus("The timeline failed closed; no track was drawn.");
   }
+}
+
+/* Show a message instead of the chart, or clear it. The placeholder is a
+   sibling of the SVG host: it used to be a child, so drawing replaced it and
+   every line after the draw threw on a null element -- the chart appeared and
+   its caption, table view and tooltip silently never initialised. */
+function setStatus(message) {
+  const el = $("#chart-empty");
+  el.hidden = message === null;
+  if (message !== null) { el.textContent = message; $("#chart").replaceChildren(); }
 }
 
 /* ---------- the chart --------------------------------------------------
@@ -794,7 +849,7 @@ function drawChart() {
   svg += `<rect id="hit" x="${PADL}" y="0" width="${plotW}" height="${H - 16}" fill="transparent"/>`;
   svg += `</svg>`;
   host.innerHTML = svg;
-  $("#chart-empty").hidden = true;
+  setStatus(null);
 
   const cap = $("#chart-cap");
   const worst = Math.max(...d.child.general_flash, ...d.child.red_flash);
