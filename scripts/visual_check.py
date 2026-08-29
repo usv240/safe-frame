@@ -77,6 +77,40 @@ def _timeline_fixture() -> dict:
     }}
 
 
+RISK_FIXTURE = {"data": {
+    "profiles": [
+        {"transform": "60fps_interp", "renditions": 400, "regressed": 16, "regressed_pct": 4.0,
+         "general_flash": 16, "red_flash": 0},
+        {"transform": "adbreak_insert", "renditions": 400, "regressed": 15, "regressed_pct": 3.75,
+         "general_flash": 15, "red_flash": 0},
+        {"transform": "subtitle_burnin", "renditions": 400, "regressed": 7, "regressed_pct": 1.75,
+         "general_flash": 0, "red_flash": 7},
+        {"transform": "social_crop_v", "renditions": 400, "regressed": 6, "regressed_pct": 1.5,
+         "general_flash": 0, "red_flash": 6},
+        {"transform": "sdr_tonemap", "renditions": 400, "regressed": 0, "regressed_pct": 0.0,
+         "general_flash": 0, "red_flash": 0},
+    ],
+    "transforms_implicated": 4, "transforms_clean": 1, "total_regressed": 44,
+    "red_only_regressions": 13, "decision_source": "clickhouse_sql_via_official_mcp",
+}}
+TRIAGE_FIXTURE = {"data": {
+    "status": "completed", "agent": "QcTriageAgent", "model": "gemini-2.5-flash",
+    "decision_source": "clickhouse_sql", "requires_human": True,
+    "tool_calls": [
+        {"step": 1, "tool": "survey_regressions"},
+        {"step": 2, "tool": "profile_transform_risk"},
+        {"step": 3, "tool": "count_luminance_blind_spot"},
+        {"step": 4, "tool": "inspect_pair_timeline"},
+    ],
+    "steps": 4,
+    "text": "\n".join([
+        "What the sweep found", "44 renditions regressed.", "",
+        "Systemic cause", "Two profiles.", "",
+        "Required human action", "Review before release.",
+    ]),
+}}
+
+
 def _stub(page) -> None:
     import json as _json
 
@@ -86,6 +120,8 @@ def _stub(page) -> None:
     page.route("**/v1/catalogue/shape", lambda r: reply(r, SHAPE_FIXTURE))
     page.route("**/v1/catalogue/sweep", lambda r: reply(r, SWEEP_FIXTURE))
     page.route("**/v1/catalogue/timeline*", lambda r: reply(r, _timeline_fixture()))
+    page.route("**/v1/catalogue/transform-risk", lambda r: reply(r, RISK_FIXTURE))
+    page.route("**/v1/triage", lambda r: reply(r, TRIAGE_FIXTURE))
 
 
 def offline() -> list[str]:
@@ -151,11 +187,35 @@ def offline() -> list[str]:
         if page.eval_on_selector("#chart-empty", "e => !e.hidden"):
             problems.append("the placeholder is still showing over a drawn chart")
 
-        # selecting the other rule must redraw rather than throw
-        page.locator("#rows tr:has(.chip.general_flash)").first.click()
+        # selecting the other rule must redraw rather than throw. Centre it first:
+        # the header is sticky, so a row scrolled flush to the top is covered by it
+        # and a real click would land on the header instead.
+        row = page.locator("#rows tr:has(.chip.general_flash)").first
+        row.evaluate("e => e.scrollIntoView({block: 'center'})")
+        page.wait_for_timeout(200)
+        row.click()
         page.wait_for_timeout(900)
         if not page.eval_on_selector_all("svg.timeline", "els => els.length"):
             problems.append("re-selecting a row left no chart")
+        # the systemic-cause profile and the multi-step agent brief
+        page.click("#risk-run")
+        page.wait_for_timeout(900)
+        bars = page.eval_on_selector_all("#risk .riskrow", "els => els.length")
+        if bars != 5:
+            problems.append(f"the transform profile drew {bars} rows, expected one per transform")
+        if page.eval_on_selector("#outcome", "e => e.hidden"):
+            problems.append("the operational outcome tiles did not appear")
+
+        page.click("#brief-run")
+        page.wait_for_timeout(900)
+        steps = page.eval_on_selector_all("#trace li", "els => els.length")
+        if steps != 4:
+            problems.append(f"the agent trace rendered {steps} steps, expected 4")
+        if page.eval_on_selector("#brief-text", "e => e.hidden"):
+            problems.append("the brief did not render")
+        if not page.eval_on_selector("#brief-text", "e => e.innerHTML.includes('<strong>')"):
+            problems.append("the brief headings were not lifted")
+
         if errors2:
             problems.append(f"script threw on the evidence path: {errors2[:3]}")
         browser.close()

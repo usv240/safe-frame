@@ -311,6 +311,47 @@ pre.out{
   white-space:pre-wrap;overflow-wrap:anywhere;font:var(--t-xs)/1.55 var(--mono);color:var(--ink-2)
 }
 
+/* ---------- systemic cause ---------- */
+.risk{display:grid;gap:.55rem;margin-top:var(--s-4)}
+.riskrow{display:grid;grid-template-columns:minmax(7.5rem,auto) 1fr minmax(8.5rem,auto);gap:var(--s-3);align-items:center}
+.riskrow .name{font:650 var(--t-sm)/1.3 var(--mono);overflow-wrap:anywhere}
+.riskbar{height:1.35rem;background:var(--surface-2);border-radius:var(--r-sm);overflow:hidden;display:flex;gap:2px;min-width:0}
+.riskbar i{display:block;height:100%}
+.riskbar i.g{background:var(--series-general)}
+.riskbar i.r{background:var(--series-red)}
+.riskrow .val{font-size:var(--t-sm);color:var(--ink-2);font-variant-numeric:tabular-nums;text-align:right}
+.riskrow.clean .name,.riskrow.clean .val{color:var(--ink-3)}
+@media(max-width:40rem){
+  .riskrow{grid-template-columns:1fr auto;gap:.3rem var(--s-2)}
+  .riskbar{grid-column:1 / -1;order:3}
+}
+.outcome{
+  display:grid;gap:var(--s-3);margin-top:var(--s-5);
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr))
+}
+.outcome div{padding:var(--s-4);border-radius:var(--r-lg);background:var(--surface);border:1px solid var(--line)}
+.outcome b{display:block;font:600 var(--t-xl)/1.05 var(--serif);color:var(--accent);font-variant-numeric:tabular-nums}
+.outcome span{display:block;font-size:var(--t-sm);color:var(--ink-2);margin-top:var(--s-2)}
+
+/* ---------- agent brief ---------- */
+.brief{display:grid;gap:var(--s-3)}
+@media (min-width:62rem){.brief{grid-template-columns:minmax(0,1fr) minmax(0,17rem)}}
+.trace{list-style:none;margin:var(--s-3) 0 0;padding:0;display:grid;gap:.5rem;counter-reset:step}
+.trace li{
+  display:flex;gap:.6rem;align-items:baseline;font-size:var(--t-sm);
+  padding:.5rem .7rem;background:var(--surface-2);border-radius:var(--r-sm)
+}
+.trace li b{
+  font:700 var(--t-xs)/1.5 var(--sans);color:var(--accent-ink);background:var(--accent);
+  min-width:1.35rem;height:1.35rem;border-radius:50%;display:grid;place-items:center;flex:none
+}
+.trace li code{font-family:var(--mono);font-size:.92em;overflow-wrap:anywhere}
+.brieftext{
+  white-space:pre-wrap;overflow-wrap:anywhere;font-size:var(--t-sm);line-height:1.65;
+  color:var(--ink-2);margin-top:var(--s-3)
+}
+.brieftext strong{color:var(--ink)}
+
 /* ---------- provenance table ---------- */
 .prov{width:100%;border-collapse:collapse;font-size:var(--t-sm)}
 .prov th{position:static;background:transparent}
@@ -515,6 +556,61 @@ body.tech .technical{display:block}
     </div>
   </section>
 
+  <section id="systemic">
+    <div class="wrap">
+      <p class="eyebrow">Systemic cause</p>
+      <h2>Dozens of findings, or a handful of broken profiles?</h2>
+      <p class="lead" style="margin-top:var(--s-3)">The count is not the useful number. The useful number is how many <em>encoder profiles</em> are producing them &mdash; because a profile is one upstream fix, not N renditions to patch one at a time.</p>
+
+      <div class="controls">
+        <button class="btn btn-primary" id="risk-run">Profile every transform</button>
+      </div>
+
+      <div class="panel" style="padding:var(--s-4)" id="risk-panel">
+        <p class="empty" id="risk-empty">Press &ldquo;Profile every transform&rdquo; to compute this live.</p>
+        <div class="risk" id="risk" hidden></div>
+        <p class="muted" id="risk-cap" style="font-size:var(--t-xs);margin-top:var(--s-3)"></p>
+      </div>
+
+      <div class="outcome" id="outcome" hidden>
+        <div><b id="o-profiles">&mdash;</b><span id="o-profiles-t"></span></div>
+        <div><b id="o-blind">&mdash;</b><span id="o-blind-t"></span></div>
+        <div><b id="o-clean">&mdash;</b><span id="o-clean-t"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="brief">
+    <div class="wrap">
+      <p class="eyebrow">The agent&rsquo;s mission</p>
+      <h2>A brief a QC lead can act on before the shift starts.</h2>
+      <p class="lead plain" style="margin-top:var(--s-3)">The agent does not decide anything. It reads the database four different ways, works out which conversion is at fault, and hands a human the order to review in.</p>
+      <p class="lead technical" style="margin-top:var(--s-3)">A Google ADK <code class="mono">LlmAgent</code> on Gemini with four tools, each a live query through the official <code class="mono">mcp-clickhouse</code> server. It sequences them itself. Every figure in the brief came back from SQL; the tool trace is returned alongside so you can check that.</p>
+
+      <div class="controls">
+        <button class="btn btn-primary" id="brief-run">Run the triage agent</button>
+      </div>
+
+      <div class="brief">
+        <article class="panel" style="padding:var(--s-4)">
+          <h3>QC triage brief</h3>
+          <p class="empty" id="brief-empty" style="padding:var(--s-5) 0">No brief has been generated in this browser session.</p>
+          <div class="brieftext" id="brief-text" hidden></div>
+        </article>
+        <aside class="panel" style="padding:var(--s-4)">
+          <h3>Steps the agent took</h3>
+          <p class="muted" style="font-size:var(--t-xs);margin-top:var(--s-2)">Recorded from the run, not scripted.</p>
+          <ol class="trace" id="trace"></ol>
+          <dl class="facts" id="brief-facts" hidden style="margin-top:var(--s-4)">
+            <dt>Decision</dt><dd id="b-source">&mdash;</dd>
+            <dt>Human required</dt><dd id="b-human">&mdash;</dd>
+            <dt>Model</dt><dd id="b-model">&mdash;</dd>
+          </dl>
+        </aside>
+      </div>
+    </div>
+  </section>
+
   <section id="criteria">
     <div class="wrap">
       <p class="eyebrow">Criteria provenance</p>
@@ -615,6 +711,12 @@ const RULE = {
   },
 };
 const ruleLabel = (r) => (RULE[r] || { label: r }).label;
+const BRIEF_HEADINGS = new RegExp(
+  "^[ \t]*(" + [
+    "What the sweep found", "Systemic cause",
+    "What a luminance-only check would have missed",
+    "Review first", "Required human action",
+  ].join("|") + "):?[ \t]*$", "gim");
 
 /* Declared before the theme restore below, which reads `selected` to decide
    whether a chart needs repainting. Leaving these further down put them in the
@@ -912,6 +1014,108 @@ $("#explain").onclick = async () => {
     out.textContent = `The explanation failed closed: ${e.message}`;
   } finally {
     b.disabled = false; b.removeAttribute("aria-busy"); b.textContent = "Ask the ADK agent";
+  }
+};
+
+/* ---------- systemic cause -------------------------------------------- */
+$("#risk-run").onclick = async () => {
+  const b = $("#risk-run");
+  b.disabled = true; b.setAttribute("aria-busy", "true"); b.textContent = "Profiling in ClickHouse…";
+  try {
+    const r = await fetch("/v1/catalogue/transform-risk");
+    const p = await r.json();
+    if (!r.ok) throw new Error((p.detail && p.detail.message) || "The profile failed closed.");
+    renderRisk(p.data);
+  } catch (e) {
+    $("#risk-empty").hidden = false;
+    $("#risk-empty").textContent = "The profile failed closed; no rates were invented.";
+  } finally {
+    b.disabled = false; b.removeAttribute("aria-busy"); b.textContent = "Profile every transform";
+  }
+};
+
+function renderRisk(d) {
+  const host = $("#risk");
+  host.replaceChildren();
+  const worst = Math.max(1, ...d.profiles.map((p) => p.regressed));
+  for (const p of d.profiles) {
+    const row = document.createElement("div");
+    row.className = "riskrow" + (p.regressed ? "" : " clean");
+    // Segments are the rule split, never a stacked total: the two rules are
+    // independent tests and their sum is not a quantity the criteria compute.
+    const seg = (n, cls) => (n ? `<i class="${cls}" style="width:${(n / worst) * 100}%"></i>` : "");
+    row.innerHTML =
+      `<span class="name">${p.transform}</span>` +
+      `<span class="riskbar">${seg(p.general_flash, "g")}${seg(p.red_flash, "r")}</span>` +
+      `<span class="val">${p.regressed ? `${p.regressed} of ${p.renditions} · ${p.regressed_pct}%` : "clean"}</span>`;
+    host.append(row);
+  }
+  host.hidden = false;
+  $("#risk-empty").hidden = true;
+  $("#risk-cap").textContent =
+    `Every transform in the catalogue, computed live. Bars are the rule split — ` +
+    `blue is general flash, red is red flash — scaled to the worst transform. ` +
+    `${d.transforms_clean} of ${d.profiles.length} transforms introduced nothing.`;
+
+  const implicated = d.profiles.filter((p) => p.regressed);
+  const top = implicated.slice(0, 2).reduce((a, p) => a + p.regressed, 0);
+  $("#outcome").hidden = false;
+  $("#o-profiles").textContent = d.transforms_implicated;
+  $("#o-profiles-t").textContent =
+    `encoder profiles account for all ${d.total_regressed} regressions. The worst two alone produce ${top} of them, so this is a small number of upstream fixes rather than ${d.total_regressed} renditions to patch.`;
+  $("#o-blind").textContent = `${d.red_only_regressions} of ${d.total_regressed}`;
+  $("#o-blind-t").textContent =
+    "findings come from transforms whose only failure mode is red flash. A checker implementing just the luminance rule passes every one of them.";
+  $("#o-clean").textContent = d.transforms_clean;
+  $("#o-clean-t").textContent =
+    "transforms introduced nothing at all, which is what makes the others worth investigating rather than the pipeline as a whole.";
+}
+
+/* ---------- the multi-step agent -------------------------------------- */
+$("#brief-run").onclick = async () => {
+  const b = $("#brief-run"), trace = $("#trace");
+  b.disabled = true; b.setAttribute("aria-busy", "true"); b.textContent = "Agent working…";
+  trace.replaceChildren();
+  $("#brief-empty").hidden = false;
+  $("#brief-empty").textContent = "The agent is querying ClickHouse through MCP…";
+  $("#brief-text").hidden = true;
+  try {
+    const r = await fetch("/v1/triage", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ operator_id: "web-judge" }),
+    });
+    const p = await r.json();
+    if (!r.ok) throw new Error((p.detail && p.detail.message) || "The agent failed closed.");
+    const d = p.data;
+    for (const step of d.tool_calls || []) {
+      const li = document.createElement("li");
+      li.innerHTML = `<b>${step.step}</b><code>${step.tool}</code>`;
+      trace.append(li);
+    }
+    if (!(d.tool_calls || []).length) {
+      trace.innerHTML = '<li>The run recorded no tool calls.</li>';
+    }
+    $("#brief-empty").hidden = true;
+    $("#brief-text").hidden = false;
+    // The agent writes the headings it was told to use, sometimes as markdown.
+    // Only headings and inline code are lifted; nothing else is interpreted, and
+    // the text is escaped first, so the model cannot inject markup into the page.
+    $("#brief-text").innerHTML = String(d.text || "")
+      .replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c])
+      .replace(/^[ 	]*#{1,6}[ 	]*\*{0,2}(.+?)\*{0,2}[ 	]*$/gm, "<strong>$1</strong>")
+      .replace(/^[ 	]*\*\*(.+?)\*\*:?[ 	]*$/gm, "<strong>$1</strong>")
+      // the agent may emit the headings plain, so match them by name too
+      .replace(BRIEF_HEADINGS, "<strong>$1</strong>")
+      .replace(/`([^`\r\n]{1,120})`/g, '<code class="mono">$1</code>');
+    $("#brief-facts").hidden = false;
+    $("#b-source").textContent = d.decision_source;
+    $("#b-human").textContent = String(d.requires_human);
+    $("#b-model").textContent = d.model;
+  } catch (e) {
+    $("#brief-empty").hidden = false;
+    $("#brief-empty").textContent = `The agent failed closed: ${e.message}`;
+  } finally {
+    b.disabled = false; b.removeAttribute("aria-busy"); b.textContent = "Run the triage agent";
   }
 };
 
