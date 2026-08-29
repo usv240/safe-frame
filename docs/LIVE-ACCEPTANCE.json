@@ -176,5 +176,70 @@
     "a `let` read from its temporal dead zone during theme restore threw at init and detached every listener; the page rendered and did nothing, and the whole pytest suite passed",
     "the chart placeholder was a child of the element the draw replaces, so every successful draw destroyed it and then threw, silently skipping the caption, table view and tooltip",
     "the phone card layout had width:100% plus margins and overflowed the viewport by exactly the margin"
+  ],
+  "multi_step_agent": {
+    "agent": "QcTriageAgent",
+    "endpoint": "/v1/triage",
+    "tools": [
+      "survey_regressions",
+      "profile_transform_risk",
+      "count_luminance_blind_spot",
+      "inspect_pair_timeline"
+    ],
+    "observed_trace": [
+      "survey_regressions",
+      "profile_transform_risk",
+      "count_luminance_blind_spot",
+      "inspect_pair_timeline"
+    ],
+    "steps_observed": 4,
+    "elapsed_s": 20.6,
+    "decision_source": "clickhouse_sql",
+    "requires_human": true,
+    "note": "every tool is a live query through the official mcp-clickhouse server; the trace is recorded from the run and returned with the brief"
+  },
+  "systemic_finding": {
+    "endpoint": "/v1/catalogue/transform-risk",
+    "profiles": {
+      "60fps_interp": {
+        "renditions": 400,
+        "regressed": 16,
+        "pct": 4.0,
+        "rule": "general_flash"
+      },
+      "adbreak_insert": {
+        "renditions": 400,
+        "regressed": 15,
+        "pct": 3.75,
+        "rule": "general_flash"
+      },
+      "subtitle_burnin": {
+        "renditions": 400,
+        "regressed": 7,
+        "pct": 1.75,
+        "rule": "red_flash"
+      },
+      "social_crop_v": {
+        "renditions": 400,
+        "regressed": 6,
+        "pct": 1.5,
+        "rule": "red_flash"
+      }
+    },
+    "transforms_implicated": 4,
+    "transforms_clean": 3,
+    "red_only_regressions": 13,
+    "why_it_matters": "44 findings resolve to four encoder profiles with two distinct root causes, so the action is a handful of upstream fixes rather than 44 patches; 13 are invisible to a luminance-only checker"
+  },
+  "on_the_page": [
+    "who it is for, named in one line under the hero",
+    "the impact case with its sources",
+    "the live sweep, and the evidence chart for any finding",
+    "the systemic cause: every transform with its regression rate and rule split",
+    "the multi-step agent brief with the tool sequence it actually ran",
+    "the partner integration, checkable in place: transport, read-only status, advertised tools and a live query result",
+    "the runtime hops with the credential boundary marked",
+    "every threshold traced to its published definition, including the one not implemented",
+    "an export so the findings can leave the page"
   ]
 }

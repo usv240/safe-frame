@@ -56,6 +56,11 @@ Updated: 2026-08-28
 - [x] Systemic root-cause analysis: per-transform regression rates turn 44
       findings into four implicated encoder profiles and three clean ones
 - [x] Impact stated on the product surface with sources, not only in the repo
+- [x] Partner integration checkable from the page itself: transport, read-only
+      status, advertised tools and a live query result
+- [x] Runtime hops shown with the credential boundary marked
+- [x] Audience named explicitly (distribution QC and encoding teams)
+- [x] Findings can leave the page as a report carrying its own limitations
 
 ## Release tasks
 
