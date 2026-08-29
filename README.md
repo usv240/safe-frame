@@ -6,8 +6,11 @@ that was absent from the approved parent?
 
 Public app: <https://safe-frame-regression-109051079423.us-central1.run.app>
 
-Start with [`JUDGING.md`](JUDGING.md) for the shortest verified judge path and
-[`submission-evidence.json`](submission-evidence.json) for machine-readable proof.
+Start with [`JUDGING.md`](JUDGING.md) for the shortest verified judge path,
+[`docs/CRITERIA.md`](docs/CRITERIA.md) for where every threshold came from,
+[`docs/IMPACT.md`](docs/IMPACT.md) for who this is for and what has *not* been
+shown, and [`submission-evidence.json`](submission-evidence.json) for
+machine-readable proof.
 
 It is **not a certified, broadcaster-approved, or medical diagnostic device**.
 The deterministic detector and ClickHouse SQL are an open pre-check against
@@ -29,7 +32,9 @@ alignment because frame-rate conversion makes it invalid.
 
 ## Two rules, windowed independently
 
-Published photosensitivity guidance is not one rule. Safe Frame implements two:
+Published guidance is not one rule, and the thresholds are not ours to pick.
+Every one traces to WCAG 2.3.1 — see [`docs/CRITERIA.md`](docs/CRITERIA.md) for
+the quoted definitions. Safe Frame implements two of the three tests:
 
 - **general flash** — luminance alternation at or above a 0.10 delta.
 - **red flash** — saturated-red alternation at or above a 0.20 red delta, with

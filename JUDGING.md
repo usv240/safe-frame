@@ -25,10 +25,14 @@
    saturated-red alternation whose luminance change stays *under* the general-flash
    floor — a luminance-only checker passes those renditions. The two rules are
    attributed to different transforms, so the table shows which conversion did what.
-4. Click any row, then press **Ask the ADK agent about the selection**. The agent must
-   retrieve its evidence through MCP; confirm `decision_source` stays `clickhouse_sql`
-   and `requires_human` stays `true`.
-5. Open `/health`; all four runtime checks should be true.
+4. Look at the evidence chart. Both tracks come from one query over one table on a
+   shared scale: the approved master stays under the criterion for its whole runtime,
+   and the rendition crosses it in one second. Pick a **red flash** row and note that
+   its general-flash track never moves — that is the case a luminance-only check
+   passes. The same numbers are available as a table under the chart.
+5. Press **Ask the ADK agent**. It must retrieve evidence through MCP; confirm
+   `decision_source` stays `clickhouse_sql` and `requires_human` stays `true`.
+6. Open `/health`; all four runtime checks should be true.
 
 ## Verifying the verdict is not theatre
 
@@ -46,8 +50,8 @@
 |---|---|---|
 | Technological Implementation | The sweep, then MCP evidence, then an explanation | Two rules windowed independently in one pass, presentation-time lineage, live SQL isolation, request-bound ADK evidence, fail-closed behaviour |
 | Design | `/` in Plain mode, then Technical mode | One coherent non-flashing path for an editor and for an engineering judge |
-| Potential Impact | The red-flash rows | A rendition that introduced a risk its approved master never had, invisible to a luminance-only check and to any per-file QC that never compares versions |
-| Quality of Idea | `docs/PRIOR-ART.md` | Detection, repair, dimming and batch scale are conceded; the narrow public gap is lineage regression |
+| Potential Impact | The red-flash rows and `docs/IMPACT.md` | A rendition that introduced a risk its approved master never had, invisible to a luminance-only check and to any per-file QC that never compares versions. `IMPACT.md` carries the sourced case *and* an explicit list of what has not been shown |
+| Quality of Idea | `docs/PRIOR-ART.md` and `docs/CRITERIA.md` | Detection, repair, dimming and batch scale are conceded; the narrow public gap is lineage regression, and every threshold traces to a quoted WCAG 2.3.1 definition |
 
 The catalogue is self-authored synthetic measurement, not footage, and contains no
 flashing media. Safe Frame is not a certified device and makes no medical efficacy

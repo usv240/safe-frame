@@ -737,21 +737,28 @@ function drawChart() {
   const peak = Math.max(crit + 2, ...d.parent.general_flash, ...d.parent.red_flash,
                         ...d.child.general_flash, ...d.child.red_flash);
 
-  const W = 760, PADL = 34, PADR = 12, TRACK = 92, GAP = 30, LABEL = 18;
+  // The viewBox is measured from the container rather than fixed, so one SVG
+  // unit stays one CSS pixel at every width. A fixed viewBox would scale the
+  // labels down with the drawing and make them unreadable on a phone.
+  const W = Math.max(300, Math.round(host.clientWidth || 760));
+  const narrow = W < 560;
+  const PADL = narrow ? 26 : 34, PADR = 12;
+  const TRACK = narrow ? 68 : 92, GAP = narrow ? 24 : 30, LABEL = 18;
+  const FS = narrow ? 10 : 11;
   const plotW = W - PADL - PADR;
   const H = LABEL + TRACK + GAP + LABEL + TRACK + 22;
-  const bw = Math.max(1.1, (plotW / secs) * 0.38);
+  const bw = Math.max(1, (plotW / secs) * 0.38);
 
   const y = (top, v) => top + TRACK - (v / peak) * TRACK;
   const x = (s) => PADL + (s / secs) * plotW;
 
   function track(top, series, name, isChild) {
-    let g = `<text x="${PADL}" y="${top - 6}" fill="${colInk}" font-size="11.5" font-weight="700">${name}</text>`;
+    let g = `<text x="${PADL}" y="${top - 6}" fill="${colInk}" font-size="${FS + .5}" font-weight="700">${name}</text>`;
     // horizontal baseline + criterion rule
     g += `<line x1="${PADL}" y1="${top + TRACK}" x2="${W - PADR}" y2="${top + TRACK}" stroke="${colLine}" stroke-width="1"/>`;
     g += `<line x1="${PADL}" y1="${y(top, crit)}" x2="${W - PADR}" y2="${y(top, crit)}" stroke="${colInk3}" stroke-width="1.5" stroke-dasharray="4 3"/>`;
-    g += `<text x="${PADL - 6}" y="${y(top, crit) + 3.5}" fill="${colInk3}" font-size="10" text-anchor="end">${crit}</text>`;
-    g += `<text x="${PADL - 6}" y="${top + TRACK + 3.5}" fill="${colInk3}" font-size="10" text-anchor="end">0</text>`;
+    g += `<text x="${PADL - 6}" y="${y(top, crit) + 3.5}" fill="${colInk3}" font-size="${FS - 1}" text-anchor="end">${crit}</text>`;
+    g += `<text x="${PADL - 6}" y="${top + TRACK + 3.5}" fill="${colInk3}" font-size="${FS - 1}" text-anchor="end">0</text>`;
     for (let s = 0; s < secs; s++) {
       const gv = series.general_flash[s] || 0, rv = series.red_flash[s] || 0;
       if (gv) g += `<rect x="${(x(s) - bw - 0.6).toFixed(2)}" y="${y(top, gv).toFixed(2)}" width="${bw.toFixed(2)}" height="${((gv / peak) * TRACK).toFixed(2)}" fill="${colGeneral}" rx="1"/>`;
@@ -759,7 +766,11 @@ function drawChart() {
       // one direct label on the offending second, never a number on every bar
       if (isChild && Math.max(gv, rv) > crit) {
         const v = Math.max(gv, rv);
-        g += `<text x="${x(s)}" y="${y(top, v) - 6}" fill="${gv > rv ? colGeneral : colRed}" font-size="11" font-weight="700" text-anchor="middle">${v} in one second</text>`;
+        const label = narrow ? `${v} in 1s` : `${v} in one second`;
+        // keep the direct label inside the plot at every width
+        const half = label.length * FS * 0.29;
+        const lx = Math.min(Math.max(x(s), PADL + half), W - PADR - half);
+        g += `<text x="${lx}" y="${y(top, v) - 6}" fill="${gv > rv ? colGeneral : colRed}" font-size="${FS}" font-weight="700" text-anchor="middle">${label}</text>`;
       }
     }
     return g;
@@ -772,8 +783,9 @@ function drawChart() {
   svg += track(topA, d.parent, "Approved master", false);
   svg += track(topB, d.child, "Shipped rendition", true);
   // x axis
-  for (let s = 0; s <= secs; s += Math.max(10, Math.round(secs / 8 / 10) * 10)) {
-    svg += `<text x="${x(s)}" y="${H - 6}" fill="${colInk3}" font-size="10" text-anchor="middle">${s}s</text>`;
+  const tick = Math.max(10, Math.round(secs / (narrow ? 4 : 8) / 10) * 10);
+  for (let s = 0; s <= secs; s += tick) {
+    svg += `<text x="${x(s)}" y="${H - 6}" fill="${colInk3}" font-size="${FS - 1}" text-anchor="middle">${s}s</text>`;
   }
   svg += `<rect id="hit" x="${PADL}" y="0" width="${plotW}" height="${H - 16}" fill="transparent"/>`;
   svg += `</svg>`;
@@ -815,7 +827,13 @@ function drawChart() {
   });
   svgEl.addEventListener("pointerleave", () => { tip.dataset.show = "0"; });
 }
-window.addEventListener("resize", () => { if (timelineData) drawChart(); });
+let redraw;
+const scheduleRedraw = () => {
+  clearTimeout(redraw);
+  redraw = setTimeout(() => { if (timelineData) drawChart(); }, 120);
+};
+window.addEventListener("resize", scheduleRedraw);
+if (window.ResizeObserver) new ResizeObserver(scheduleRedraw).observe($("#chart"));
 
 /* ---------- the agent -------------------------------------------------- */
 $("#explain").onclick = async () => {
