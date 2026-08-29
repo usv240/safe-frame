@@ -285,6 +285,33 @@ async def catalogue_sweep() -> dict[str, object]:
     return {"data": result}
 
 
+@app.get("/v1/catalogue/timeline")
+async def catalogue_timeline(parent_asset: str, child_asset: str) -> dict[str, object]:
+    """Second-by-second qualifying transitions for an approved master and one rendition.
+
+    This is what the evidence chart draws. Both tracks come from the same query
+    over the same table on one shared scale, so the page cannot flatter the
+    comparison by scaling the two sides differently.
+    """
+    from .catalogue import timeline
+
+    try:
+        result = await timeline(parent_asset, child_asset)
+    except ClickHouseNotConfigured as exc:
+        raise HTTPException(
+            503, detail={"code": "mcp_clickhouse_not_configured", "message": str(exc)}
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            502,
+            detail={
+                "code": "catalogue_timeline_failed",
+                "message": f"The timeline failed closed ({type(exc).__name__}); no track was invented.",
+            },
+        ) from exc
+    return {"data": result}
+
+
 @app.get("/v1/integrations/clickhouse/evidence")
 async def clickhouse_evidence() -> dict[str, object]:
     try:

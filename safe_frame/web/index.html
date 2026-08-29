@@ -1,328 +1,839 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Find the rendition that introduced a photosensitivity risk the approved master never had.">
-  <title>Safe Frame — rendition regression pre-check</title>
-  <style>
-    :root{color-scheme:light;--paper:#f8f4e9;--ink:#1e2421;--muted:#646962;--line:#d7d3c8;--amber:#b45309;--red:#a62f27;--green:#186348;--card:#fffdf7;--dark:#17211d;--shadow:0 16px 44px rgba(30,36,33,.09)}
-    html[data-theme="dark"]{color-scheme:dark;--paper:#111714;--ink:#eef3ed;--muted:#a9b3ab;--line:#39443d;--card:#1b241f;--dark:#080d0b;--amber:#f0a758;--red:#f08a80;--green:#6fd7ab;--shadow:none}
-    *{box-sizing:border-box}
-    body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}
-    button{font:inherit;cursor:pointer}
-    .shell{width:min(1180px,calc(100% - 2rem));margin:auto}
-    a{color:var(--amber)}
-    nav{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);padding:14px 0 20px;gap:1rem;flex-wrap:wrap}
-    .brand{font-weight:900;letter-spacing:.18em}
-    .mode{display:flex;border:1px solid var(--line);border-radius:99px;padding:3px;background:var(--card)}
-    .mode button{border:0;border-radius:99px;background:transparent;padding:7px 13px;color:var(--muted)}
-    .mode button.active{background:var(--ink);color:var(--paper)}
-    header{padding:62px 0 42px;display:grid;grid-template-columns:1.4fr .6fr;gap:40px;align-items:end}
-    .eyebrow{font-size:.76rem;font-weight:850;letter-spacing:.14em;text-transform:uppercase;color:var(--amber)}
-    h1{font:clamp(2.8rem,6.4vw,5.6rem)/.94 Georgia,serif;letter-spacing:-.05em;margin:14px 0 22px;max-width:16ch}
-    .lead{font-size:1.16rem;color:var(--muted);max-width:60ch}
-    .boundary{background:var(--dark);color:#f3f8f5;padding:22px;border-radius:14px;box-shadow:var(--shadow)}
-    .boundary strong{display:block;margin-bottom:.5rem}
-    .boundary p{color:#cfdcd5;margin:7px 0;font-size:.9rem}
-    .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#54d39c;margin-right:8px}
-    .dot.warn{background:#efb15d}
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Find the rendition that introduced a photosensitivity risk the approved master never had. Live ClickHouse regression sweep across a distribution catalogue.">
+<meta name="color-scheme" content="light dark">
+<title>Safe Frame — rendition regression pre-check</title>
+<style>
+/* ============================================================================
+   Safe Frame design tokens.
 
-    h2{font:clamp(1.8rem,3.6vw,3rem)/1.08 Georgia,serif;letter-spacing:-.03em;margin:.3rem 0 1rem}
-    section.block{padding:46px 0}
-    .scale{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin:8px 0 26px}
-    .scale div{background:var(--card);padding:1rem 1.1rem}
-    .scale b{display:block;font:1.75rem/1.1 Georgia,serif}
-    .scale span{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+   Light is the default and is defined on bare :root, so a page that never
+   matches a media query or a theme stamp is still fully painted. Dark is
+   declared twice on purpose: once for the OS setting, guarded so an explicit
+   light choice beats it, and once for the explicit dark choice, so the toggle
+   wins in both directions.
 
-    .controls{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}
-    .primary,.secondary{border:1px solid var(--line);border-radius:8px;padding:11px 17px;background:var(--card);color:var(--ink);text-decoration:none;display:inline-block}
-    .primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-    .primary:disabled{opacity:.55;cursor:default}
+   This is a product about visual safety, so the page holds itself to the rule
+   it enforces: nothing here flashes, no animation loops, and every transition
+   is disabled outright under prefers-reduced-motion.
+   ============================================================================ */
+:root{
+  color-scheme:light;
 
-    .sweepwrap{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
-    .sweephead{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:1rem 1.2rem;border-bottom:1px solid var(--line);flex-wrap:wrap}
-    .sweephead h3{margin:0;font-size:1rem}
-    .qstat{display:flex;gap:1.2rem;flex-wrap:wrap;font-size:.78rem;color:var(--muted)}
-    .qstat b{color:var(--ink);font-variant-numeric:tabular-nums}
-    .tablewrap{overflow-x:auto;max-height:420px;overflow-y:auto}
-    table{border-collapse:collapse;width:100%;font-size:.86rem}
-    th{position:sticky;top:0;background:var(--card);text-align:left;font-size:.7rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);padding:.7rem 1rem;border-bottom:1px solid var(--line);white-space:nowrap;z-index:1}
-    td{padding:.62rem 1rem;border-bottom:1px solid var(--line);white-space:nowrap;font-variant-numeric:tabular-nums}
-    tbody tr{cursor:pointer}
-    tbody tr:hover{background:color-mix(in srgb,var(--amber) 8%,transparent)}
-    tbody tr.sel{background:color-mix(in srgb,var(--amber) 15%,transparent)}
-    .tf{font-weight:750;color:var(--red)}
-    .rule{font-size:.68rem;font-weight:850;letter-spacing:.06em;text-transform:uppercase;padding:.25rem .5rem;border-radius:999px;white-space:nowrap}
-    .rule.general_flash{background:color-mix(in srgb,var(--amber) 20%,transparent);color:var(--amber)}
-    .rule.red_flash{background:color-mix(in srgb,var(--red) 20%,transparent);color:var(--red)}
-    .bars.red i.hot{background:var(--red)}
-    .bars.red i.warm{background:color-mix(in srgb,var(--red) 55%,var(--amber))}
-    .mono{font-family:ui-monospace,Consolas,monospace;font-size:.8rem}
-    .empty{padding:2.6rem 1.2rem;color:var(--muted);text-align:center}
+  --paper:#faf7f0;
+  --surface:#fffdf8;
+  --surface-2:#f3eee3;
+  --ink:#1b201d;
+  --ink-2:#4a514c;
+  --ink-3:#6f7671;
+  --line:#e0dacd;
+  --line-strong:#c8c0ae;
 
-    .detail{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem}
-    .panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:1.2rem;box-shadow:var(--shadow)}
-    .panel h4{margin:0 0 .2rem;font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
-    .panel .big{font:1.5rem/1.2 Georgia,serif;margin:.15rem 0 .6rem}
-    .track{margin:1rem 0 .3rem}
-    .trackhead{display:flex;justify-content:space-between;font-size:.78rem;color:var(--muted);margin-bottom:.35rem}
-    .trackhead b{color:var(--ink)}
-    .bars{height:56px;display:flex;align-items:flex-end;gap:3px;border-bottom:2px solid var(--line);padding-bottom:2px}
-    .bars i{flex:1;background:var(--green);border-radius:1px 1px 0 0;min-height:3px}
-    .bars.fail i.hot{background:var(--red)}
-    .bars.fail i.warm{background:var(--amber)}
-    .caption{font-size:.76rem;color:var(--muted);margin-top:.45rem}
-    .verdict{display:inline-block;font-size:.7rem;font-weight:850;letter-spacing:.09em;text-transform:uppercase;padding:.3rem .65rem;border-radius:999px}
-    .verdict.pass{background:color-mix(in srgb,var(--green) 18%,transparent);color:var(--green)}
-    .verdict.fail{background:color-mix(in srgb,var(--red) 18%,transparent);color:var(--red)}
+  --accent:#a1571c;
+  --accent-ink:#fffdf8;
+  --good:#1d6b4c;
+  --warn:#8a5a12;
 
-    .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:34px 0}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px}
-    .card h3{margin:8px 0 .4rem}
-    .card p{margin:0;color:var(--muted);font-size:.92rem}
-    .tag{color:var(--amber);font-size:.7rem;font-weight:900;letter-spacing:.1em}
+  /* Categorical series. Validated for CVD separation and contrast against
+     --paper in both modes with the dataviz palette validator: worst adjacent
+     pair CVD ΔE 21.6 light / 19.2 dark against a target of 8. Red carries the
+     red-flash rule because the rule is about saturated red; it is never the
+     only cue -- every mark is paired with a text label. */
+  --series-general:#2a78d6;
+  --series-red:#e34948;
+  --series-general-soft:#2a78d61f;
+  --series-red-soft:#e349481f;
 
-    .gate{display:grid;grid-template-columns:.8fr 1.2fr;gap:30px;background:var(--ink);color:var(--paper);padding:32px;border-radius:16px;margin:44px 0}
-    html[data-theme="dark"] .gate{background:#080d0b}
-    .gate h2{color:var(--paper);margin-top:.2rem}
-    .gate p{color:#c6d2cb}
-    .sql{background:#0d1411;padding:18px;border-radius:10px;color:#bdebd8;font:12.5px/1.65 ui-monospace,Consolas,monospace;overflow-x:auto}
-    .sql .kw{color:#7fd4ff}.sql .st{color:#f3c078}
+  --focus:#1a63b8;
 
-    pre.result{background:var(--dark);color:#bdebd8;padding:18px;border-radius:12px;max-height:340px;overflow:auto;white-space:pre-wrap;font:12px/1.55 ui-monospace,Consolas,monospace;margin-top:1rem}
-    pre.result[hidden]{display:none}
-    .technical{display:none}
-    body.tech .plain{display:none}
-    body.tech .technical{display:block}
-    footer{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;border-top:1px solid var(--line);padding:26px 0;color:var(--muted);font-size:.84rem}
-    @media(max-width:900px){header,.gate,.grid3,.detail{grid-template-columns:1fr}.scale{grid-template-columns:1fr 1fr}h1{font-size:2.8rem}}
-  </style>
+  --r-sm:6px; --r-md:10px; --r-lg:16px; --r-xl:22px;
+  --shadow-1:0 1px 2px rgba(27,32,29,.05), 0 2px 8px rgba(27,32,29,.05);
+  --shadow-2:0 4px 12px rgba(27,32,29,.07), 0 16px 40px rgba(27,32,29,.07);
+
+  /* Fluid scale: every step interpolates on viewport width, so the page is
+     continuously responsive rather than snapping at a few breakpoints. */
+  --t-xs:clamp(.72rem,.70rem + .10vw,.79rem);
+  --t-sm:clamp(.81rem,.78rem + .14vw,.90rem);
+  --t-base:clamp(.95rem,.91rem + .19vw,1.06rem);
+  --t-lg:clamp(1.08rem,1.00rem + .38vw,1.30rem);
+  --t-xl:clamp(1.35rem,1.15rem + .95vw,2.00rem);
+  --t-2xl:clamp(1.75rem,1.30rem + 2.20vw,3.10rem);
+  --t-3xl:clamp(2.30rem,1.45rem + 4.10vw,4.60rem);
+
+  --s-1:.35rem; --s-2:.6rem; --s-3:.95rem; --s-4:1.4rem;
+  --s-5:2.1rem; --s-6:3.1rem; --s-7:4.6rem;
+
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Inter,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Consolas,"Liberation Mono",monospace;
+}
+
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --paper:#14120f;
+    --surface:#1c1a16;
+    --surface-2:#252119;
+    --ink:#f3efe6;
+    --ink-2:#bdb8ab;
+    --ink-3:#918c80;
+    --line:#332e25;
+    --line-strong:#4a4335;
+    --accent:#e0a267;
+    --accent-ink:#14120f;
+    --good:#5fc79b;
+    --warn:#e0a267;
+    --series-general:#3987e5;
+    --series-red:#e66767;
+    --series-general-soft:#3987e526;
+    --series-red-soft:#e6676726;
+    --focus:#7db6ff;
+    --shadow-1:0 1px 2px rgba(0,0,0,.4);
+    --shadow-2:0 8px 30px rgba(0,0,0,.45);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --paper:#14120f;
+  --surface:#1c1a16;
+  --surface-2:#252119;
+  --ink:#f3efe6;
+  --ink-2:#bdb8ab;
+  --ink-3:#918c80;
+  --line:#332e25;
+  --line-strong:#4a4335;
+  --accent:#e0a267;
+  --accent-ink:#14120f;
+  --good:#5fc79b;
+  --warn:#e0a267;
+  --series-general:#3987e5;
+  --series-red:#e66767;
+  --series-general-soft:#3987e526;
+  --series-red-soft:#e6676726;
+  --focus:#7db6ff;
+  --shadow-1:0 1px 2px rgba(0,0,0,.4);
+  --shadow-2:0 8px 30px rgba(0,0,0,.45);
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font:var(--t-base)/1.6 var(--sans);
+  font-synthesis-weight:none;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+h1,h2,h3{font-family:var(--serif);font-weight:600;letter-spacing:-.022em;line-height:1.08;margin:0}
+h1{font-size:var(--t-3xl);letter-spacing:-.035em}
+h2{font-size:var(--t-2xl)}
+h3{font-size:var(--t-lg);font-family:var(--sans);font-weight:650;letter-spacing:-.01em}
+p{margin:0}
+a{color:var(--accent);text-underline-offset:.18em;text-decoration-thickness:.06em}
+:where(a,button,summary,[tabindex]):focus-visible{
+  outline:2.5px solid var(--focus);outline-offset:3px;border-radius:var(--r-sm);
+}
+.skip{position:absolute;left:-9999px;top:0;z-index:99;background:var(--ink);color:var(--paper);padding:var(--s-2) var(--s-3);border-radius:0 0 var(--r-md) 0}
+.skip:focus{left:0}
+
+.wrap{width:min(1220px,100% - clamp(1.6rem,5vw,4rem));margin-inline:auto}
+.eyebrow{
+  font-size:var(--t-xs);font-weight:700;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--accent);margin:0 0 var(--s-2)
+}
+.lead{font-size:var(--t-lg);color:var(--ink-2);line-height:1.5;max-width:62ch}
+.muted{color:var(--ink-3)}
+.mono{font-family:var(--mono);font-size:.92em;font-variant-ligatures:none}
+
+/* ---------- header ---------- */
+header.top{
+  position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--paper) 88%,transparent);
+  backdrop-filter:blur(12px);border-bottom:1px solid var(--line)
+}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:var(--s-3);padding:var(--s-3) 0;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:.55rem;font-weight:800;letter-spacing:.15em;font-size:var(--t-sm);text-transform:uppercase}
+.brand svg{flex:none}
+.toggles{display:flex;gap:var(--s-2);flex-wrap:wrap}
+.seg{display:flex;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:3px}
+.seg button{
+  font:600 var(--t-xs)/1 var(--sans);letter-spacing:.04em;border:0;background:transparent;color:var(--ink-3);
+  padding:.5rem .8rem;border-radius:999px;cursor:pointer;white-space:nowrap
+}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+
+/* ---------- hero ---------- */
+.hero{padding:clamp(2.4rem,6vw,5.2rem) 0 var(--s-5)}
+.hero h1{max-width:17ch;margin-bottom:var(--s-4)}
+.hero .lead{margin-bottom:var(--s-5)}
+.headline-stat{
+  display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--s-2) var(--s-3);
+  padding:var(--s-4);border-radius:var(--r-lg);
+  background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow-1)
+}
+.headline-stat b{font:600 var(--t-xl)/1 var(--serif);color:var(--accent);font-variant-numeric:tabular-nums}
+
+/* ---------- generic surfaces ---------- */
+section{padding:clamp(2.6rem,6vw,4.8rem) 0;border-top:1px solid var(--line)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:var(--s-4)}
+.grid{display:grid;gap:var(--s-3)}
+.g-3{grid-template-columns:repeat(auto-fit,minmax(min(100%,17rem),1fr))}
+.g-2{grid-template-columns:repeat(auto-fit,minmax(min(100%,22rem),1fr))}
+
+/* ---------- impact ---------- */
+.fact{display:flex;flex-direction:column;gap:var(--s-1);padding:var(--s-4);background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg)}
+.fact b{font:600 var(--t-xl)/1.05 var(--serif);color:var(--ink);font-variant-numeric:tabular-nums}
+.fact p{font-size:var(--t-sm);color:var(--ink-2)}
+.fact cite{font-size:var(--t-xs);color:var(--ink-3);font-style:normal;margin-top:var(--s-1)}
+.fact cite a{color:inherit}
+
+.pull{
+  border-left:3px solid var(--accent);padding:var(--s-2) 0 var(--s-2) var(--s-4);
+  margin:var(--s-5) 0 0;font-family:var(--serif);font-size:var(--t-lg);line-height:1.45;max-width:58ch
+}
+
+/* ---------- stat strip ---------- */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,10rem),1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
+.stats div{background:var(--surface);padding:var(--s-3) var(--s-4)}
+.stats b{display:block;font:600 var(--t-xl)/1.05 var(--serif);font-variant-numeric:tabular-nums}
+.stats span{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.09em;color:var(--ink-3)}
+
+/* ---------- controls ---------- */
+.controls{display:flex;gap:var(--s-2);flex-wrap:wrap;margin:var(--s-4) 0}
+.btn{
+  font:650 var(--t-sm)/1 var(--sans);border:1px solid var(--line-strong);border-radius:var(--r-md);
+  padding:.78rem 1.15rem;background:var(--surface);color:var(--ink);cursor:pointer;
+  text-decoration:none;display:inline-flex;align-items:center;gap:.45rem
+}
+.btn:hover{border-color:var(--ink-3)}
+.btn-primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn-primary:hover{filter:brightness(1.06)}
+.btn[disabled]{opacity:.5;cursor:default}
+.btn[aria-busy="true"]{cursor:progress}
+
+/* ---------- results table ---------- */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--shadow-1)}
+.panel-head{display:flex;justify-content:space-between;align-items:center;gap:var(--s-3);padding:var(--s-3) var(--s-4);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.panel-head h3{font-size:var(--t-base)}
+.qstat{display:flex;gap:var(--s-3);flex-wrap:wrap;font-size:var(--t-xs);color:var(--ink-3)}
+.qstat b{color:var(--ink);font-variant-numeric:tabular-nums}
+
+.scroll{overflow-x:auto;max-height:26rem;overflow-y:auto;overscroll-behavior:contain}
+table{border-collapse:collapse;width:100%;font-size:var(--t-sm)}
+caption{text-align:left;padding:var(--s-2) var(--s-4);font-size:var(--t-xs);color:var(--ink-3)}
+th{
+  position:sticky;top:0;z-index:1;background:var(--surface);text-align:left;
+  font:700 var(--t-xs)/1.2 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);
+  padding:.7rem var(--s-3);border-bottom:1px solid var(--line);white-space:nowrap
+}
+td{padding:.62rem var(--s-3);border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;white-space:nowrap}
+tbody tr{cursor:pointer}
+tbody tr:hover td{background:var(--surface-2)}
+tbody tr[aria-selected="true"] td{background:color-mix(in srgb,var(--accent) 12%,var(--surface))}
+tbody tr:focus-visible{outline:2.5px solid var(--focus);outline-offset:-2px}
+.empty{padding:var(--s-6) var(--s-4);text-align:center;color:var(--ink-3)}
+
+.chip{
+  display:inline-flex;align-items:center;gap:.4rem;font:700 var(--t-xs)/1 var(--sans);
+  letter-spacing:.05em;padding:.34rem .55rem;border-radius:999px;white-space:nowrap
+}
+.chip::before{content:"";width:.5rem;height:.5rem;border-radius:50%;background:currentColor;flex:none}
+.chip.general_flash{background:var(--series-general-soft);color:var(--series-general)}
+.chip.red_flash{background:var(--series-red-soft);color:var(--series-red)}
+.tf{font-weight:650}
+
+/* ---------- evidence / chart ---------- */
+.evidence{display:grid;gap:var(--s-3);margin-top:var(--s-3)}
+@media (min-width:62rem){.evidence{grid-template-columns:minmax(0,1.75fr) minmax(0,1fr)}}
+.chartwrap{padding:var(--s-4);min-width:0}
+.chart-head{display:flex;justify-content:space-between;gap:var(--s-3);flex-wrap:wrap;margin-bottom:var(--s-3)}
+.legend{display:flex;gap:var(--s-3);flex-wrap:wrap;font-size:var(--t-xs);color:var(--ink-2)}
+.legend i{display:inline-block;width:.7rem;height:.7rem;border-radius:2px;margin-right:.35rem;vertical-align:-1px}
+figure{margin:0}
+figcaption{font-size:var(--t-xs);color:var(--ink-3);margin-top:var(--s-2);max-width:70ch}
+svg.timeline{display:block;width:100%;height:auto;overflow:visible}
+.tt{
+  position:absolute;pointer-events:none;opacity:0;transform:translate(-50%,-115%);
+  background:var(--ink);color:var(--paper);font:600 var(--t-xs)/1.35 var(--sans);
+  padding:.42rem .6rem;border-radius:var(--r-sm);white-space:nowrap;z-index:5;box-shadow:var(--shadow-2)
+}
+.tt[data-show="1"]{opacity:1}
+
+dl.facts{display:grid;grid-template-columns:auto 1fr;gap:.55rem var(--s-3);margin:0;font-size:var(--t-sm)}
+dl.facts dt{color:var(--ink-3)}
+dl.facts dd{margin:0;font-variant-numeric:tabular-nums;font-weight:600;overflow-wrap:anywhere}
+
+.verdict{display:inline-flex;align-items:center;gap:.4rem;font:700 var(--t-xs)/1 var(--sans);letter-spacing:.07em;text-transform:uppercase;padding:.4rem .65rem;border-radius:999px}
+.verdict.pass{background:color-mix(in srgb,var(--good) 16%,transparent);color:var(--good)}
+.verdict.fail{background:var(--series-red-soft);color:var(--series-red)}
+
+pre.out{
+  background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-md);
+  padding:var(--s-3);margin:var(--s-3) 0 0;max-height:20rem;overflow:auto;
+  white-space:pre-wrap;overflow-wrap:anywhere;font:var(--t-xs)/1.55 var(--mono);color:var(--ink-2)
+}
+
+/* ---------- provenance table ---------- */
+.prov{width:100%;border-collapse:collapse;font-size:var(--t-sm)}
+.prov th{position:static;background:transparent}
+.prov td{white-space:normal;vertical-align:top;padding:.8rem var(--s-3)}
+.prov td:first-child{font-weight:650}
+.prov .no{color:var(--ink-3)}
+
+/* ---------- decision boundary ---------- */
+.boundary{background:var(--ink);color:var(--paper);border-radius:var(--r-xl);padding:clamp(1.6rem,4vw,var(--s-6))}
+.boundary h2,.boundary h3{color:var(--paper)}
+.boundary p{color:color-mix(in srgb,var(--paper) 76%,var(--ink))}
+.boundary .eyebrow{color:var(--accent)}
+.boundary-grid{display:grid;gap:var(--s-4)}
+@media (min-width:56rem){.boundary-grid{grid-template-columns:1fr 1fr;align-items:start}}
+.sqlbox{
+  background:rgba(0,0,0,.32);border:1px solid rgba(255,255,255,.10);border-radius:var(--r-md);
+  padding:var(--s-3);overflow-x:auto;font:var(--t-xs)/1.7 var(--mono);color:#c8e6d6
+}
+.sqlbox .k{color:#8ecdf5}.sqlbox .s{color:#f0c98a}.sqlbox .c{color:#8a9a92}
+
+footer{border-top:1px solid var(--line);padding:var(--s-5) 0;color:var(--ink-3);font-size:var(--t-sm)}
+.footgrid{display:flex;justify-content:space-between;gap:var(--s-3);flex-wrap:wrap}
+
+.technical{display:none}
+body.tech .plain{display:none}
+body.tech .technical{display:block}
+[hidden]{display:none !important}
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+/* A product about visual safety does not get to animate carelessly. */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none !important;transition:none !important;scroll-behavior:auto !important}
+}
+@media (prefers-contrast:more){
+  :root{--line:var(--ink-3);--line-strong:var(--ink-2)}
+}
+</style>
 </head>
 <body>
-<main class="shell">
-  <nav>
-    <span class="brand">SAFE FRAME</span>
-    <div class="mode">
-      <button id="plain" class="active">Plain</button>
-      <button id="tech">Technical</button>
-      <button id="dark">Dark</button>
-    </div>
-  </nav>
+<a class="skip" href="#sweep">Skip to the catalogue sweep</a>
 
-  <header>
-    <div>
-      <div class="eyebrow">ClickHouse track · version lineage safety</div>
-      <h1>The master passed. The version people watched was never checked.</h1>
-      <p class="lead plain">One film becomes dozens of cuts, grades and frame rates. Safe Frame searches the whole catalogue for a photosensitivity risk that a conversion introduced — even when the approved master was clean.</p>
-      <p class="lead technical">Transition metrics are aligned on presentation time and stored in ClickHouse. The published criteria are evaluated across every rendition in one pass through official <code>mcp-clickhouse</code>, and master/rendition isolation happens inside the same query. Gemini explains; SQL decides.</p>
-    </div>
-    <aside class="boundary">
-      <strong>Evidence boundary</strong>
-      <p><i class="dot"></i>SQL verdict through official MCP</p>
-      <p><i class="dot"></i>Gemini on Vertex via Google ADK</p>
-      <p><i class="dot"></i>SQL held to the reference detector by test</p>
-      <p><i class="dot warn"></i>Open pre-check, not a certified device</p>
-      <p><i class="dot"></i>This page contains no flashing media</p>
-    </aside>
-  </header>
-
-  <section class="block">
-    <div class="eyebrow">Catalogue sweep</div>
-    <h2>Every title. Every rendition. One question.</h2>
-    <p class="lead plain">Which renditions about to ship introduced a flash their approved master never had?</p>
-    <p class="lead technical">Both published rules — general flash and red flash — are computed live over the corpus below in a single pass. Nothing on this page is a pre-computed answer.</p>
-
-    <div class="scale" id="scale">
-      <div><b id="s-tr">—</b><span>transition rows</span></div>
-      <div><b id="s-as">—</b><span>renditions</span></div>
-      <div><b id="s-ti">—</b><span>titles</span></div>
-      <div><b id="s-tf">—</b><span>transform types</span></div>
-    </div>
-
-    <div class="controls">
-      <button class="primary" id="run">Sweep the catalogue</button>
-      <button class="secondary" id="explain" disabled>Ask the ADK agent about the selection</button>
-      <a class="secondary" href="/v1/integrations/clickhouse/evidence" target="_blank" rel="noreferrer">Inspect MCP evidence</a>
-      <a class="secondary" href="/docs" target="_blank" rel="noreferrer">API</a>
-    </div>
-
-    <div class="sweepwrap">
-      <div class="sweephead">
-        <h3 id="sweeptitle">Ready — press “Sweep the catalogue”.</h3>
-        <div class="qstat" id="qstat"></div>
+<header class="top">
+  <div class="wrap topbar">
+    <span class="brand">
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+        <rect x="1" y="1" width="16" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        <path d="M5 9h8M9 5v8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+      Safe Frame
+    </span>
+    <div class="toggles">
+      <div class="seg" role="group" aria-label="Reading mode">
+        <button id="m-plain" aria-pressed="true">Plain</button>
+        <button id="m-tech" aria-pressed="false">Technical</button>
       </div>
-      <div class="tablewrap">
-        <table>
-          <thead><tr><th>Title</th><th>Rendition</th><th>Rule</th><th>Introduced by</th><th>Window</th><th>Transitions</th><th>Peak area</th></tr></thead>
-          <tbody id="rows"><tr><td colspan="7"><div class="empty">No sweep has been run in this browser session.</div></td></tr></tbody>
-        </table>
+      <div class="seg" role="group" aria-label="Colour theme">
+        <button id="t-light" aria-pressed="false">Light</button>
+        <button id="t-dark" aria-pressed="false">Dark</button>
+        <button id="t-sys" aria-pressed="true">System</button>
       </div>
     </div>
+  </div>
+</header>
 
-    <div class="detail" id="detail" hidden>
-      <article class="panel">
-        <h4>Approved master</h4>
-        <div class="big" id="d-parent">—</div>
-        <span class="verdict pass">no violation at this window</span>
-        <div class="track">
-          <div class="trackhead"><b>Qualifying transitions per second</b><span id="d-parent-n">—</span></div>
-          <div class="bars" id="bars-parent"></div>
-          <p class="caption">Baseline content stays under the criterion. Bars are drawn from the returned counts, not from playback.</p>
+<main>
+  <div class="wrap hero">
+    <p class="eyebrow">ClickHouse track · version-lineage safety</p>
+    <h1>The master passed. The version people watched was never checked.</h1>
+    <p class="lead plain">One film becomes dozens of cuts, grades, frame rates and ad-break versions. Safe Frame searches a whole distribution catalogue for a photosensitivity risk that a conversion introduced &mdash; even when the approved master was clean.</p>
+    <p class="lead technical">Transition measurements are aligned on presentation time in ClickHouse. Both published flash rules are evaluated across every rendition in a single pass through the official <code class="mono">mcp-clickhouse</code> server, and master/rendition isolation happens inside the same query. Gemini explains the rows; SQL decides.</p>
+    <p class="headline-stat" id="headline">
+      <b id="h-count">&mdash;</b>
+      <span>renditions in this catalogue introduced a violation their approved master never had.</span>
+    </p>
+  </div>
+
+  <section id="why">
+    <div class="wrap">
+      <p class="eyebrow">Why this matters</p>
+      <h2>A rendition is a new chance to hurt somebody.</h2>
+      <p class="lead" style="margin-top:var(--s-3)">Photosensitive epilepsy is rare, documented, and regulated. The standards are public and the analysers are mature &mdash; but they were built to judge <em>a file</em>, not to judge a file <em>against the one that was already approved</em>.</p>
+
+      <div class="grid g-3" style="margin-top:var(--s-5)">
+        <article class="fact">
+          <b>~1 in 4,000</b>
+          <p>people in the general population have photosensitive epilepsy. It is roughly twice as common in women, and most often begins before age 20.</p>
+          <cite>Epilepsy Foundation review, <a href="https://onlinelibrary.wiley.com/doi/10.1111/epi.17175" target="_blank" rel="noreferrer">Fisher et al., <em>Epilepsia</em> 2022</a></cite>
+        </article>
+        <article class="fact">
+          <b>685 children</b>
+          <p>were taken to hospital across Japan after a single television broadcast on 16 December 1997. Two stayed in hospital more than two weeks.</p>
+          <cite><a href="https://en.wikipedia.org/wiki/Photosensitive_epilepsy" target="_blank" rel="noreferrer">The 1997 broadcast incident</a></cite>
+        </article>
+        <article class="fact">
+          <b>Rule 2.12</b>
+          <p>of the Ofcom Broadcasting Code requires broadcasters to keep risk to photosensitive viewers low. WCAG&nbsp;2.3.1 sets equivalent thresholds for anything delivered on the web.</p>
+          <cite><a href="https://www.ofcom.org.uk/tv-radio-and-on-demand/broadcast-standards/section-two-harm-offence" target="_blank" rel="noreferrer">Ofcom &sect;2</a> &middot; <a href="https://www.w3.org/TR/UNDERSTANDING-WCAG20/seizure-does-not-violate.html" target="_blank" rel="noreferrer">W3C WCAG 2.3.1</a></cite>
+        </article>
+      </div>
+
+      <blockquote class="pull">
+        Standard practice puts the quality gate at ingest, before transcode, because a bad master multiplies across the whole ladder. That gate is doing its job. It simply is not looking at what the transcode <em>adds</em> after the master was signed off.
+      </blockquote>
+
+      <div class="grid g-2" style="margin-top:var(--s-5)">
+        <div class="card">
+          <h3>What already exists</h3>
+          <p class="muted" style="margin-top:var(--s-2);font-size:var(--t-sm)">Detection, repair, viewer-side dimming and networked batch analysis are all mature. Harding-style analysers test luminance flashes, red flashes and spatial patterns, and fail a file that breaches them. We claim none of this as ours.</p>
         </div>
-      </article>
-      <article class="panel">
-        <h4>Rendition that shipped</h4>
-        <div class="big" id="d-child">—</div>
-        <span class="verdict fail" id="d-verdict">introduced violation</span>
-        <div class="track">
-          <div class="trackhead"><b>Qualifying transitions in the flagged second</b><span id="d-child-n">—</span></div>
-          <div class="bars fail" id="bars-child"></div>
-          <p class="caption" id="d-caption">—</p>
+        <div class="card">
+          <h3>What we could not find</h3>
+          <p class="muted" style="margin-top:var(--s-2);font-size:var(--t-sm)">A documented check that compares a rendition against <em>its own approved parent</em> and attributes a newly-introduced violation to the transform that caused it. Our search covered public product documentation; it cannot prove no private integration exists.</p>
         </div>
-      </article>
-    </div>
-
-    <pre class="result" id="result" hidden></pre>
-  </section>
-
-  <section class="block">
-    <div class="grid3">
-      <article class="card"><span class="tag">01 · MEASURE</span><h3>Two rules, not one</h3><p>A saturated-red alternation can hold luminance under the general-flash floor. Checking luminance alone passes it, so both rules are windowed independently.</p></article>
-      <article class="card"><span class="tag">02 · ALIGN</span><h3>Presentation time</h3><p>Frame-rate conversion renumbers every frame. Millisecond timestamps survive it; frame indices do not.</p></article>
-      <article class="card"><span class="tag">03 · ISOLATE</span><h3>Child minus parent</h3><p>A violation the master already had is not a regression. The sweep excludes inherited ones by construction.</p></article>
+      </div>
     </div>
   </section>
 
-  <section class="gate">
-    <div>
-      <div class="eyebrow">Decision boundary</div>
-      <h2>Arithmetic owns the verdict.</h2>
-      <p class="plain">The AI cannot declare a video safe. It explains rows the database returned, and asks a human QC operator to act.</p>
-      <p class="technical">If the MCP query fails or its rows cannot be parsed, the endpoint returns 502. It never substitutes Gemini or a local guess in the live path.</p>
-      <p class="technical"><code>tests/test_sql_parity.py</code> runs the reference Python detector and this SQL over identical randomized inputs and requires exact agreement, so the catalogue sweep cannot silently drift from the per-file pre-check.</p>
+  <section id="sweep">
+    <div class="wrap">
+      <p class="eyebrow">Live catalogue sweep</p>
+      <h2>Every title. Every rendition. One question.</h2>
+      <p class="lead plain" style="margin-top:var(--s-3)">Which renditions about to ship introduced a flash their approved master never had?</p>
+      <p class="lead technical" style="margin-top:var(--s-3)">Both rules are computed live over the corpus below in one pass. Nothing on this page is a pre-computed answer.</p>
+
+      <div class="stats" style="margin-top:var(--s-4)" id="scale">
+        <div><b id="s-tr">&mdash;</b><span>transition rows</span></div>
+        <div><b id="s-as">&mdash;</b><span>renditions</span></div>
+        <div><b id="s-ti">&mdash;</b><span>titles</span></div>
+        <div><b id="s-tf">&mdash;</b><span>transform types</span></div>
+      </div>
+
+      <div class="controls">
+        <button class="btn btn-primary" id="run">Sweep the catalogue</button>
+        <a class="btn" href="/v1/integrations/clickhouse/evidence" target="_blank" rel="noreferrer">Inspect MCP evidence</a>
+        <a class="btn" href="/docs" target="_blank" rel="noreferrer">API</a>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h3 id="sweeptitle">Ready &mdash; press &ldquo;Sweep the catalogue&rdquo;.</h3>
+          <div class="qstat" id="qstat"></div>
+        </div>
+        <div class="scroll">
+          <table>
+            <caption class="sr">Renditions that introduced a photosensitivity violation their approved master did not have. Select a row to see its evidence.</caption>
+            <thead><tr>
+              <th scope="col">Title</th><th scope="col">Rendition</th><th scope="col">Rule</th>
+              <th scope="col">Introduced by</th><th scope="col">Window</th>
+              <th scope="col">Transitions</th><th scope="col">Peak area</th>
+            </tr></thead>
+            <tbody id="rows">
+              <tr><td colspan="7"><p class="empty">No sweep has been run in this browser session.</p></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="evidence" id="evidence" hidden>
+        <figure class="panel chartwrap">
+          <div class="chart-head">
+            <div>
+              <h3 id="chart-title">Qualifying transitions per second</h3>
+              <p class="muted" style="font-size:var(--t-xs)">Approved master above, shipped rendition below &mdash; one shared scale.</p>
+            </div>
+            <div class="legend">
+              <span><i style="background:var(--series-general)"></i>General flash</span>
+              <span><i style="background:var(--series-red)"></i>Red flash</span>
+              <span><svg width="16" height="8" aria-hidden="true"><line x1="0" y1="4" x2="16" y2="4" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 3"/></svg>Criterion</span>
+            </div>
+          </div>
+          <div id="chart" style="position:relative">
+            <p class="empty" id="chart-empty">Select a rendition above.</p>
+          </div>
+          <figcaption id="chart-cap"></figcaption>
+          <details style="margin-top:var(--s-3)">
+            <summary style="cursor:pointer;font-size:var(--t-sm);color:var(--ink-2)">View this chart as a table</summary>
+            <div class="scroll" style="max-height:16rem;margin-top:var(--s-2)">
+              <table><thead><tr><th scope="col">Second</th><th scope="col">Master &mdash; general</th><th scope="col">Master &mdash; red</th><th scope="col">Rendition &mdash; general</th><th scope="col">Rendition &mdash; red</th></tr></thead>
+              <tbody id="chart-table"></tbody></table>
+            </div>
+          </details>
+        </figure>
+
+        <div class="panel" style="padding:var(--s-4)">
+          <h3>Selected regression</h3>
+          <p style="margin:var(--s-2) 0 var(--s-3)"><span class="verdict fail" id="d-verdict">introduced violation</span></p>
+          <dl class="facts">
+            <dt>Approved master</dt><dd class="mono" id="d-parent">&mdash;</dd>
+            <dt>Rendition</dt><dd class="mono" id="d-child">&mdash;</dd>
+            <dt>Rule</dt><dd id="d-rule">&mdash;</dd>
+            <dt>Introduced by</dt><dd id="d-transform">&mdash;</dd>
+            <dt>Window</dt><dd id="d-window">&mdash;</dd>
+            <dt>Transitions</dt><dd id="d-trans">&mdash;</dd>
+            <dt>Peak area</dt><dd id="d-area">&mdash;</dd>
+          </dl>
+          <p class="muted" id="d-note" style="font-size:var(--t-sm);margin-top:var(--s-3)"></p>
+          <div class="controls" style="margin-bottom:0">
+            <button class="btn" id="explain">Ask the ADK agent</button>
+          </div>
+          <pre class="out" id="out" hidden aria-live="polite"></pre>
+        </div>
+      </div>
     </div>
-    <div class="sql"><span class="kw">ARRAY JOIN</span> arrayFilter((name, keep) -&gt; keep,<br>&nbsp;&nbsp;[<span class="st">'general_flash'</span>, <span class="st">'red_flash'</span>],<br>&nbsp;&nbsp;[luma_delta &gt;= 0.10, red_delta &gt;= 0.20])<br><br><span class="kw">WINDOW</span> w <span class="kw">AS</span> (<span class="kw">PARTITION BY</span> asset_id, rule<br>&nbsp;&nbsp;<span class="kw">ORDER BY</span> pts_ms<br>&nbsp;&nbsp;<span class="kw">RANGE BETWEEN CURRENT ROW AND</span> 999 <span class="kw">FOLLOWING</span>)<br><br><span class="kw">WHERE</span> win_transitions &gt; 6<br>&nbsp;&nbsp;<span class="kw">AND</span> win_dir_min != win_dir_max<br><br>DECISION_SOURCE = clickhouse_sql_via_official_mcp</div>
   </section>
 
-  <footer>
-    <span>Self-authored synthetic catalogue · Apache-2.0 · <code>certified: false</code></span>
-    <span><a href="/health">Live health</a> · <a href="https://github.com/usv240/safe-frame">Source</a> · Safe Frame 0.3</span>
-  </footer>
+  <section id="criteria">
+    <div class="wrap">
+      <p class="eyebrow">Criteria provenance</p>
+      <h2>Every threshold traces to a published definition.</h2>
+      <p class="lead" style="margin-top:var(--s-3)">Nothing here is a number we chose. Each one is the published criterion, and the one rule we have not implemented is named rather than implied.</p>
+      <div class="panel" style="margin-top:var(--s-4)">
+        <div class="scroll" style="max-height:none">
+          <table class="prov">
+            <thead><tr><th scope="col">What is tested</th><th scope="col">Threshold in Safe Frame</th><th scope="col">Published definition</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>General flash</td>
+                <td class="mono">luma_delta &ge; 0.10</td>
+                <td>&ldquo;a pair of opposing changes in relative luminance of 10% or more of the maximum relative luminance&rdquo; &mdash; WCAG 2.3.1</td>
+              </tr>
+              <tr>
+                <td>Red flash</td>
+                <td class="mono">red_delta &ge; 0.20<br><span class="muted">no luminance floor</span></td>
+                <td>&ldquo;any pair of opposing transitions involving a saturated red&rdquo;. People are more sensitive to red flashing than other colours, so it gets its own test &mdash; and deliberately no luminance condition &mdash; WCAG 2.3.1</td>
+              </tr>
+              <tr>
+                <td>Affected area</td>
+                <td class="mono">changed_area_fraction &ge; 0.25</td>
+                <td>flashes occupying more than &ldquo;25% of any 10 degree visual field on the screen&rdquo; at typical viewing distance &mdash; WCAG 2.3.1</td>
+              </tr>
+              <tr>
+                <td>Rate</td>
+                <td class="mono">&gt; 6 opposing transitions<br>in any 1000 ms</td>
+                <td>&ldquo;more than three flashes in any one second period&rdquo;. One flash is a pair of opposing transitions, so three flashes is six transitions &mdash; WCAG 2.3.1</td>
+              </tr>
+              <tr class="no">
+                <td>Spatial pattern</td>
+                <td><strong>not implemented</strong></td>
+                <td>Harding-style analysers also test regular spatial patterns. Safe Frame does not, and will not flag a striped or checkerboard pattern that breaches the spatial criteria.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <p class="muted" style="font-size:var(--t-sm);margin-top:var(--s-3);max-width:70ch">Safe Frame is an open pre-check implementing published criteria. It is not certified, not broadcaster-approved, and not a medical device. It does not replace certified delivery testing.</p>
+    </div>
+  </section>
+
+  <section id="boundary">
+    <div class="wrap">
+      <div class="boundary">
+        <div class="boundary-grid">
+          <div>
+            <p class="eyebrow">Decision boundary</p>
+            <h2>Arithmetic owns the verdict.</h2>
+            <p class="plain" style="margin-top:var(--s-3)">The AI cannot declare a video safe. It explains rows the database returned, and asks a human QC operator to act.</p>
+            <p class="technical" style="margin-top:var(--s-3)">If the MCP query fails, or its rows cannot be parsed, the endpoint returns 502. It never substitutes Gemini or a local guess in the live path.</p>
+            <p class="technical" style="margin-top:var(--s-3)"><code class="mono">tests/test_sql_parity.py</code> runs the reference Python detector and this SQL over identical randomised inputs, for both rules, and requires exact agreement &mdash; so the catalogue sweep cannot silently drift from the per-file pre-check.</p>
+            <p style="margin-top:var(--s-3)">Each rule is windowed over its own qualifying transitions, so one rule can never pad the other&rsquo;s count, and the isolation step is keyed on rule: a master that already flashed in luminance does not excuse a rendition that introduced a red flash.</p>
+          </div>
+          <div class="sqlbox" aria-label="The criteria as they run in ClickHouse">
+<span class="c">-- each rule gets its own qualifying set</span><br>
+<span class="k">WHERE</span> luma_delta &gt;= 0.10<br>
+&nbsp;&nbsp;<span class="k">AND</span> changed_area_fraction &gt;= 0.25<br>
+&nbsp;&nbsp;<span class="k">AND</span> direction != <span class="s">'flat'</span><br><br>
+<span class="k">WHERE</span> red_delta &gt;= 0.20 <span class="c">-- no luma floor</span><br>
+&nbsp;&nbsp;<span class="k">AND</span> changed_area_fraction &gt;= 0.25<br>
+&nbsp;&nbsp;<span class="k">AND</span> direction != <span class="s">'flat'</span><br><br>
+<span class="k">WINDOW</span> w <span class="k">AS</span> (<span class="k">PARTITION BY</span> asset_id<br>
+&nbsp;&nbsp;<span class="k">ORDER BY</span> pts_ms<br>
+&nbsp;&nbsp;<span class="k">RANGE BETWEEN CURRENT ROW AND</span> 999 <span class="k">FOLLOWING</span>)<br><br>
+<span class="k">WHERE</span> win_transitions &gt; 6<br>
+&nbsp;&nbsp;<span class="k">AND</span> win_dir_min != win_dir_max<br><br>
+<span class="c">decision_source = clickhouse_sql_via_official_mcp</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 </main>
 
+<footer>
+  <div class="wrap footgrid">
+    <span>Self-authored synthetic catalogue &middot; no flashing media on this page &middot; <code class="mono">certified: false</code></span>
+    <span><a href="/health">Live health</a> &middot; <a href="https://github.com/usv240/safe-frame">Source</a> &middot; Apache-2.0</span>
+  </div>
+</footer>
+
+<div class="tt" id="tip" role="status" aria-live="off"></div>
+
 <script>
-const $=s=>document.querySelector(s);
-let sweepData=null,selected=null;
-
-$('#plain').onclick=()=>{document.body.classList.remove('tech');$('#plain').classList.add('active');$('#tech').classList.remove('active')};
-$('#tech').onclick=()=>{document.body.classList.add('tech');$('#tech').classList.add('active');$('#plain').classList.remove('active')};
-$('#dark').onclick=()=>{const d=document.documentElement.dataset.theme!=='dark';document.documentElement.dataset.theme=d?'dark':'';$('#dark').textContent=d?'Light':'Dark';$('#dark').classList.toggle('active',d)};
-
-const nf=n=>Number(n).toLocaleString();
-const RULE_LABEL={general_flash:'General flash',red_flash:'Red flash'};
-const RULE_NOTE={
-  general_flash:'Luminance alternation over the general-flash floor.',
-  red_flash:'Saturated-red alternation. Luminance change here stays under the general-flash floor, so a luminance-only check passes this rendition.'
+"use strict";
+const $ = (s) => document.querySelector(s);
+const nf = (n) => Number(n || 0).toLocaleString();
+const RULE = {
+  general_flash: {
+    label: "General flash",
+    note: "Luminance alternation over the general-flash floor.",
+  },
+  red_flash: {
+    label: "Red flash",
+    note: "Saturated-red alternation. Luminance change here stays under the general-flash floor, so a luminance-only check passes this rendition.",
+  },
 };
+const ruleLabel = (r) => (RULE[r] || { label: r }).label;
 
-async function loadScale(){
-  try{
-    const r=await fetch('/v1/catalogue/shape');
-    if(!r.ok)return;
-    const c=(await r.json()).data;
-    $('#s-tr').textContent=nf(c.transitions);$('#s-as').textContent=nf(c.assets);
-    $('#s-ti').textContent=nf(c.titles);$('#s-tf').textContent=nf(c.transforms);
-  }catch(e){/* the sweep will report the corpus too */}
+/* ---------- reading mode + theme -------------------------------------- */
+function setMode(tech) {
+  document.body.classList.toggle("tech", tech);
+  $("#m-tech").setAttribute("aria-pressed", String(tech));
+  $("#m-plain").setAttribute("aria-pressed", String(!tech));
+  try { localStorage.setItem("sf-mode", tech ? "tech" : "plain"); } catch (e) {}
 }
-
-function bars(host,count,hot){
-  host.replaceChildren();
-  for(let i=0;i<25;i++){
-    const b=document.createElement('i');
-    const inBurst=hot&&i<count;
-    b.style.height=(inBurst?(58+((i*13)%38)):(10+((i*7)%22)))+'%';
-    if(inBurst)b.className=(i%2===0)?'hot':'warm';
-    host.append(b);
+function setTheme(t) {
+  if (t === "system") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.dataset.theme = t;
+  for (const [id, v] of [["#t-light", "light"], ["#t-dark", "dark"], ["#t-sys", "system"]]) {
+    $(id).setAttribute("aria-pressed", String(t === v));
   }
+  try { localStorage.setItem("sf-theme", t); } catch (e) {}
+  if (selected) drawChart();
+}
+$("#m-plain").onclick = () => setMode(false);
+$("#m-tech").onclick = () => setMode(true);
+$("#t-light").onclick = () => setTheme("light");
+$("#t-dark").onclick = () => setTheme("dark");
+$("#t-sys").onclick = () => setTheme("system");
+try {
+  setMode(localStorage.getItem("sf-mode") === "tech");
+  setTheme(localStorage.getItem("sf-theme") || "system");
+} catch (e) { setMode(false); setTheme("system"); }
+
+/* ---------- corpus shape ---------------------------------------------- */
+async function loadScale() {
+  try {
+    const r = await fetch("/v1/catalogue/shape");
+    if (!r.ok) return;
+    const c = (await r.json()).data;
+    $("#s-tr").textContent = nf(c.transitions);
+    $("#s-as").textContent = nf(c.assets);
+    $("#s-ti").textContent = nf(c.titles);
+    $("#s-tf").textContent = nf(c.transforms);
+  } catch (e) { /* the sweep reports the corpus too */ }
 }
 
-function select(row,tr){
-  selected=row;
-  document.querySelectorAll('#rows tr').forEach(x=>x.classList.remove('sel'));
-  if(tr)tr.classList.add('sel');
-  $('#detail').hidden=false;
-  $('#d-parent').textContent=row.parent_id;
-  $('#d-child').textContent=row.asset_id;
-  $('#d-parent-n').textContent='under the 6-per-second criterion for '+RULE_LABEL[row.rule].toLowerCase();
-  $('#d-child-n').textContent=row.transitions+' in 1000 ms';
-  $('#d-caption').textContent='Flagged window '+row.window_start_ms+'–'+row.window_end_ms+' ms · peak changed area '+
-    Math.round(row.peak_changed_area_fraction*100)+'% · introduced by '+row.transform+'. '+RULE_NOTE[row.rule];
-  $('#d-verdict').textContent='introduced '+RULE_LABEL[row.rule].toLowerCase();
-  $('#bars-child').classList.toggle('red',row.rule==='red_flash');
-  bars($('#bars-parent'),0,false);
-  bars($('#bars-child'),Math.min(row.transitions,25),true);
-  $('#explain').disabled=false;
-  $('#detail').scrollIntoView({behavior:'smooth',block:'nearest'});
-}
+/* ---------- sweep ------------------------------------------------------ */
+let selected = null, timelineData = null;
 
-function renderSweep(d){
-  sweepData=d;
-  const c=d.corpus||{};
-  if(c.transitions){$('#s-tr').textContent=nf(c.transitions);$('#s-as').textContent=nf(c.assets);$('#s-ti').textContent=nf(c.titles);$('#s-tf').textContent=nf(c.transforms)}
-  $('#sweeptitle').textContent=d.regression_count+' rendition'+(d.regression_count===1?'':'s')+
-    ' introduced a violation across '+nf(c.titles||0)+' titles';
-  const parts=[];
-  parts.push('<span>scanned <b>'+nf(c.transitions||0)+'</b> rows</span>');
-  parts.push('<span>returned <b>'+d.regression_count+'</b></span>');
-  const t=d.timing||{};
-  if(t.query_ms!=null)parts.push('<span>ClickHouse <b>'+t.query_ms+' ms</b></span>');
-  if(t.mcp_setup_ms!=null)parts.push('<span>MCP handshake <b>'+t.mcp_setup_ms+' ms</b></span>');
-  Object.entries(d.by_rule||{}).forEach(([k,v])=>parts.push('<span>'+RULE_LABEL[k]+' <b>'+v+'</b></span>'));
-  Object.entries(d.by_transform||{}).forEach(([k,v])=>parts.push('<span>'+k+' <b>'+v+'</b></span>'));
-  $('#qstat').innerHTML=parts.join('');
-  const body=$('#rows');body.replaceChildren();
-  if(!d.regressions.length){
-    body.innerHTML='<tr><td colspan="7"><div class="empty">No rendition in the catalogue introduced a violation its master did not already have.</div></td></tr>';
+function renderSweep(d) {
+  const c = d.corpus || {};
+  if (c.transitions) {
+    $("#s-tr").textContent = nf(c.transitions); $("#s-as").textContent = nf(c.assets);
+    $("#s-ti").textContent = nf(c.titles); $("#s-tf").textContent = nf(c.transforms);
+  }
+  $("#h-count").textContent = nf(d.regression_count);
+  $("#sweeptitle").textContent =
+    `${d.regression_count} rendition${d.regression_count === 1 ? "" : "s"} introduced a violation across ${nf(c.titles)} titles`;
+
+  const parts = [`<span>scanned <b>${nf(c.transitions)}</b> rows</span>`,
+                 `<span>returned <b>${d.regression_count}</b></span>`];
+  if (d.timing && d.timing.query_ms != null) parts.push(`<span>ClickHouse <b>${d.timing.query_ms} ms</b></span>`);
+  for (const [k, v] of Object.entries(d.by_rule || {})) parts.push(`<span>${ruleLabel(k)} <b>${v}</b></span>`);
+  $("#qstat").innerHTML = parts.join("");
+
+  const body = $("#rows");
+  body.replaceChildren();
+  if (!d.regressions.length) {
+    body.innerHTML = '<tr><td colspan="7"><p class="empty">No rendition in the catalogue introduced a violation its master did not already have.</p></td></tr>';
+    $("#evidence").hidden = true;
     return;
   }
-  d.regressions.forEach(row=>{
-    const tr=document.createElement('tr');
-    tr.innerHTML='<td class="mono">'+row.lineage_id+'</td><td class="mono">'+row.asset_id+
-      '</td><td><span class="rule '+row.rule+'">'+RULE_LABEL[row.rule]+'</span></td><td class="tf">'+row.transform+
-      '</td><td>'+row.window_start_ms+'–'+row.window_end_ms+' ms</td><td>'+
-      row.transitions+'</td><td>'+Math.round(row.peak_changed_area_fraction*100)+'%</td>';
-    tr.onclick=()=>select(row,tr);
+  d.regressions.forEach((row, i) => {
+    const tr = document.createElement("tr");
+    tr.tabIndex = 0;
+    tr.setAttribute("aria-selected", "false");
+    tr.innerHTML =
+      `<td class="mono">${row.lineage_id}</td><td class="mono">${row.asset_id}</td>` +
+      `<td><span class="chip ${row.rule}">${ruleLabel(row.rule)}</span></td>` +
+      `<td class="tf">${row.transform}</td>` +
+      `<td>${row.window_start_ms}&ndash;${row.window_end_ms} ms</td>` +
+      `<td>${row.transitions}</td><td>${Math.round(row.peak_changed_area_fraction * 100)}%</td>`;
+    const pick = () => select(row, tr);
+    tr.onclick = pick;
+    tr.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } };
     body.append(tr);
+    if (i === 0) queueMicrotask(pick);
   });
-  select(d.regressions[0],body.firstElementChild);
 }
 
-$('#run').onclick=async()=>{
-  const b=$('#run');b.disabled=true;b.textContent='Evaluating criteria in ClickHouse…';
-  $('#result').hidden=true;
-  try{
-    const r=await fetch('/v1/catalogue/sweep');
-    const p=await r.json();
-    if(!r.ok)throw new Error(p.detail?.message||'The sweep failed closed.');
+$("#run").onclick = async () => {
+  const b = $("#run");
+  b.disabled = true; b.setAttribute("aria-busy", "true");
+  b.textContent = "Evaluating criteria in ClickHouse…";
+  $("#out").hidden = true;
+  try {
+    const r = await fetch("/v1/catalogue/sweep");
+    const p = await r.json();
+    if (!r.ok) throw new Error((p.detail && p.detail.message) || "The sweep failed closed.");
     renderSweep(p.data);
-  }catch(e){
-    $('#sweeptitle').textContent='The sweep failed closed. No regression list was invented.';
-    $('#result').hidden=false;$('#result').textContent=e.message;
-  }finally{b.disabled=false;b.textContent='Sweep the catalogue'}
+  } catch (e) {
+    $("#sweeptitle").textContent = "The sweep failed closed. No regression list was invented.";
+    $("#out").hidden = false; $("#out").textContent = e.message;
+  } finally {
+    b.disabled = false; b.removeAttribute("aria-busy"); b.textContent = "Sweep the catalogue";
+  }
 };
 
-$('#explain').onclick=async()=>{
-  if(!selected)return;
-  const b=$('#explain');b.disabled=true;b.textContent='Agent reading MCP evidence…';
-  const out=$('#result');out.hidden=false;out.textContent='Google ADK agent is reading the returned rows…';
-  try{
-    const r=await fetch('/v1/explain',{method:'POST',headers:{'content-type':'application/json'},
-      body:JSON.stringify({parent_asset:selected.parent_id,child_asset:selected.asset_id,operator_id:'web-judge'})});
-    const p=await r.json();
-    out.textContent=JSON.stringify(p,null,2);
-  }catch(e){out.textContent='The explanation failed closed: '+e.message}
-  finally{b.disabled=false;b.textContent='Ask the ADK agent about the selection'}
+/* ---------- selection + evidence -------------------------------------- */
+async function select(row, tr) {
+  selected = row;
+  document.querySelectorAll("#rows tr").forEach((x) => x.setAttribute("aria-selected", "false"));
+  if (tr) tr.setAttribute("aria-selected", "true");
+  $("#evidence").hidden = false;
+  $("#d-parent").textContent = row.parent_id;
+  $("#d-child").textContent = row.asset_id;
+  $("#d-rule").innerHTML = `<span class="chip ${row.rule}">${ruleLabel(row.rule)}</span>`;
+  $("#d-transform").textContent = row.transform;
+  $("#d-window").textContent = `${row.window_start_ms}–${row.window_end_ms} ms`;
+  $("#d-trans").textContent = `${row.transitions} in 1000 ms`;
+  $("#d-area").textContent = `${Math.round(row.peak_changed_area_fraction * 100)}%`;
+  $("#d-verdict").textContent = `introduced ${ruleLabel(row.rule).toLowerCase()}`;
+  $("#d-note").textContent = (RULE[row.rule] || {}).note || "";
+  $("#out").hidden = true;
+  $("#chart-title").textContent = `Qualifying transitions per second — ${row.lineage_id}`;
+
+  timelineData = null;
+  $("#chart-empty").hidden = false;
+  $("#chart-empty").textContent = "Reading both tracks from ClickHouse…";
+  try {
+    const r = await fetch(`/v1/catalogue/timeline?parent_asset=${encodeURIComponent(row.parent_id)}&child_asset=${encodeURIComponent(row.asset_id)}`);
+    const p = await r.json();
+    if (!r.ok) throw new Error((p.detail && p.detail.message) || "timeline failed closed");
+    if (selected !== row) return;           // a newer selection won
+    timelineData = p.data;
+    drawChart();
+  } catch (e) {
+    $("#chart-empty").hidden = false;
+    $("#chart-empty").textContent = "The timeline failed closed; no track was drawn.";
+  }
+}
+
+/* ---------- the chart --------------------------------------------------
+   Two tracks, one shared y-scale, criterion drawn as a single rule across
+   both. Bars are grouped per second rather than stacked: the two rules are
+   independent tests and stacking them would imply a combined count that the
+   criteria never compute.                                                */
+function drawChart() {
+  const d = timelineData;
+  if (!d) return;
+  const host = $("#chart");
+  const css = getComputedStyle(document.documentElement);
+  const colGeneral = css.getPropertyValue("--series-general").trim();
+  const colRed = css.getPropertyValue("--series-red").trim();
+  const colLine = css.getPropertyValue("--line-strong").trim();
+  const colInk3 = css.getPropertyValue("--ink-3").trim();
+  const colInk = css.getPropertyValue("--ink").trim();
+
+  const crit = d.criterion_transitions_per_second;
+  const secs = Math.max(d.parent.seconds, d.child.seconds);
+  const peak = Math.max(crit + 2, ...d.parent.general_flash, ...d.parent.red_flash,
+                        ...d.child.general_flash, ...d.child.red_flash);
+
+  const W = 760, PADL = 34, PADR = 12, TRACK = 92, GAP = 30, LABEL = 18;
+  const plotW = W - PADL - PADR;
+  const H = LABEL + TRACK + GAP + LABEL + TRACK + 22;
+  const bw = Math.max(1.1, (plotW / secs) * 0.38);
+
+  const y = (top, v) => top + TRACK - (v / peak) * TRACK;
+  const x = (s) => PADL + (s / secs) * plotW;
+
+  function track(top, series, name, isChild) {
+    let g = `<text x="${PADL}" y="${top - 6}" fill="${colInk}" font-size="11.5" font-weight="700">${name}</text>`;
+    // horizontal baseline + criterion rule
+    g += `<line x1="${PADL}" y1="${top + TRACK}" x2="${W - PADR}" y2="${top + TRACK}" stroke="${colLine}" stroke-width="1"/>`;
+    g += `<line x1="${PADL}" y1="${y(top, crit)}" x2="${W - PADR}" y2="${y(top, crit)}" stroke="${colInk3}" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+    g += `<text x="${PADL - 6}" y="${y(top, crit) + 3.5}" fill="${colInk3}" font-size="10" text-anchor="end">${crit}</text>`;
+    g += `<text x="${PADL - 6}" y="${top + TRACK + 3.5}" fill="${colInk3}" font-size="10" text-anchor="end">0</text>`;
+    for (let s = 0; s < secs; s++) {
+      const gv = series.general_flash[s] || 0, rv = series.red_flash[s] || 0;
+      if (gv) g += `<rect x="${(x(s) - bw - 0.6).toFixed(2)}" y="${y(top, gv).toFixed(2)}" width="${bw.toFixed(2)}" height="${((gv / peak) * TRACK).toFixed(2)}" fill="${colGeneral}" rx="1"/>`;
+      if (rv) g += `<rect x="${(x(s) + 0.6).toFixed(2)}" y="${y(top, rv).toFixed(2)}" width="${bw.toFixed(2)}" height="${((rv / peak) * TRACK).toFixed(2)}" fill="${colRed}" rx="1"/>`;
+      // one direct label on the offending second, never a number on every bar
+      if (isChild && Math.max(gv, rv) > crit) {
+        const v = Math.max(gv, rv);
+        g += `<text x="${x(s)}" y="${y(top, v) - 6}" fill="${gv > rv ? colGeneral : colRed}" font-size="11" font-weight="700" text-anchor="middle">${v} in one second</text>`;
+      }
+    }
+    return g;
+  }
+
+  const topA = LABEL, topB = LABEL + TRACK + GAP + LABEL;
+  let svg = `<svg class="timeline" viewBox="0 0 ${W} ${H}" role="img" aria-label="${
+    `Qualifying transitions per second. The approved master ${d.parent.asset_id} stays at or below the criterion of ${crit} for its whole runtime. The rendition ${d.child.asset_id} exceeds it.`
+  }">`;
+  svg += track(topA, d.parent, "Approved master", false);
+  svg += track(topB, d.child, "Shipped rendition", true);
+  // x axis
+  for (let s = 0; s <= secs; s += Math.max(10, Math.round(secs / 8 / 10) * 10)) {
+    svg += `<text x="${x(s)}" y="${H - 6}" fill="${colInk3}" font-size="10" text-anchor="middle">${s}s</text>`;
+  }
+  svg += `<rect id="hit" x="${PADL}" y="0" width="${plotW}" height="${H - 16}" fill="transparent"/>`;
+  svg += `</svg>`;
+  host.innerHTML = svg;
+  $("#chart-empty").hidden = true;
+
+  const cap = $("#chart-cap");
+  const worst = Math.max(...d.child.general_flash, ...d.child.red_flash);
+  const pworst = Math.max(...d.parent.general_flash, ...d.parent.red_flash);
+  cap.textContent =
+    `Counts are qualifying transitions per second, as the criteria define them, read live from ClickHouse. ` +
+    `Across ${d.parent.seconds} seconds the approved master peaks at ${pworst}, under the criterion of ${crit}. ` +
+    `The rendition reaches ${worst} in a single second.`;
+
+  // table view of the same numbers
+  const tb = $("#chart-table");
+  tb.replaceChildren();
+  for (let s = 0; s < secs; s++) {
+    const pg = d.parent.general_flash[s] || 0, pr = d.parent.red_flash[s] || 0;
+    const cg = d.child.general_flash[s] || 0, cr = d.child.red_flash[s] || 0;
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${s}</td><td>${pg}</td><td>${pr}</td><td>${cg}</td><td>${cr}</td>`;
+    tb.append(tr);
+  }
+
+  // hover crosshair
+  const svgEl = host.querySelector("svg"), tip = $("#tip");
+  svgEl.addEventListener("pointermove", (ev) => {
+    const box = svgEl.getBoundingClientRect();
+    const sx = ((ev.clientX - box.left) / box.width) * W;
+    const s = Math.round(((sx - PADL) / plotW) * secs);
+    if (s < 0 || s >= secs) { tip.dataset.show = "0"; return; }
+    tip.dataset.show = "1";
+    tip.style.left = `${ev.clientX}px`;
+    tip.style.top = `${ev.clientY + window.scrollY}px`;
+    tip.textContent =
+      `${s}s · master ${d.parent.general_flash[s] || 0}g/${d.parent.red_flash[s] || 0}r · ` +
+      `rendition ${d.child.general_flash[s] || 0}g/${d.child.red_flash[s] || 0}r`;
+  });
+  svgEl.addEventListener("pointerleave", () => { tip.dataset.show = "0"; });
+}
+window.addEventListener("resize", () => { if (timelineData) drawChart(); });
+
+/* ---------- the agent -------------------------------------------------- */
+$("#explain").onclick = async () => {
+  if (!selected) return;
+  const b = $("#explain"), out = $("#out");
+  b.disabled = true; b.setAttribute("aria-busy", "true"); b.textContent = "Agent reading MCP evidence…";
+  out.hidden = false; out.textContent = "The Google ADK agent is retrieving the returned rows through MCP…";
+  try {
+    const r = await fetch("/v1/explain", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ parent_asset: selected.parent_id, child_asset: selected.asset_id, operator_id: "web-judge" }),
+    });
+    out.textContent = JSON.stringify(await r.json(), null, 2);
+  } catch (e) {
+    out.textContent = `The explanation failed closed: ${e.message}`;
+  } finally {
+    b.disabled = false; b.removeAttribute("aria-busy"); b.textContent = "Ask the ADK agent";
+  }
 };
 
 loadScale();

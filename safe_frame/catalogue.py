@@ -18,7 +18,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from .clickhouse_mcp import ClickHouseMcp
+from .clickhouse_mcp import ClickHouseMcp, timeline_sql
 
 
 SQL_PATH = Path(__file__).resolve().parent.parent / "sql" / "006_catalogue_regression.sql"
@@ -107,4 +107,46 @@ async def sweep() -> dict[str, Any]:
         "parity": "tests/test_sql_parity.py holds this SQL to safe_frame.detector",
         "certified": False,
         "mcp": sweep_result,
+    }
+
+
+async def timeline(parent_asset: str, child_asset: str) -> dict[str, Any]:
+    """Second-by-second qualifying-transition counts for one master/rendition pair.
+
+    Returned as two aligned tracks over a shared scale so the comparison is
+    honest: the same axis, the same units, the criterion drawn as one line
+    across both. The criterion itself is returned rather than hard-coded in the
+    page, so the chart cannot drift from the rule the database applied.
+    """
+    result = await ClickHouseMcp().query(timeline_sql(parent_asset, child_asset))
+    rows = _decode(result)
+
+    tracks: dict[str, dict[int, dict[str, int]]] = {parent_asset: {}, child_asset: {}}
+    for row in rows:
+        asset = str(row.get("asset_id", ""))
+        if asset not in tracks:
+            continue
+        tracks[asset][int(row.get("second", 0) or 0)] = {
+            "general_flash": int(row.get("general_flash", 0) or 0),
+            "red_flash": int(row.get("red_flash", 0) or 0),
+        }
+
+    def series(asset: str) -> dict[str, Any]:
+        seconds = tracks[asset]
+        span = max(seconds) + 1 if seconds else 0
+        return {
+            "asset_id": asset,
+            "seconds": span,
+            "general_flash": [seconds.get(i, {}).get("general_flash", 0) for i in range(span)],
+            "red_flash": [seconds.get(i, {}).get("red_flash", 0) for i in range(span)],
+        }
+
+    return {
+        "parent": series(parent_asset),
+        "child": series(child_asset),
+        # Drawn as the threshold line on the chart. More than this many
+        # qualifying transitions inside one second is a violation.
+        "criterion_transitions_per_second": 6,
+        "decision_source": "clickhouse_sql_via_official_mcp",
+        "note": "counts are qualifying transitions per second, per rule, as the criteria define them",
     }

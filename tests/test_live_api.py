@@ -20,18 +20,52 @@ def burst(asset: str, transform: str, count: int):
     ]
 
 
-def test_landing_page_has_no_flashing_media_and_exposes_judge_proof():
-    response = TestClient(app).get("/")
-    assert response.status_code == 200
-    assert "Sweep the catalogue" in response.text
-    assert "This page contains no flashing media" in response.text
-    assert "<video" not in response.text
-    assert "prefers-color-scheme" not in response.text
-    assert "Dark" in response.text
-    # The catalogue result must never be baked into the page: the judge has to
-    # see the sweep actually query ClickHouse.
-    assert "No sweep has been run in this browser session." in response.text
-    assert "certified: false" in response.text
+def test_landing_page_is_safe_for_the_audience_it_is_about():
+    """A product about photosensitivity does not get to be careless on its own page.
+
+    The page must contain no moving or flashing media, must state that, and must
+    disable its own transitions under `prefers-reduced-motion`. It also honours
+    the visitor's OS colour preference rather than forcing a bright page on
+    someone who chose dark: an unrequested full-screen flash to light is exactly
+    the class of thing this product exists to catch. An explicit choice still
+    overrides the OS in both directions.
+    """
+    page = TestClient(app).get("/")
+    assert page.status_code == 200
+    text = page.text
+
+    assert "<video" not in text and "<canvas" not in text
+    assert "no flashing media on this page" in text
+    assert "prefers-reduced-motion" in text, "motion must be suppressed for reduced-motion users"
+    assert "@keyframes" not in text, "nothing on this page may animate on a loop"
+
+    # three-state theming: OS default, plus an explicit override that wins both ways
+    assert "prefers-color-scheme:dark" in text
+    assert ':root:not([data-theme="light"])' in text
+    assert ':root[data-theme="dark"]' in text
+
+
+def test_landing_page_exposes_the_judge_path_without_baking_in_the_answer():
+    text = TestClient(app).get("/").text
+    assert "Sweep the catalogue" in text
+    assert "No sweep has been run in this browser session." in text
+    assert "certified: false" in text
+    # the corpus counters and every result must be fetched, never hard-coded
+    for endpoint in ("/v1/catalogue/sweep", "/v1/catalogue/shape",
+                     "/v1/catalogue/timeline", "/v1/explain"):
+        assert endpoint in text
+
+
+def test_landing_page_states_where_every_threshold_came_from():
+    """Each implemented threshold is traceable, and the unimplemented rule is named."""
+    text = TestClient(app).get("/").text
+    assert "WCAG 2.3.1" in text
+    for threshold in ("0.10", "0.20", "0.25"):
+        assert threshold in text
+    assert "Spatial pattern" in text and "not implemented" in text
+    # the impact claims must carry their sources rather than stand alone
+    assert "epi.17175" in text, "prevalence claim must cite the Epilepsy Foundation review"
+    assert "ofcom.org.uk" in text and "w3.org" in text
 
 
 def test_local_scan_is_honest_when_live_catalogue_is_not_configured(monkeypatch):

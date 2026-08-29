@@ -445,3 +445,36 @@ async def parity_violations(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     if isinstance(decoded, dict):
         return [decoded]
     raise RuntimeError(f"unexpected parity payload: {text[:400]}")
+
+
+def timeline_sql(parent_asset: str, child_asset: str) -> str:
+    """Per-second qualifying-transition counts for an approved master and one rendition.
+
+    The sweep answers *which* renditions regressed. This answers *what the
+    difference looks like*: for every second of both assets, how many
+    transitions actually counted toward each rule. Plotting the two tracks on
+    one shared scale is the claim itself -- the master stays under the
+    criterion for the whole runtime while the rendition spikes past it in one
+    second -- drawn from measurements rather than asserted in prose.
+
+    Seconds with no qualifying transitions are kept, so the baseline is visible
+    and a reader can see the burst is an exception rather than the shape of the
+    whole asset.
+    """
+    parent = _asset(parent_asset)
+    child = _asset(child_asset)
+    return f"""
+SELECT
+    asset_id,
+    toUInt32(intDiv(pts_ms, 1000)) AS second,
+    countIf(luma_delta >= 0.10
+            AND changed_area_fraction >= 0.25
+            AND direction != 'flat') AS general_flash,
+    countIf(red_delta >= 0.20
+            AND changed_area_fraction >= 0.25
+            AND direction != 'flat') AS red_flash
+FROM safe_frame.transitions
+WHERE asset_id IN ('{parent}', '{child}')
+GROUP BY asset_id, second
+ORDER BY asset_id, second
+""".strip()
