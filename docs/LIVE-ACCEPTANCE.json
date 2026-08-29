@@ -15,7 +15,10 @@
     "corpus_assets": 3200,
     "corpus_titles": 400,
     "regression_count": 44,
-    "by_rule": {"general_flash": 31, "red_flash": 13},
+    "by_rule": {
+      "general_flash": 31,
+      "red_flash": 13
+    },
     "by_transform": {
       "60fps_interp": 16,
       "adbreak_insert": 15,
@@ -32,15 +35,29 @@
       "parent": "title_0017__master",
       "child": "title_0017__60fps_interp",
       "sweep": "fail",
-      "catalogue_regressions": {"verdict": "fail", "regression_count": 1},
-      "explain": {"decision_source": "clickhouse_sql", "requires_human": true, "cited_rule": "general_flash"}
+      "catalogue_regressions": {
+        "verdict": "fail",
+        "regression_count": 1
+      },
+      "explain": {
+        "decision_source": "clickhouse_sql",
+        "requires_human": true,
+        "cited_rule": "general_flash"
+      }
     },
     "red_flash_pair": {
       "parent": "title_0022__master",
       "child": "title_0022__subtitle_burnin",
       "sweep": "fail",
-      "catalogue_regressions": {"verdict": "fail", "regression_count": 1},
-      "explain": {"decision_source": "clickhouse_sql", "requires_human": true, "cited_rule": "red_flash"}
+      "catalogue_regressions": {
+        "verdict": "fail",
+        "regression_count": 1
+      },
+      "explain": {
+        "decision_source": "clickhouse_sql",
+        "requires_human": true,
+        "cited_rule": "red_flash"
+      }
     }
   },
   "controls": {
@@ -51,7 +68,10 @@
       "why": "the master already violates, so the rendition introduced nothing"
     },
     "inherited_red": {
-      "example_lineages": ["title_0240", "title_0316"],
+      "example_lineages": [
+        "title_0240",
+        "title_0316"
+      ],
       "expected_rows_in_sweep": 0,
       "observed_rows_in_sweep": 0
     },
@@ -72,7 +92,10 @@
   "parity": {
     "seeds": 40,
     "agreement": "40/40 exact",
-    "rules_exercised": {"general_flash": 6, "red_flash": 5},
+    "rules_exercised": {
+      "general_flash": 6,
+      "red_flash": 5
+    },
     "plus": [
       "six-versus-seven transition boundary",
       "same-direction burst must not violate",
@@ -83,12 +106,75 @@
   "query_shape_benchmark": {
     "question": "one scan with ARRAY JOIN fan-out, or two scans unioned",
     "runs_each": 5,
-    "two_pass_union_shipped": {"rows_read": 19200000, "median_ms": 703},
-    "one_pass_array_join": {"rows_read": 9600000, "median_ms": 1096},
+    "two_pass_union_shipped": {
+      "rows_read": 19200000,
+      "median_ms": 703
+    },
+    "one_pass_array_join": {
+      "rows_read": 9600000,
+      "median_ms": 1096
+    },
     "result": "identical 31-row output; halving rows read was 56% slower, so the two-pass form ships"
   },
   "notes": [
     "The catalogue is self-authored synthetic measurement, not footage, and contains no flashing media.",
     "This is an open pre-check and never claims device or regulatory certification."
+  ],
+  "design_acceptance": {
+    "method": "scripts/visual_check.py drives a real browser; --offline needs no cluster",
+    "widths_checked": [
+      "phone 390",
+      "laptop 1280",
+      "desktop 1680"
+    ],
+    "themes_checked": [
+      "light",
+      "dark",
+      "OS default"
+    ],
+    "asserted": [
+      "no horizontal page scroll at any width in either theme",
+      "no console errors or uncaught exceptions on the judge path",
+      "initialisation completes with the backend entirely absent",
+      "a failing sweep reports failing closed rather than throwing",
+      "the evidence path completes: sweep, selection, timeline, draw, caption, table view"
+    ],
+    "series_palette": {
+      "validated_with": "the dataviz palette validator, against this page's own surfaces",
+      "light": {
+        "general_flash": "#2a78d6",
+        "red_flash": "#e34948",
+        "surface": "#faf7f0"
+      },
+      "dark": {
+        "general_flash": "#3987e5",
+        "red_flash": "#e66767",
+        "surface": "#14120f"
+      },
+      "worst_adjacent_cvd_delta_e": {
+        "light": 21.6,
+        "dark": 19.2,
+        "target": 8
+      },
+      "worst_adjacent_normal_delta_e": {
+        "light": 32.3,
+        "dark": 29.0,
+        "floor": 15
+      },
+      "contrast_vs_surface": "all series >= 3:1 in both modes",
+      "note": "colour is never the only cue; every rule mark is paired with its name"
+    },
+    "accessibility": [
+      "skip link, visible focus rings, keyboard-selectable result rows",
+      "the chart carries an aria-label stating the finding, plus a table view of the same numbers",
+      "all transitions disabled under prefers-reduced-motion; no looping animation anywhere",
+      "no flashing or moving media on a page about flashing media",
+      "the visitor's OS colour preference is honoured; an explicit choice overrides it both ways"
+    ]
+  },
+  "defects_found_by_this_check": [
+    "a `let` read from its temporal dead zone during theme restore threw at init and detached every listener; the page rendered and did nothing, and the whole pytest suite passed",
+    "the chart placeholder was a child of the element the draw replaces, so every successful draw destroyed it and then threw, silently skipping the caption, table view and tooltip",
+    "the phone card layout had width:100% plus margins and overflowed the viewport by exactly the margin"
   ]
 }

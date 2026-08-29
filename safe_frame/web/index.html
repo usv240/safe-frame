@@ -240,6 +240,8 @@ tbody tr:focus-visible{outline:2.5px solid var(--focus);outline-offset:-2px}
 .empty{padding:var(--s-6) var(--s-4);text-align:center;color:var(--ink-3)}
 
 @media (max-width:46rem){
+  /* `hidden`, not `visible`: with overflow-y already auto, a `visible` value on
+     the other axis computes to auto, and the container would still scroll. */
   #sweep .scroll{max-height:none;overflow-x:hidden}
   #sweep table,#sweep tbody,#sweep td{display:block;width:100%}
   /* the card is a block with margins: width:100% here would add the margins on
