@@ -38,6 +38,10 @@ class ScanRequest(BaseModel):
         return self
 
 
+class TriageRequest(BaseModel):
+    operator_id: str = Field(min_length=2, max_length=120)
+
+
 class ExplanationRequest(BaseModel):
     parent_asset: str = Field(pattern=r"^[A-Za-z0-9_-]{1,80}$")
     child_asset: str = Field(pattern=r"^[A-Za-z0-9_-]{1,80}$")
@@ -307,6 +311,55 @@ async def catalogue_timeline(parent_asset: str, child_asset: str) -> dict[str, o
             detail={
                 "code": "catalogue_timeline_failed",
                 "message": f"The timeline failed closed ({type(exc).__name__}); no track was invented.",
+            },
+        ) from exc
+    return {"data": result}
+
+
+@app.get("/v1/catalogue/transform-risk")
+async def catalogue_transform_risk() -> dict[str, object]:
+    """Per-transform regression rates: is this scattered accidents or a few profiles?
+
+    The operational difference matters more than the count. A transform with a
+    non-zero rate is one upstream configuration to fix, not N renditions to
+    patch one at a time.
+    """
+    from .catalogue import transform_risk
+
+    try:
+        result = await transform_risk()
+    except ClickHouseNotConfigured as exc:
+        raise HTTPException(
+            503, detail={"code": "mcp_clickhouse_not_configured", "message": str(exc)}
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            502,
+            detail={
+                "code": "transform_risk_failed",
+                "message": f"The risk profile failed closed ({type(exc).__name__}).",
+            },
+        ) from exc
+    return {"data": result}
+
+
+@app.post("/v1/triage")
+async def triage(request: TriageRequest) -> dict[str, object]:
+    """The multi-step agent: survey, find the systemic cause, size the blind spot, go deep.
+
+    Returns the brief together with the tool-call sequence that produced it, so
+    the multi-step work can be checked rather than taken on trust.
+    """
+    from .adk_app import triage_catalogue
+
+    try:
+        result = await triage_catalogue(request.operator_id)
+    except Exception as exc:
+        raise HTTPException(
+            502,
+            detail={
+                "code": "agent_triage_failed",
+                "message": f"The ADK triage agent could not complete ({type(exc).__name__}).",
             },
         ) from exc
     return {"data": result}

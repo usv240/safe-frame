@@ -478,3 +478,50 @@ WHERE asset_id IN ('{parent}', '{child}')
 GROUP BY asset_id, second
 ORDER BY asset_id, second
 """.strip()
+
+
+def transform_risk_sql() -> str:
+    """Which transforms are systemically producing regressions, and at what rate.
+
+    The sweep answers "which renditions regressed". A QC lead's next question is
+    "is this 44 unrelated accidents, or a handful of encoder profiles"? That is
+    a different query: every transform in the catalogue, how many renditions it
+    produced, and how many of those it broke.
+
+    The answer is what makes the finding actionable. A transform with a
+    non-zero rate is an upstream configuration to fix once, not N renditions to
+    patch individually, and the rule split shows *what kind* of defect that
+    profile introduces.
+
+    `countDistinctIf(..., asset_id != '')` rather than `countDistinct`: the LEFT
+    JOIN fills misses with an empty LowCardinality(String) rather than NULL, so
+    a clean transform would otherwise report one regression it does not have.
+    """
+    from .catalogue import catalogue_sql
+
+    return f"""
+WITH
+regressions AS
+(
+{catalogue_sql()}
+),
+produced AS
+(
+    SELECT transform, uniqExact(asset_id) AS renditions
+    FROM safe_frame.transitions
+    WHERE transform != 'master'
+    GROUP BY transform
+)
+SELECT
+    produced.transform AS transform,
+    produced.renditions AS renditions,
+    countDistinctIf(regressions.asset_id, regressions.asset_id != '') AS regressed,
+    round(100.0 * countDistinctIf(regressions.asset_id, regressions.asset_id != '')
+          / produced.renditions, 2) AS regressed_pct,
+    countDistinctIf(regressions.asset_id, regressions.rule = 'general_flash') AS general_flash,
+    countDistinctIf(regressions.asset_id, regressions.rule = 'red_flash') AS red_flash
+FROM produced
+LEFT JOIN regressions ON regressions.transform = produced.transform
+GROUP BY produced.transform, produced.renditions
+ORDER BY regressed DESC, transform
+""".strip()

@@ -150,3 +150,42 @@ async def timeline(parent_asset: str, child_asset: str) -> dict[str, Any]:
         "decision_source": "clickhouse_sql_via_official_mcp",
         "note": "counts are qualifying transitions per second, per rule, as the criteria define them",
     }
+
+
+async def transform_risk() -> dict[str, Any]:
+    """Per-transform regression rates, plus the blind-spot count.
+
+    `red_only` is the number of regressions whose transform produced red-flash
+    failures and no luminance failures at all. Those renditions are invisible to
+    a checker that implements only the general-flash rule, which is the case the
+    second rule exists to catch.
+    """
+    from .clickhouse_mcp import transform_risk_sql
+
+    rows = _decode(await ClickHouseMcp().query(transform_risk_sql()))
+    profiles = [
+        {
+            "transform": str(row.get("transform", "")),
+            "renditions": int(row.get("renditions", 0) or 0),
+            "regressed": int(row.get("regressed", 0) or 0),
+            "regressed_pct": float(row.get("regressed_pct", 0) or 0),
+            "general_flash": int(row.get("general_flash", 0) or 0),
+            "red_flash": int(row.get("red_flash", 0) or 0),
+        }
+        for row in rows
+    ]
+    implicated = [p for p in profiles if p["regressed"]]
+    return {
+        "profiles": profiles,
+        "transforms_implicated": len(implicated),
+        "transforms_clean": len(profiles) - len(implicated),
+        "total_regressed": sum(p["regressed"] for p in profiles),
+        "red_only_regressions": sum(
+            p["red_flash"] for p in profiles if p["red_flash"] and not p["general_flash"]
+        ),
+        "decision_source": "clickhouse_sql_via_official_mcp",
+        "note": (
+            "a transform with a non-zero rate is one upstream profile to fix, "
+            "not N renditions to patch"
+        ),
+    }
