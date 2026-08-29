@@ -21,8 +21,8 @@ Three Flashes or Below Threshold* and the WCAG relative-luminance definition:
 | Test | Safe Frame | Published definition |
 |---|---|---|
 | General flash — amplitude | `luma_delta >= 0.10` | "a pair of opposing changes in relative luminance of 10% or more of the maximum relative luminance" |
-| General flash — darker image | `luma_min < 0.80` | "…**where the relative luminance of the darker image is below 0.80**" |
-| Red flash | a saturated-red transition, **no luminance condition** | "any pair of opposing transitions involving a saturated red" |
+| General flash — darker image | `luma_min < 0.80` | "…**where the relative luminance of the darker image is below 0.80**". The Ofcom/ITU broadcast form states the same condition in absolute units — a change of 20 cd/m² or more, applying only when the darker image is below 160 cd/m² — which is the same 0.80 fraction of a 200 cd/m² reference display |
+| Red flash | a saturated-red transition, **no luminance condition** | "any pair of opposing transitions involving a saturated red". Ofcom's broadcast guidance is explicit that this holds "irrespective of luminance" |
 | Saturated red | `R / (R + G + B) >= 0.8` in either state, and `\|Δ (R−G−B)×320\| > 20` | "for either or both states involved in each transition, R/(R+G+B) >= 0.8, and the change in the value of (R-G-B)x320 is > 20" |
 | Relative luminance | `0.2126 R + 0.7152 G + 0.0722 B` over **linearised** sRGB | "if RsRGB <= 0.04045 then R = RsRGB/12.92 else R = ((RsRGB+0.055)/1.055) ^ 2.4" |
 | Affected area | `changed_area_fraction >= 0.25` | flashes occupying more than "25% of any 10 degree visual field on the screen" |
@@ -75,17 +75,38 @@ the red rule is now taken from the change in `(R−G−B)`.
 These are simplifications we have not resolved. They are stated here rather than
 implied.
 
-**Area is a fraction of the frame, not of a 10-degree visual field.** The
-published condition is angular: "25% of any 10 degree visual field on the
-screen" at typical viewing distance. That depends on screen size and viewing
-distance, which a file does not carry. Safe Frame uses the fraction of the frame
-that changed, which is the common file-based approximation. On a large screen
-viewed closely, a smaller frame fraction can subtend a 10-degree field, so this
-approximation can under-report.
+**Area is a fraction of the frame, not of a 10-degree visual field.** WCAG's
+condition is angular: "25% of any 10 degree visual field on the screen" at
+typical viewing distance, which depends on screen size and viewing distance that
+a file does not carry. Safe Frame uses the fraction of the frame that changed.
+
+This is worth stating precisely rather than as a simple shortfall. A peer-reviewed
+gap analysis of the international guidelines finds that WCAG is the outlier here:
+
+> "All of the guidelines except WCAG require flashes be constrained to 25% of
+> the screen."
+>
+> — Jordan, J. B. and Vanderheiden, G. C., *International Guidelines for
+> Photosensitive Epilepsy: Gap Analysis and Recommendations*, ACM Transactions
+> on Accessible Computing 17(3), 2024. <https://doi.org/10.1145/3694790>
+
+So the frame-fraction test matches the broadcast and ISO family — including the
+Ofcom/ITU phrasing, which is "no more than three flashes in a one second period
+occupying more than a quarter of the screen area" — and is more permissive than
+WCAG's angular test. On a large screen viewed closely, a region smaller than a
+quarter of the frame can subtend a 10-degree field, so against WCAG specifically
+this can under-report. We have not implemented the angular test.
 
 **The published area test is over flashes "occurring concurrently".** Safe Frame
 measures the changed area of each transition and takes the peak across the
 window rather than compositing concurrent flashing regions.
+
+**The guidelines themselves are not harmonised**, which bounds what agreement
+with any one of them is worth. The same gap analysis finds the red-flash test
+differs between WCAG 2.0/2.1 and ISO, and that Japan's guidance uses
+percentage-based measurements with a more permissive rate. Safe Frame implements
+the WCAG formulation throughout; a file that passes here is not thereby
+compliant with every regime.
 
 **The synthetic catalogue is generated as transition metrics, not pixels.** The
 corpus exercises the criteria, the lineage isolation and every control at scale,

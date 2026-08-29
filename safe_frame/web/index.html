@@ -665,7 +665,7 @@ body.tech .technical{display:block}
               <tr>
                 <td>Affected area</td>
                 <td class="mono">changed_area_fraction &ge; 0.25<br><span class="muted">approximated</span></td>
-                <td>flashes occupying more than &ldquo;25% of any 10 degree visual field on the screen&rdquo; at typical viewing distance. That is an <em>angular</em> measure and depends on screen size and viewing distance, which a file does not carry; we use the fraction of the frame, which can under-report on a large screen viewed closely. &mdash; WCAG 2.3.1</td>
+                <td>WCAG asks for &ldquo;25% of any 10 degree visual field&rdquo; &mdash; an <em>angular</em> measure needing screen size and viewing distance a file does not carry. We use the fraction of the frame, which matches the Ofcom/ITU wording (&ldquo;a quarter of the screen area&rdquo;) and, per a 2024 gap analysis, every guideline except WCAG. Against WCAG specifically it can under-report. &mdash; WCAG 2.3.1 &middot; Ofcom &sect;2</td>
               </tr>
               <tr>
                 <td>Rate</td>
@@ -684,7 +684,7 @@ body.tech .technical{display:block}
       <div class="grid g-2" style="margin-top:var(--s-4)">
         <div class="card">
           <h3>What auditing against the source found</h3>
-          <p class="muted" style="margin-top:var(--s-2);font-size:var(--t-sm)">We could not obtain review by a qualified photosensitive-epilepsy professional, so we audited the implementation against the published texts instead and wrote down what was wrong. Three defects, all of which changed results: relative luminance was never linearised; the darker-image condition was missing entirely; and saturated red was a plausible-looking proxy rather than the published test.</p>
+          <p class="muted" style="margin-top:var(--s-2);font-size:var(--t-sm)">We could not obtain review by a qualified photosensitive-epilepsy professional, so we audited the implementation against the published texts instead and wrote down what was wrong. Three defects, all of which changed results: relative luminance was never linearised; the darker-image condition was missing entirely; and saturated red was a plausible-looking proxy rather than the published test. The guidelines are themselves <a href="https://doi.org/10.1145/3694790" target="_blank" rel="noreferrer">not harmonised</a>, so passing here is not compliance with every regime.</p>
         </div>
         <div class="card">
           <h3>What that was worth</h3>
