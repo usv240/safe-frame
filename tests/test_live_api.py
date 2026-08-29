@@ -236,3 +236,33 @@ def test_telemetry_never_breaks_a_request():
             raise RuntimeError("boom")
 
     log_event("agent_run", payload=Unserialisable())  # must not raise
+
+
+def test_the_page_shows_the_criteria_that_actually_run():
+    """The landing page prints the criteria as evidence, so it must not drift.
+
+    The SQL panel omitted the darker-image condition after that condition was
+    added, which put the page in contradiction with its own criteria table two
+    sections above it. A judge reading both would find the page arguing with
+    itself.
+    """
+    from pathlib import Path as _P
+    import inspect
+
+    from safe_frame.detector import detect_general_flashes
+
+    text = TestClient(app).get("/").text
+    sweep = (_P(__file__).resolve().parent.parent / "sql" / "006_catalogue_regression.sql").read_text(
+        encoding="utf-8")
+    defaults = inspect.signature(detect_general_flashes).parameters
+
+    # every threshold the sweep applies must be visible on the page
+    for shown in (f"{defaults['luma_delta_floor'].default:.2f}",
+                  f"{defaults['darker_image_ceiling'].default:.2f}",
+                  f"{defaults['area_floor'].default:.2f}",
+                  str(defaults['max_transitions_per_second'].default)):
+        assert shown in text, f"the page does not show {shown}"
+
+    assert "luma_min &lt; 0.80" in text or "luma_min < 0.80" in text, \
+        "the page's SQL panel lost the darker-image condition"
+    assert "luma_min < 0.80" in sweep, "the sweep lost the darker-image condition"

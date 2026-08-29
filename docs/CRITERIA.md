@@ -97,6 +97,14 @@ WCAG's angular test. On a large screen viewed closely, a region smaller than a
 quarter of the frame can subtend a 10-degree field, so against WCAG specifically
 this can under-report. We have not implemented the angular test.
 
+**The red rule's area floor is 0.20, not the published 0.25.** `red_delta` is
+the fraction of the frame whose pixels satisfied the saturated-red transition
+test, and the SQL thresholds it at 0.20 while the general rule uses the
+published 0.25 for `changed_area_fraction`. That makes the red rule the more
+sensitive of the two by design — it errs toward flagging, which is the safer
+direction for a pre-check — but 0.20 is our number, not one from the standard,
+and it is the only threshold in the detector of which that is true.
+
 **The published area test is over flashes "occurring concurrently".** Safe Frame
 measures the changed area of each transition and takes the peak across the
 window rather than compositing concurrent flashing regions.

@@ -654,8 +654,8 @@ body.tech .technical{display:block}
               </tr>
               <tr>
                 <td>Red flash</td>
-                <td class="mono">R/(R+G+B) &ge; 0.8<br>and |&Delta;(R&minus;G&minus;B)&times;320| &gt; 20<br><span class="muted">no luminance condition</span></td>
-                <td>&ldquo;any pair of opposing transitions involving a saturated red&rdquo;, where &ldquo;for either or both states&hellip; R/(R+G+B) &gt;= 0.8, and the change in the value of (R-G-B)x320 is &gt; 20&rdquo;. People are more sensitive to red flashing, so it gets its own test &mdash; deliberately with no luminance condition. &mdash; WCAG 2.3.1</td>
+                <td class="mono">per pixel: R/(R+G+B) &ge; 0.8<br>and |&Delta;(R&minus;G&minus;B)&times;320| &gt; 20<br>then <span class="mono">red_delta &ge; 0.20</span><br><span class="muted">no luminance condition</span></td>
+                <td>&ldquo;any pair of opposing transitions involving a saturated red&rdquo;, where &ldquo;for either or both states&hellip; R/(R+G+B) &gt;= 0.8, and the change in the value of (R-G-B)x320 is &gt; 20&rdquo;. People are more sensitive to red flashing, so it gets its own test &mdash; deliberately with no luminance condition. The pixel test runs in <code class="mono">safe_frame/metrics.py</code> and yields <code class="mono">red_delta</code>, the fraction of the frame that satisfied it; the SQL thresholds that column at 0.20. That floor is <em>lower</em> than the 0.25 area condition, so the red rule is deliberately the more sensitive of the two. &mdash; WCAG 2.3.1</td>
               </tr>
               <tr>
                 <td>Relative luminance</td>
