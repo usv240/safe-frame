@@ -27,10 +27,10 @@ Updated: 2026-08-28
       flash) and excludes every inherited one, for both rules
 - [x] Two published rules implemented and windowed independently: general flash
       and red flash (no luminance floor), both evaluated in one sweep
-- [x] SQL/Python parity suite: 43 cases agree exactly with the reference
-      detector across both rules, with a guard test that fails if the fixtures
-      stop producing violations
-- [x] Persistent official mcp-clickhouse session, warmed at startup (sweep 1.7s end to end over 9.6M rows)
+- [x] SQL/Python parity suite: 45 cluster-backed cases agree exactly with the
+      reference detector across both rules and the darker-image ceiling, plus a
+      cluster-free guard that fails if the fixtures stop producing violations
+- [x] Persistent official mcp-clickhouse session, warmed at startup (sweep about 1.9s end to end over 9.6M rows; ~0.8s of that is the ClickHouse query, the rest MCP transport and serialisation)
 - [x] Official ClickHouse Agent Skills applied to schema and catalogue query;
       findings and three measured declines in docs/CLICKHOUSE-SKILLS-REVIEW.md,
       including a CRITICAL rule that benchmarking contradicted

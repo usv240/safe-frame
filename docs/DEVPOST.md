@@ -54,8 +54,10 @@ Safe Frame is a master-to-rendition photosensitivity **regression** pre-check.
 
 On the live corpus (400 titles, 3,200 renditions, 9,600,000 transition rows) the
 sweep returns 44 renditions that introduced a violation — 31 general flash, 13
-red flash — in about 1.7 seconds, and correctly excludes the control cohorts
-whose *master* already violated.
+red flash — in about two seconds end to end, of which roughly 0.8s is the
+ClickHouse query itself. It correctly excludes every control cohort: titles whose
+*master* already violated, and a bright-on-bright cohort that the published
+darker-image condition does not apply to.
 
 ## Findings become an action
 
