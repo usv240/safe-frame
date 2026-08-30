@@ -266,11 +266,11 @@ async def evaluation() -> dict[str, Any]:
         "ground_truth_source": "sql/008_ground_truth.sql",
         "detector_source": "sql/006_catalogue_regression.sql",
         "independence": (
-            "the ground-truth query reads no measurement column; it recomputes the "
+            "The ground-truth query reads no measurement column; it recomputes the "
             "generator's planting decisions from sipHash64"
         ),
         "scope": (
-            "this measures agreement with a known synthetic ground truth. It is not "
+            "This measures agreement with a known synthetic ground truth. It is not "
             "evidence about real footage and establishes no clinical efficacy."
         ),
         "timing": {"mcp_setup_ms": timing.get("mcp_setup_ms"), "query_ms": timing.get("query_ms")},

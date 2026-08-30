@@ -1331,7 +1331,8 @@ $("#eval-run").onclick = async () => {
     $("#e-det").textContent = d.detector_source;
     $("#e-decoy").textContent =
       `${d.planted} regressions were planted and ${d.found} returned. ${d.decoys.total} decoys were placed to be rejected: ` +
-      `${d.decoys.inherited} inherited and ${d.decoys.bright} bright-on-bright. ${d.decoys.why}.`;
+      `${d.decoys.inherited} inherited and ${d.decoys.bright} bright-on-bright. ` +
+      d.decoys.why.charAt(0).toUpperCase() + d.decoys.why.slice(1) + ".";
     $("#e-scope").textContent = d.scope + " " + d.independence + ".";
     $("#eval-out").hidden = false;
     $("#eval-empty").hidden = true;
