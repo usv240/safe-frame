@@ -59,6 +59,38 @@ ClickHouse query itself. It correctly excludes every control cohort: titles whos
 *master* already violated, and a bright-on-bright cohort that the published
 darker-image condition does not apply to.
 
+## We scored it against a ground truth it cannot see
+
+A synthetic corpus invites one fair objection: bursts were planted, then found.
+
+So the planted set is recovered independently — from the generator's own
+`sipHash64` decisions, by a query that reads **no measurement column at all**
+(`sql/008_ground_truth.sql`) — and compared against what the criteria returned.
+
+| | |
+|---|---|
+| planted | 44 |
+| found | 44 |
+| false negatives | 0 |
+| false positives | 0 |
+| precision / recall | 1.000 / 1.000 |
+| decoys correctly rejected | 55 of 55 |
+
+The decoys carry the result. 42 are renditions with a genuine burst that is *not*
+a regression, because the approved master has the same burst at the same
+presentation time. 13 are a bright-on-bright cohort that clears the delta, area
+and rate floors and sits above the published 0.80 darker-image ceiling. Recall
+alone could be bought by flagging everything; precision is measured against
+those.
+
+Two tests defend the independence: the ground-truth query may not name a
+measurement column, and the detector may not contain `sipHash64`. Otherwise
+someone simplifying this later turns it into a tautology that still prints 1.000.
+
+This establishes something narrow and worth stating exactly: the implementation
+does what the published criteria say, at catalogue scale, including on cases
+built to fool it. It says nothing about real footage.
+
 ## Findings become an action
 
 44 failures is not an operational answer. The next query is the one that matters:

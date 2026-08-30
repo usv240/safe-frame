@@ -1,4 +1,4 @@
-# Demo video script — 2:50
+# Demo video script — 2:52
 
 Hard limit is 3:00; only the first 3:00 is evaluated.
 
@@ -54,7 +54,23 @@ across every row in one pass, through the official ClickHouse MCP server."
 "Forty-four renditions introduced a violation their master never had. Under two
 seconds. Thirty-one general flash, thirteen red flash."
 
-## 1:05–1:40 — The case a luminance checker misses
+## 1:05–1:22 — Prove it isn't circular
+
+> *Scroll to "Does it actually work". Press **Score the detector**.*
+
+"Obvious objection: you generated data with flashes in it and then found the
+flashes. So here is the planted set, recovered from the generator's own random
+seed by a query that reads no measurement at all — not luminance, not red, not
+area. Forty-four planted, forty-four found. Nothing missed, nothing invented."
+
+> *Point at the decoy tile.*
+
+"And fifty-five decoys placed to be rejected — renditions that really do flash,
+but whose master flashes identically, so nothing was introduced. All fifty-five
+correctly left alone. Recall you can fake by flagging everything. Precision
+against those decoys you cannot."
+
+## 1:22–1:50 — The case a luminance checker misses
 
 > *Click a **red flash** row. Wait for the chart.*
 
@@ -68,7 +84,7 @@ second, twenty-five qualifying transitions."
 its own test, deliberately with no luminance condition, because red flashing is
 more provocative. A checker that only tests luminance passes this file."
 
-## 1:40–2:05 — The systemic answer
+## 1:50–2:10 — The systemic answer
 
 > *Scroll to Systemic cause. Press **Profile every transform**.*
 
@@ -79,7 +95,7 @@ regression; subtitle burn-in and social crop produce every red one. That is two
 different root causes with two different owners — and thirteen of the
 forty-four are invisible to a luminance-only check."
 
-## 2:05–2:35 — The agent's mission
+## 2:10–2:38 — The agent's mission
 
 > *Scroll to the brief. Press **Run the triage agent**. Talk while it works.*
 
@@ -95,7 +111,7 @@ the brief came back from SQL. And look at the boundary: decision source is
 `clickhouse_sql`, human required is `true`. The arithmetic decides, the model
 explains, a person acts."
 
-## 2:35–2:50 — Restraint, and close
+## 2:38–2:52 — Restraint, and close
 
 > *Scroll to the criteria table. Let the "not implemented" row sit on screen.*
 
@@ -113,6 +129,7 @@ audience does."
 ## Shot checklist
 
 - [ ] Sweep pressed live, result not cut
+- [ ] Evaluation scored live: 44/44, and the decoy tile called out
 - [ ] A `red_flash` row selected, chart drawn on camera
 - [ ] The flat luminance track on that rendition pointed out explicitly
 - [ ] Transform profile run live, the four-profiles point made
