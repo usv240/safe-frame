@@ -88,6 +88,34 @@ This is measured on a synthetic corpus we authored, so it demonstrates that the
 analysis produces an actionable answer at catalogue scale. It is not a claim
 about the real-world rate of these defects.
 
+## The demonstration is scored, not asserted
+
+A synthetic corpus invites the obvious objection: bursts were planted, then
+found. The planted set is therefore recovered independently, from the
+generator's `sipHash64` decisions, by a query that reads no measurement column
+(`sql/008_ground_truth.sql`), and compared against what the criteria returned.
+
+| | |
+|---|---|
+| planted | 44 |
+| found | 44 |
+| true positives | 44 |
+| false negatives | 0 |
+| false positives | 0 |
+| precision / recall | 1.000 / 1.000 |
+| decoys correctly rejected | 55 of 55 |
+
+The decoys carry the measurement. 42 of them are renditions with a genuine burst
+that is *not* a regression, because the approved master has the same burst at
+the same presentation time; 13 are a bright-on-bright cohort that clears the
+delta, area and rate floors and sits above the published 0.80 darker-image
+ceiling. Recall alone could be bought by flagging everything — precision is
+measured against those.
+
+What this establishes is narrow and worth stating exactly: the implementation
+does what the published criteria say, at catalogue scale, including on cases
+constructed to fool it. It says nothing about real footage.
+
 ## What we have not shown
 
 - **No clinical or population validation.** Nothing here demonstrates that

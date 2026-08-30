@@ -78,6 +78,10 @@ Updated: 2026-08-28
 - [x] Structured run telemetry: every agent run logs its tool sequence and
       decision source, every fail-closed refusal logs why, in Cloud Logging shape
 
+- [x] Scored evaluation against an independently-derived ground truth:
+      44 planted, 44 found, precision and recall 1.000, all 55 decoys rejected
+      (`/v1/evaluation`, `sql/008_ground_truth.sql`)
+
 ## Release tasks
 
 - [ ] Record and publish the under-three-minute demo — script ready in

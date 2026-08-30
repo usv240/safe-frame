@@ -189,3 +189,89 @@ async def transform_risk() -> dict[str, Any]:
             "not N renditions to patch"
         ),
     }
+
+
+GROUND_TRUTH_PATH = Path(__file__).resolve().parent.parent / "sql" / "008_ground_truth.sql"
+
+
+def ground_truth_sql() -> str:
+    """The planted set, recovered from the generator's hashes."""
+    raw = GROUND_TRUTH_PATH.read_text(encoding="utf-8")
+    return _COMMENT.sub("", raw).strip().rstrip(";")
+
+
+async def evaluation() -> dict[str, Any]:
+    """Score the detector against what the generator planted.
+
+    Two independent queries: one recomputes the planting decisions from
+    `sipHash64` without reading a single measurement column, the other runs the
+    published criteria over 9.6M measurements. Neither knows about the other.
+    Agreement between them is therefore a result rather than a restatement.
+
+    Recall on its own would be trivial to score by flagging everything, so the
+    corpus carries decoys that must NOT be returned: renditions whose master has
+    the same burst at the same presentation time, and a bright-on-bright cohort
+    that the published darker-image condition excludes. Precision is measured
+    against those.
+    """
+    results, timing = await ClickHouseMcp().query_many([ground_truth_sql(), catalogue_sql()])
+    planted_rows, found_rows = _decode(results[0]), _decode(results[1])
+
+    expected: set[tuple[str, str]] = set()
+    bright_decoys: set[str] = set()
+    inherited_decoys: set[str] = set()
+    for row in planted_rows:
+        asset = str(row.get("asset_id", ""))
+        if row.get("expect_general"):
+            expected.add((asset, "general_flash"))
+        if row.get("expect_red"):
+            expected.add((asset, "red_flash"))
+        if row.get("bright_decoy"):
+            bright_decoys.add(asset)
+        if row.get("inherited_decoy"):
+            inherited_decoys.add(asset)
+
+    found = {(str(r.get("asset_id", "")), str(r.get("rule", ""))) for r in found_rows}
+    flagged_assets = {asset for asset, _ in found}
+
+    true_positive = sorted(expected & found)
+    false_negative = sorted(expected - found)
+    false_positive = sorted(found - expected)
+    decoys = bright_decoys | inherited_decoys
+
+    def ratio(numerator: int, denominator: int) -> float | None:
+        return round(numerator / denominator, 4) if denominator else None
+
+    return {
+        "planted": len(expected),
+        "found": len(found),
+        "true_positive": len(true_positive),
+        "false_negative": len(false_negative),
+        "false_positive": len(false_positive),
+        "precision": ratio(len(true_positive), len(found)),
+        "recall": ratio(len(true_positive), len(expected)),
+        "decoys": {
+            "total": len(decoys),
+            "inherited": len(inherited_decoys),
+            "bright": len(bright_decoys),
+            "wrongly_flagged": len(decoys & flagged_assets),
+            "why": (
+                "inherited decoys carry the same burst as their master at the same "
+                "presentation time, so nothing was introduced; bright decoys clear every "
+                "floor but sit above the published 0.80 darker-image ceiling"
+            ),
+        },
+        "misses": [{"asset_id": a, "rule": r} for a, r in false_negative[:20]],
+        "spurious": [{"asset_id": a, "rule": r} for a, r in false_positive[:20]],
+        "ground_truth_source": "sql/008_ground_truth.sql",
+        "detector_source": "sql/006_catalogue_regression.sql",
+        "independence": (
+            "the ground-truth query reads no measurement column; it recomputes the "
+            "generator's planting decisions from sipHash64"
+        ),
+        "scope": (
+            "this measures agreement with a known synthetic ground truth. It is not "
+            "evidence about real footage and establishes no clinical efficacy."
+        ),
+        "timing": {"mcp_setup_ms": timing.get("mcp_setup_ms"), "query_ms": timing.get("query_ms")},
+    }

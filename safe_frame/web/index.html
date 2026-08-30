@@ -371,6 +371,12 @@ pre.out{
 }
 .brieftext strong{color:var(--ink)}
 
+.matrix{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,11rem),1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;margin-top:var(--s-4)}
+.matrix div{background:var(--surface);padding:var(--s-4)}
+.matrix b{display:block;font:600 var(--t-2xl)/1 var(--serif);font-variant-numeric:tabular-nums}
+.matrix span{display:block;font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.09em;color:var(--ink-3);margin-top:var(--s-2)}
+.matrix .good b{color:var(--good)}
+.matrix .bad b{color:var(--series-red)}
 /* ---------- provenance table ---------- */
 .prov{width:100%;border-collapse:collapse;font-size:var(--t-sm)}
 .prov th{position:static;background:transparent}
@@ -628,6 +634,50 @@ body.tech .technical{display:block}
             <dt>Model</dt><dd id="b-model">&mdash;</dd>
           </dl>
         </aside>
+      </div>
+    </div>
+  </section>
+
+  <section id="evaluation">
+    <div class="wrap">
+      <p class="eyebrow">Does it actually work</p>
+      <h2>Scored against a ground truth it cannot see.</h2>
+      <p class="lead" style="margin-top:var(--s-3)">The fair objection to a synthetic demonstration is that it is circular &mdash; data was generated with flashes in it, and then the flashes were found. So the planted set is recovered from the generator&rsquo;s own random decisions, <em>without reading a single measurement</em>, and compared against what the criteria returned.</p>
+      <p class="lead technical" style="margin-top:var(--s-3)"><code class="mono">sql/008_ground_truth.sql</code> recomputes the <code class="mono">sipHash64</code> coin flips that decided where to plant. It never touches <code class="mono">luma_delta</code>, <code class="mono">red_delta</code>, <code class="mono">luma_min</code>, <code class="mono">changed_area_fraction</code> or <code class="mono">direction</code>. Two queries, produced by independent means; agreement between them is a result rather than a restatement.</p>
+
+      <div class="controls">
+        <button class="btn btn-primary" id="eval-run">Score the detector</button>
+      </div>
+
+      <div class="panel" style="padding:var(--s-4)">
+        <p class="empty" id="eval-empty">Press &ldquo;Score the detector&rdquo; to compute this live.</p>
+        <div id="eval-out" hidden>
+          <div class="matrix">
+            <div class="good"><b id="e-tp">&mdash;</b><span>found, and planted</span></div>
+            <div class="bad"><b id="e-fn">&mdash;</b><span>planted, and missed</span></div>
+            <div class="bad"><b id="e-fp">&mdash;</b><span>found, never planted</span></div>
+            <div class="good"><b id="e-dec">&mdash;</b><span>decoys correctly rejected</span></div>
+          </div>
+          <dl class="facts" style="margin-top:var(--s-4)">
+            <dt>Precision</dt><dd id="e-prec">&mdash;</dd>
+            <dt>Recall</dt><dd id="e-rec">&mdash;</dd>
+            <dt>Ground truth</dt><dd class="mono" id="e-gt">&mdash;</dd>
+            <dt>Detector</dt><dd class="mono" id="e-det">&mdash;</dd>
+          </dl>
+          <p class="muted" id="e-decoy" style="font-size:var(--t-sm);margin-top:var(--s-3)"></p>
+          <p class="muted" id="e-scope" style="font-size:var(--t-xs);margin-top:var(--s-3)"></p>
+        </div>
+      </div>
+
+      <div class="grid g-2" style="margin-top:var(--s-4)">
+        <div class="card">
+          <h3>Why the decoys are the point</h3>
+          <p class="muted" style="margin-top:var(--s-2);font-size:var(--t-sm)">Recall alone can be bought by flagging everything. The corpus carries renditions that carry a real burst and are still <em>not</em> regressions &mdash; because their approved master has the same burst at the same presentation time &mdash; and a cohort that clears every floor but sits above the published darker-image ceiling. Precision is measured against those.</p>
+        </div>
+        <div class="card">
+          <h3>What this does not show</h3>
+          <p class="muted" style="margin-top:var(--s-2);font-size:var(--t-sm)">Agreement with a synthetic ground truth we authored. It demonstrates that the implementation does what the criteria say at catalogue scale, and it is not evidence about real footage, not a comparison against a certified analyser, and not a clinical result.</p>
+        </div>
       </div>
     </div>
   </section>
@@ -1260,6 +1310,37 @@ $("#mcp-run").onclick = async () => {
     $("#mcp-empty").textContent = `The MCP check failed closed: ${e.message}`;
   } finally {
     b.disabled = false; b.removeAttribute("aria-busy"); b.textContent = "Check the MCP connection now";
+  }
+};
+
+$("#eval-run").onclick = async () => {
+  const b = $("#eval-run");
+  b.disabled = true; b.setAttribute("aria-busy", "true"); b.textContent = "Scoring against ground truth…";
+  try {
+    const r = await fetch("/v1/evaluation");
+    const p = await r.json();
+    if (!r.ok) throw new Error((p.detail && p.detail.message) || "The evaluation failed closed.");
+    const d = p.data;
+    $("#e-tp").textContent = d.true_positive;
+    $("#e-fn").textContent = d.false_negative;
+    $("#e-fp").textContent = d.false_positive;
+    $("#e-dec").textContent = `${d.decoys.total - d.decoys.wrongly_flagged} of ${d.decoys.total}`;
+    $("#e-prec").textContent = d.precision === null ? "—" : d.precision.toFixed(3);
+    $("#e-rec").textContent = d.recall === null ? "—" : d.recall.toFixed(3);
+    $("#e-gt").textContent = d.ground_truth_source;
+    $("#e-det").textContent = d.detector_source;
+    $("#e-decoy").textContent =
+      `${d.planted} regressions were planted and ${d.found} returned. ${d.decoys.total} decoys were placed to be rejected: ` +
+      `${d.decoys.inherited} inherited and ${d.decoys.bright} bright-on-bright. ${d.decoys.why}.`;
+    $("#e-scope").textContent = d.scope + " " + d.independence + ".";
+    $("#eval-out").hidden = false;
+    $("#eval-empty").hidden = true;
+  } catch (e) {
+    $("#eval-out").hidden = true;
+    $("#eval-empty").hidden = false;
+    $("#eval-empty").textContent = `The evaluation failed closed: ${e.message}`;
+  } finally {
+    b.disabled = false; b.removeAttribute("aria-busy"); b.textContent = "Score the detector";
   }
 };
 

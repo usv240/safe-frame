@@ -127,3 +127,41 @@ def test_the_darker_image_ceiling_is_applied_wherever_general_flash_is():
         red = sql[sql.index("red_flash_qualifying"):]
         assert "luma_min < 0.80" in general, f"{name} lost the darker-image ceiling"
         assert "luma_min" not in red, f"{name} applied a luminance condition to the red rule"
+
+
+def test_ground_truth_never_reads_a_measurement_column():
+    """The evaluation is only a measurement if the two sides are independent.
+
+    If the ground-truth query looked at `luma_delta` or `red_delta`, it would be
+    re-deriving the detector's own answer and the confusion matrix would be
+    circular. It may read only which assets exist, and recompute the generator's
+    planting hashes.
+    """
+    from pathlib import Path
+
+    sql = (Path(__file__).resolve().parent.parent / "sql" / "008_ground_truth.sql").read_text(
+        encoding="utf-8")
+    body = sql[sql.index("*/") + 2:]  # the header comment names them to explain the rule
+
+    for measurement in ("luma_delta", "red_delta", "luma_min",
+                        "changed_area_fraction", "direction", "pts_ms"):
+        assert measurement not in body, (
+            f"the ground-truth query reads {measurement}; it must not depend on any measurement"
+        )
+    assert "sipHash64" in body, "it must recompute the generator's planting decisions"
+    assert "toUInt64" in body, (
+        "title_index must be cast to UInt64 or sipHash64 hashes a different value "
+        "than the generator did, and the comparison silently scores the wrong set"
+    )
+
+
+def test_ground_truth_and_detector_are_different_queries():
+    """Guard against someone 'simplifying' the evaluation into a tautology."""
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent / "sql"
+    truth = root.joinpath("008_ground_truth.sql").read_text(encoding="utf-8")
+    detector = root.joinpath("006_catalogue_regression.sql").read_text(encoding="utf-8")
+
+    assert "win_transitions" not in truth, "the ground truth must not evaluate the criteria"
+    assert "sipHash64" not in detector, "the detector must not know where anything was planted"

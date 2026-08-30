@@ -98,6 +98,30 @@ measures a swing below 0.01 and stays silent while the red rule fires.
   gcloud logging read 'jsonPayload.event="agent_run"' --limit 20 --format json
   ```
 
+## Does it actually work
+
+The fair objection to a synthetic demonstration is that it is circular: data was
+generated with flashes in it, and then the flashes were found.
+
+`sql/008_ground_truth.sql` answers that. It recovers the planted set from the
+generator's own `sipHash64` decisions and reads **no measurement column at all**
+— not `luma_delta`, not `red_delta`, not `luma_min`, not
+`changed_area_fraction`, not `direction`. `/v1/evaluation` runs it alongside the
+sweep and reports the confusion matrix. Two queries produced by independent
+means; agreement between them is a result rather than a restatement.
+
+On the live corpus: **44 planted, 44 found, precision 1.000, recall 1.000**, and
+all 55 decoys correctly rejected.
+
+The decoys are the part that makes the number worth anything — recall alone can
+be bought by flagging everything. They are renditions that carry a real burst
+and are still not regressions, because their approved master has the same burst
+at the same presentation time, plus a bright-on-bright cohort that clears every
+floor but sits above the published darker-image ceiling.
+
+This measures agreement with a ground truth we authored. It is not evidence
+about real footage and establishes no clinical efficacy.
+
 ## From findings to an action
 
 A count of failures is not an operational answer. `/v1/catalogue/transform-risk`
@@ -150,6 +174,7 @@ Useful judge endpoints:
 - `/v1/catalogue/timeline` — per-second qualifying transitions for a master and one
   rendition, on one shared scale; this is what the evidence chart draws
 - `/v1/catalogue/transform-risk` — per-transform regression rates: the systemic view
+- `/v1/evaluation` — the detector scored against the generator's planted ground truth
 - `/v1/triage` — the multi-step agent brief, with its tool-call sequence
 - `/v1/samples` — self-authored exact pass/fail metric pair
 - `/v1/scan` — submit raw transition metrics for a parent/child pair

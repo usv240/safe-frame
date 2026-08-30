@@ -456,6 +456,41 @@ async def triage(request: TriageRequest) -> dict[str, object]:
     return {"data": result}
 
 
+@app.get("/v1/evaluation")
+async def evaluation_endpoint() -> dict[str, object]:
+    """Score the detector against what the generator planted.
+
+    The ground truth is recovered from the generator's `sipHash64` decisions
+    without reading any measurement column, so agreement with the sweep is a
+    measurement rather than a restatement. Decoys that must not be returned are
+    scored too, because recall alone can be bought by flagging everything.
+    """
+    from .catalogue import evaluation
+
+    try:
+        result = await evaluation()
+    except ClickHouseNotConfigured as exc:
+        raise HTTPException(
+            503, detail={"code": "mcp_clickhouse_not_configured", "message": str(exc)}
+        ) from exc
+    except Exception as exc:
+        log_event("fail_closed", severity="ERROR", endpoint="/v1/evaluation",
+                  code="evaluation_failed", reason=type(exc).__name__,
+                  message="the evaluation failed closed; no score was invented")
+        raise HTTPException(
+            502,
+            detail={
+                "code": "evaluation_failed",
+                "message": f"The evaluation failed closed ({type(exc).__name__}); no score was invented.",
+            },
+        ) from exc
+    log_event("evaluation", planted=result["planted"], found=result["found"],
+              precision=result["precision"], recall=result["recall"],
+              decoys_wrongly_flagged=result["decoys"]["wrongly_flagged"],
+              message=f"precision {result['precision']}, recall {result['recall']}")
+    return {"data": result}
+
+
 @app.get("/v1/integrations/clickhouse/evidence")
 async def clickhouse_evidence() -> dict[str, object]:
     try:

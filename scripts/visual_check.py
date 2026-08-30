@@ -118,6 +118,19 @@ EVIDENCE_FIXTURE = {"data": {
 }}
 
 
+EVALUATION_FIXTURE = {"data": {
+    "planted": 44, "found": 44, "true_positive": 44, "false_negative": 0, "false_positive": 0,
+    "precision": 1.0, "recall": 1.0,
+    "decoys": {"total": 55, "inherited": 42, "bright": 13, "wrongly_flagged": 0,
+               "why": "inherited decoys carry the same burst as their master"},
+    "misses": [], "spurious": [],
+    "ground_truth_source": "sql/008_ground_truth.sql",
+    "detector_source": "sql/006_catalogue_regression.sql",
+    "independence": "the ground-truth query reads no measurement column",
+    "scope": "agreement with a known synthetic ground truth",
+}}
+
+
 def _stub(page) -> None:
     import json as _json
 
@@ -129,6 +142,7 @@ def _stub(page) -> None:
     page.route("**/v1/catalogue/timeline*", lambda r: reply(r, _timeline_fixture()))
     page.route("**/v1/catalogue/transform-risk", lambda r: reply(r, RISK_FIXTURE))
     page.route("**/v1/triage", lambda r: reply(r, TRIAGE_FIXTURE))
+    page.route("**/v1/evaluation", lambda r: reply(r, EVALUATION_FIXTURE))
     page.route("**/v1/integrations/clickhouse/evidence", lambda r: reply(r, EVIDENCE_FIXTURE))
 
 
@@ -230,6 +244,16 @@ def offline() -> list[str]:
             page.click("#export")
         if not dl.value.suggested_filename.startswith("safe-frame-findings-"):
             problems.append(f"export filename was {dl.value.suggested_filename}")
+
+        page.click("#eval-run")
+        page.wait_for_timeout(800)
+        if page.eval_on_selector("#eval-out", "e => e.hidden"):
+            problems.append("the evaluation panel did not render")
+        if page.eval_on_selector("#e-prec", "e => e.textContent") != "1.000":
+            problems.append("precision did not render")
+        cells = page.eval_on_selector_all("#evaluation .matrix div", "els => els.length")
+        if cells != 4:
+            problems.append(f"the confusion matrix drew {cells} cells, expected 4")
 
         page.click("#mcp-run")
         page.wait_for_timeout(700)
