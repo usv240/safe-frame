@@ -161,7 +161,7 @@ invent a violation that neither published test supports.
 - One long-lived MCP session, warmed at startup, so a visitor's first sweep
   measures the query rather than a subprocess handshake.
 - The official **ClickHouse Agent Skills** were applied to the schema and the
-  catalogue query; findings and three measured declines are written up in
+  catalogue query; all 31 rules are accounted for and four measured declines are written up in
   `docs/CLICKHOUSE-SKILLS-REVIEW.md`.
 
 **The agent**

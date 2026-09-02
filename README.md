@@ -7,6 +7,9 @@ that was absent from the approved parent?
 Public app: <https://safe-frame-regression-109051079423.us-central1.run.app>
 
 Start with [`JUDGING.md`](JUDGING.md) for the shortest verified judge path,
+[`docs/CLICKHOUSE-SKILLS-REVIEW.md`](docs/CLICKHOUSE-SKILLS-REVIEW.md) for how
+every one of the 31 official ClickHouse Agent Skills rules was applied, measured
+or declined,
 [`docs/CRITERIA.md`](docs/CRITERIA.md) for where every threshold came from,
 [`docs/IMPACT.md`](docs/IMPACT.md) for who this is for and what has *not* been
 shown, and [`submission-evidence.json`](submission-evidence.json) for

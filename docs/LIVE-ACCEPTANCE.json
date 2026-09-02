@@ -1,6 +1,6 @@
 {
   "verified_at": "2026-08-29T02:10:00Z",
-  "revision": "safe-frame-regression-00030-8tl",
+  "revision": "safe-frame-regression-00037-x7p",
   "public_url": "https://safe-frame-regression-109051079423.us-central1.run.app",
   "note": "Every value below was read from the deployed revision or the live cluster. It contains no credentials.",
   "health": {

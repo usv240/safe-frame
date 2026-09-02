@@ -55,7 +55,7 @@
 
 | Criterion | Inspect this | What it proves |
 |---|---|---|
-| Technological Implementation | The sweep, the transform profile, then the triage agent | Two rules windowed independently in one pass, presentation-time lineage, live SQL isolation, a genuinely multi-step ADK agent whose four tools are all read-only MCP queries, fail-closed behaviour |
+| Technological Implementation | The sweep, the transform profile, then the triage agent; `docs/CLICKHOUSE-SKILLS-REVIEW.md` for all 31 official rules with measurements | Two rules windowed independently in one pass, presentation-time lineage, live SQL isolation, a genuinely multi-step ADK agent whose four tools are all read-only MCP queries, fail-closed behaviour |
 | Design | `/` in Plain mode, then Technical mode | One coherent non-flashing path from problem to evidence to root cause to action, for an editor and for an engineering judge. Verified at phone, laptop and desktop widths in both themes by `scripts/visual_check.py` |
 | Potential Impact | The systemic-cause section, the red-flash rows, and `docs/IMPACT.md` | A rendition that introduced a risk its approved master never had, invisible to a luminance-only check and to any per-file QC that never compares versions. The finding is actionable rather than merely alarming: four profiles, two root causes, thirteen findings a luminance-only checker misses. `IMPACT.md` carries the sourced case *and* an explicit list of what has not been shown |
 | Quality of Idea | `docs/PRIOR-ART.md` and `docs/CRITERIA.md` | Detection, repair, dimming and batch scale are conceded; the narrow public gap is lineage regression, and every threshold traces to a quoted WCAG 2.3.1 definition |

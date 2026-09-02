@@ -15,7 +15,7 @@ Updated: 2026-08-28
 - [x] Real Google ADK + Gemini Vertex explanation path
 - [x] Light-default, opt-in dark, non-flashing public web product
 - [x] Self-authored constructed judge sample
-- [x] Public Cloud Run revision `safe-frame-regression-00030-8tl`
+- [x] Public Cloud Run revision `safe-frame-regression-00037-x7p`
 - [x] Live acceptance re-verified against the deployed revision: sweep, per-pair
       verdict and ADK explanation agree on both a general-flash and a red-flash
       pair; all four controls behave (`docs/LIVE-ACCEPTANCE.json`)
