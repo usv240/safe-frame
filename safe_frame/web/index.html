@@ -643,7 +643,8 @@ body.tech .technical{display:block}
       <p class="eyebrow">Does it actually work</p>
       <h2>Scored against a ground truth it cannot see.</h2>
       <p class="lead" style="margin-top:var(--s-3)">The fair objection to a synthetic demonstration is that it is circular &mdash; data was generated with flashes in it, and then the flashes were found. So the planted set is recovered from the generator&rsquo;s own random decisions, <em>without reading a single measurement</em>, and compared against what the criteria returned.</p>
-      <p class="lead technical" style="margin-top:var(--s-3)"><code class="mono">sql/008_ground_truth.sql</code> recomputes the <code class="mono">sipHash64</code> coin flips that decided where to plant. It never touches <code class="mono">luma_delta</code>, <code class="mono">red_delta</code>, <code class="mono">luma_min</code>, <code class="mono">changed_area_fraction</code> or <code class="mono">direction</code>. Two queries, produced by independent means; agreement between them is a result rather than a restatement.</p>
+      <p class="lead technical" style="margin-top:var(--s-3)"><code class="mono">sql/008_ground_truth.sql</code> recomputes the decisions that chose where to plant. It never touches <code class="mono">luma_delta</code>, <code class="mono">red_delta</code>, <code class="mono">luma_min</code>, <code class="mono">changed_area_fraction</code> or <code class="mono">direction</code>. Two queries, produced by independent means; agreement between them is a result rather than a restatement.</p>
+      <p class="lead" style="margin-top:var(--s-3)">The catalogue holds two kinds of row, and they are scored separately on purpose. Most are <em>authored</em> &mdash; SQL decided what each measurement should be. The <code class="mono">measured_*</code> titles are not: they are constructed RGB frames pushed through the same measurement code a decoder would feed, so every value is the output of <code class="mono">relative_luminance</code> and <code class="mono">red_flash_mask</code> over real pixel arrays. If the detector only scored well on numbers we wrote, the corpus would be doing the work.</p>
 
       <div class="controls">
         <button class="btn btn-primary" id="eval-run">Score the detector</button>
@@ -664,6 +665,12 @@ body.tech .technical{display:block}
             <dt>Ground truth</dt><dd class="mono" id="e-gt">&mdash;</dd>
             <dt>Detector</dt><dd class="mono" id="e-det">&mdash;</dd>
           </dl>
+          <div class="scroll" style="max-height:none;margin-top:var(--s-4)">
+            <table><caption class="sr">Detection scored separately for each cohort of the catalogue.</caption>
+              <thead><tr><th scope="col">Cohort</th><th scope="col">Where the numbers came from</th><th scope="col">Planted</th><th scope="col">Found</th><th scope="col">Precision</th><th scope="col">Recall</th></tr></thead>
+              <tbody id="e-cohorts"></tbody>
+            </table>
+          </div>
           <p class="muted" id="e-decoy" style="font-size:var(--t-sm);margin-top:var(--s-3)"></p>
           <p class="muted" id="e-scope" style="font-size:var(--t-xs);margin-top:var(--s-3)"></p>
         </div>
@@ -1329,6 +1336,20 @@ $("#eval-run").onclick = async () => {
     $("#e-rec").textContent = d.recall === null ? "—" : d.recall.toFixed(3);
     $("#e-gt").textContent = d.ground_truth_source;
     $("#e-det").textContent = d.detector_source;
+    const cohorts = $("#e-cohorts");
+    cohorts.replaceChildren();
+    for (const [key, label] of [["measured_from_pixels", "Measured from pixels"],
+                                ["authored_metrics", "Authored metrics"]]) {
+      const c = (d.by_cohort || {})[key];
+      if (!c) continue;
+      const tr = document.createElement("tr");
+      tr.innerHTML =
+        `<td><strong>${label}</strong></td><td class="muted" style="white-space:normal">${c.provenance}</td>` +
+        `<td>${c.planted}</td><td>${c.found}</td>` +
+        `<td>${c.precision === null ? "—" : c.precision.toFixed(3)}</td>` +
+        `<td>${c.recall === null ? "—" : c.recall.toFixed(3)}</td>`;
+      cohorts.append(tr);
+    }
     $("#e-decoy").textContent =
       `${d.planted} regressions were planted and ${d.found} returned. ${d.decoys.total} decoys were placed to be rejected: ` +
       `${d.decoys.inherited} inherited and ${d.decoys.bright} bright-on-bright. ` +

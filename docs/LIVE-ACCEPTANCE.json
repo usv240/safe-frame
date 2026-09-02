@@ -1,5 +1,5 @@
 {
-  "verified_at": "2026-08-29T02:10:00Z",
+  "verified_at": "2026-09-02T00:00:00Z",
   "revision": "safe-frame-regression-00037-x7p",
   "public_url": "https://safe-frame-regression-109051079423.us-central1.run.app",
   "note": "Every value below was read from the deployed revision or the live cluster. It contains no credentials.",
@@ -11,19 +11,19 @@
   },
   "catalogue_sweep": {
     "endpoint": "/v1/catalogue/sweep",
-    "corpus_transitions": 9600000,
-    "corpus_assets": 3200,
-    "corpus_titles": 400,
-    "regression_count": 44,
+    "corpus_transitions": 10176000,
+    "corpus_assets": 3392,
+    "corpus_titles": 424,
+    "regression_count": 66,
     "by_rule": {
-      "general_flash": 31,
-      "red_flash": 13
+      "general_flash": 43,
+      "red_flash": 23
     },
     "by_transform": {
-      "60fps_interp": 16,
-      "adbreak_insert": 15,
-      "subtitle_burnin": 7,
-      "social_crop_v": 6
+      "60fps_interp": 22,
+      "adbreak_insert": 21,
+      "subtitle_burnin": 12,
+      "social_crop_v": 11
     },
     "clickhouse_query_ms": 1710.8,
     "decision_source": "clickhouse_sql_via_official_mcp",
@@ -106,7 +106,7 @@
   "query_shape_benchmark": {
     "question": "one scan with ARRAY JOIN fan-out, or two scans unioned",
     "runs_each": 5,
-    "measured_against": "the current sweep, after the darker-image condition was added",
+    "measured_against": "the 9,600,000-row corpus, before the measured cohort was added; not re-measured since, and the shape of the result is unchanged",
     "two_pass_union_shipped": {
       "rows_read": 10263552,
       "median_ms": 834,
@@ -119,7 +119,7 @@
       "min_ms": 989,
       "max_ms": 1353
     },
-    "result": "identical 44-row output; the single-scan form is 27% slower",
+    "result": "identical 44-row output at the time of measurement; the single-scan form is 27% slower",
     "why": "two passes read 10.26M rather than 19.2M because per-granule min/max lets ClickHouse skip ~93% of the second scan, so the extra scan is nearly free"
   },
   "notes": [
@@ -208,34 +208,34 @@
     "endpoint": "/v1/catalogue/transform-risk",
     "profiles": {
       "60fps_interp": {
-        "renditions": 400,
-        "regressed": 16,
-        "pct": 4.0,
+        "renditions": 424,
+        "regressed": 22,
+        "pct": 5.19,
         "rule": "general_flash"
       },
       "adbreak_insert": {
-        "renditions": 400,
-        "regressed": 15,
-        "pct": 3.75,
+        "renditions": 424,
+        "regressed": 21,
+        "pct": 4.95,
         "rule": "general_flash"
       },
       "subtitle_burnin": {
-        "renditions": 400,
-        "regressed": 7,
-        "pct": 1.75,
+        "renditions": 424,
+        "regressed": 12,
+        "pct": 2.83,
         "rule": "red_flash"
       },
       "social_crop_v": {
-        "renditions": 400,
-        "regressed": 6,
-        "pct": 1.5,
+        "renditions": 424,
+        "regressed": 11,
+        "pct": 2.59,
         "rule": "red_flash"
       }
     },
     "transforms_implicated": 4,
     "transforms_clean": 3,
-    "red_only_regressions": 13,
-    "why_it_matters": "44 findings resolve to four encoder profiles with two distinct root causes, so the action is a handful of upstream fixes rather than 44 patches; 13 are invisible to a luminance-only checker"
+    "red_only_regressions": 23,
+    "why_it_matters": "66 findings resolve to four encoder profiles with two distinct root causes, so the action is a handful of upstream fixes rather than 66 patches; 23 are invisible to a luminance-only checker"
   },
   "on_the_page": [
     "who it is for, named in one line under the hero",
@@ -282,5 +282,45 @@
     "samples": "/v1/samples mints a unique lineage per request so callers cannot collide",
     "rate_limits": "per client per minute on /v1/scan, /v1/triage and /v1/explain; no read endpoint is capped",
     "mcp": "read-only, ClickHouse credentials only, SELECT-only database user"
+  },
+  "measured_cohort": {
+    "why": "every other row is an authored number; nothing at scale ran the measurement stage",
+    "titles": 24,
+    "assets": 192,
+    "rows": 576000,
+    "source": "scripts/seed_measured_corpus.py",
+    "how": "constructed RGB frame sequences pushed through safe_frame.ingest.frames_to_transitions, so every value is the output of relative_luminance and red_flash_mask over real pixel arrays",
+    "measured_in_seconds": 149,
+    "scored_separately": true,
+    "result": "precision and recall 1.000 on the measured cohort, identical to the authored one",
+    "note": "the frames are constructed, not filmed, and none is ever rendered or displayed"
+  },
+  "evaluation": {
+    "endpoint": "/v1/evaluation",
+    "planted": 66,
+    "found": 66,
+    "true_positive": 66,
+    "false_negative": 0,
+    "false_positive": 0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "by_cohort": {
+      "measured_from_pixels": {
+        "planted": 22,
+        "found": 22,
+        "precision": 1.0,
+        "recall": 1.0
+      },
+      "authored_metrics": {
+        "planted": 44,
+        "found": 44,
+        "precision": 1.0,
+        "recall": 1.0
+      }
+    },
+    "decoys": {
+      "total": 86,
+      "wrongly_flagged": 0
+    }
   }
 }

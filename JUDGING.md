@@ -18,7 +18,7 @@
 
 1. Open `/`. The four counters are read live from ClickHouse through official MCP.
 2. Press **Sweep the catalogue**. Both published rules are evaluated across
-   9,600,000 transition rows in one pass, and the master/rendition isolation happens
+   10,176,000 transition rows in one pass, and the master/rendition isolation happens
    inside the same query. The header reports how many rows were scanned, how many
    were returned, and the ClickHouse time.
 3. Read the **Rule** column. `General flash` is the luminance rule. `Red flash` is a
@@ -32,7 +32,7 @@
    passes. The same numbers are available as a table under the chart.
 5. Scroll to **Systemic cause** and press *Profile every transform*. Four encoder
    profiles account for every finding and three transforms introduce nothing — so
-   this is a small number of upstream fixes rather than 44 renditions to patch.
+   this is a small number of upstream fixes rather than 66 renditions to patch.
    Note that the two rules cluster on *different* profiles.
 6. Scroll to **The agent's mission** and press *Run the triage agent*. It takes
    about twenty seconds because it really is running four ClickHouse queries. The
@@ -57,7 +57,7 @@
 |---|---|---|
 | Technological Implementation | The sweep, the transform profile, then the triage agent; `docs/CLICKHOUSE-SKILLS-REVIEW.md` for all 31 official rules with measurements | Two rules windowed independently in one pass, presentation-time lineage, live SQL isolation, a genuinely multi-step ADK agent whose four tools are all read-only MCP queries, fail-closed behaviour |
 | Design | `/` in Plain mode, then Technical mode | One coherent non-flashing path from problem to evidence to root cause to action, for an editor and for an engineering judge. Verified at phone, laptop and desktop widths in both themes by `scripts/visual_check.py` |
-| Potential Impact | The systemic-cause section, the red-flash rows, and `docs/IMPACT.md` | A rendition that introduced a risk its approved master never had, invisible to a luminance-only check and to any per-file QC that never compares versions. The finding is actionable rather than merely alarming: four profiles, two root causes, thirteen findings a luminance-only checker misses. `IMPACT.md` carries the sourced case *and* an explicit list of what has not been shown |
+| Potential Impact | The systemic-cause section, the red-flash rows, and `docs/IMPACT.md` | A rendition that introduced a risk its approved master never had, invisible to a luminance-only check and to any per-file QC that never compares versions. The finding is actionable rather than merely alarming: four profiles, two root causes, twenty-three findings a luminance-only checker misses. `IMPACT.md` carries the sourced case *and* an explicit list of what has not been shown |
 | Quality of Idea | `docs/PRIOR-ART.md` and `docs/CRITERIA.md` | Detection, repair, dimming and batch scale are conceded; the narrow public gap is lineage regression, and every threshold traces to a quoted WCAG 2.3.1 definition |
 
 The catalogue is self-authored synthetic measurement, not footage, and contains no

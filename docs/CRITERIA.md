@@ -53,7 +53,7 @@ with `luma_min` at 0.86. Measured against the live catalogue:
 
 | | regressions returned |
 |---|---|
-| with the darker-image condition (shipped) | **44** — 31 general flash, 13 red flash |
+| with the darker-image condition (shipped) | **44** — 43 general flash, 23 red flash |
 | without it (what we shipped before this audit) | 57 — 44 general flash, 13 red flash |
 
 Thirteen false positives, every one of them an `hdr10_passthrough` rendition
@@ -116,12 +116,21 @@ percentage-based measurements with a more permissive rate. Safe Frame implements
 the WCAG formulation throughout; a file that passes here is not thereby
 compliant with every regime.
 
-**The synthetic catalogue is generated as transition metrics, not pixels.** The
-corpus exercises the criteria, the lineage isolation and every control at scale,
-but its `red_delta` and `luma_min` are authored values rather than measurements
-of real frames. The pixel-accurate implementations of both live in
-`safe_frame/metrics.py` and `safe_frame/ingest.py` and are covered by
-`tests/test_ingest.py`; the catalogue does not exercise them.
+**Most of the catalogue is authored rather than measured — but no longer all of
+it.** 400 of the 424 titles are generated as transition metrics: SQL decided what
+`luma_delta`, `luma_min` and `red_delta` should be and wrote them. The remaining
+24 titles (`measured_*`, 576,000 rows) are constructed RGB frame sequences pushed
+through `safe_frame.ingest.frames_to_transitions`, so every value in them is the
+output of `relative_luminance` and `red_flash_mask` over real pixel arrays and
+nothing was chosen.
+
+`/v1/evaluation` scores the two cohorts separately for exactly this reason. They
+agree: precision and recall are 1.000 on both. That is what rules out the corpus
+doing the detector's work — if the numbers had only behaved because we wrote
+them, the measured cohort would have scored differently.
+
+What remains unmeasured is real *content*. The frames are constructed, not
+filmed, and no sequence is ever rendered or displayed.
 
 **Spatial pattern is not implemented at all.** Harding-style analysers test
 luminance flashes, red flashes *and* regular spatial patterns. Safe Frame

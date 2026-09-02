@@ -45,14 +45,14 @@ signed off."
 
 > *Scroll to the sweep. Point at the counters, press the button, wait.*
 
-"Four hundred titles, thirty-two hundred renditions, nine point six million
+"Four hundred and twenty-four titles, thirty-three hundred renditions, ten point two million
 transition measurements in ClickHouse. Both published flash rules evaluated
 across every row in one pass, through the official ClickHouse MCP server."
 
 > *Result lands.*
 
-"Forty-four renditions introduced a violation their master never had. Under two
-seconds. Thirty-one general flash, thirteen red flash."
+"Sixty-six renditions introduced a violation their master never had. Under two
+seconds. Forty-three general flash, twenty-three red flash."
 
 ## 1:05–1:22 — Prove it isn't circular
 
@@ -61,12 +61,12 @@ seconds. Thirty-one general flash, thirteen red flash."
 "Obvious objection: you generated data with flashes in it and then found the
 flashes. So here is the planted set, recovered from the generator's own random
 seed by a query that reads no measurement at all — not luminance, not red, not
-area. Forty-four planted, forty-four found. Nothing missed, nothing invented."
+area. Sixty-six planted, sixty-six found. Nothing missed, nothing invented."
 
 > *Point at the decoy tile.*
 
-"And fifty-five decoys placed to be rejected — renditions that really do flash,
-but whose master flashes identically, so nothing was introduced. All fifty-five
+"And eighty-six decoys placed to be rejected — renditions that really do flash,
+but whose master flashes identically, so nothing was introduced. All eighty-six
 correctly left alone. Recall you can fake by flagging everything. Precision
 against those decoys you cannot."
 
@@ -88,12 +88,12 @@ more provocative. A checker that only tests luminance passes this file."
 
 > *Scroll to Systemic cause. Press **Profile every transform**.*
 
-"Forty-four findings sounds like forty-four problems. It isn't. Four encoder
+"Sixty-six findings sounds like sixty-six problems. It isn't. Four encoder
 profiles account for all of them, and three transforms introduce nothing.
 Frame-rate interpolation and ad-break insertion produce every luminance
 regression; subtitle burn-in and social crop produce every red one. That is two
-different root causes with two different owners — and thirteen of the
-forty-four are invisible to a luminance-only check."
+different root causes with two different owners — and twenty-three of the
+sixty-six are invisible to a luminance-only check."
 
 ## 2:10–2:38 — The agent's mission
 

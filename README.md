@@ -106,21 +106,24 @@ measures a swing below 0.01 and stays silent while the red rule fires.
 The fair objection to a synthetic demonstration is that it is circular: data was
 generated with flashes in it, and then the flashes were found.
 
-`sql/008_ground_truth.sql` answers that. It recovers the planted set from the
-generator's own `sipHash64` decisions and reads **no measurement column at all**
+`sql/008_ground_truth.sql` answers that. It recovers the planted set from the decisions that chose where to plant, and reads **no measurement column at all**
 — not `luma_delta`, not `red_delta`, not `luma_min`, not
 `changed_area_fraction`, not `direction`. `/v1/evaluation` runs it alongside the
 sweep and reports the confusion matrix. Two queries produced by independent
 means; agreement between them is a result rather than a restatement.
 
-On the live corpus: **44 planted, 44 found, precision 1.000, recall 1.000**, and
-all 55 decoys correctly rejected.
+On the live corpus: **66 planted, 66 found, precision 1.000, recall 1.000**, and
+all 86 decoys correctly rejected.
 
 The decoys are the part that makes the number worth anything — recall alone can
 be bought by flagging everything. They are renditions that carry a real burst
 and are still not regressions, because their approved master has the same burst
 at the same presentation time, plus a bright-on-bright cohort that clears every
 floor but sits above the published darker-image ceiling.
+
+The two cohorts are scored apart, and they agree: 1.000 on the 400 authored
+titles and 1.000 on the 24 whose every value was measured from constructed RGB
+frames rather than chosen. That is what rules out the corpus doing the work.
 
 This measures agreement with a ground truth we authored. It is not evidence
 about real footage and establishes no clinical efficacy.
@@ -131,11 +134,11 @@ A count of failures is not an operational answer. `/v1/catalogue/transform-risk`
 asks the next question: of every transform in the catalogue, how many renditions
 did it produce and how many did it break?
 
-On the live corpus that turns 44 findings into four implicated encoder profiles
+On the live corpus that turns 66 findings into four implicated encoder profiles
 and three clean ones — `60fps_interp` and `adbreak_insert` produce every
 luminance regression between them, `subtitle_burnin` and `social_crop_v` produce
 every red one. That is a small number of upstream configurations to fix rather
-than 44 renditions to patch, and 13 of the 44 come from profiles whose only
+than 66 renditions to patch, and 23 of the 66 come from profiles whose only
 failure mode is red flash, so a luminance-only checker passes all of them.
 
 ## Using it programmatically

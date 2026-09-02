@@ -60,27 +60,27 @@ transform that produced them.
 
 ## What the demonstration actually produces
 
-On the public corpus the sweep returns 44 renditions that introduced a violation
+On the public corpus the sweep returns 66 renditions that introduced a violation
 their approved master never had. The number that matters operationally is the
 next one: those 44 come from **four** encoder profiles out of eight, and three
 transforms introduce nothing at all.
 
 | Transform | Renditions | Regressed | Rule |
 |---|---|---|---|
-| `60fps_interp` | 400 | 16 (4.00%) | general flash |
-| `adbreak_insert` | 400 | 15 (3.75%) | general flash |
-| `subtitle_burnin` | 400 | 7 (1.75%) | red flash |
-| `social_crop_v` | 400 | 6 (1.50%) | red flash |
-| three others | 1,200 | 0 | — |
+| `60fps_interp` | 424 | 22 (5.19%) | general flash |
+| `adbreak_insert` | 424 | 21 (4.95%) | general flash |
+| `subtitle_burnin` | 424 | 12 (2.83%) | red flash |
+| `social_crop_v` | 424 | 11 (2.59%) | red flash |
+| three others | 1,272 | 0 | — |
 
 Two consequences follow, and both are the kind of thing a QC lead can act on:
 
-1. **This is a handful of upstream fixes, not 44 patches.** The failures cluster
+1. **This is a handful of upstream fixes, not 66 patches.** The failures cluster
    by profile, and the two rules cluster by *different* profiles — the
    frame-rate and ad-break paths introduce luminance flashes, the crop and
    subtitle-burn paths introduce saturated-red ones. Those are two separate
    conversations with two separate owners.
-2. **13 of the 44 are invisible to a luminance-only check.** They come from
+2. **23 of the 66 are invisible to a luminance-only check.** They come from
    profiles whose only failure mode is red flash, which holds luminance under
    the general-flash floor by construction.
 
@@ -97,17 +97,17 @@ generator's `sipHash64` decisions, by a query that reads no measurement column
 
 | | |
 |---|---|
-| planted | 44 |
-| found | 44 |
-| true positives | 44 |
+| planted | 66 |
+| found | 66 |
+| true positives | 66 |
 | false negatives | 0 |
 | false positives | 0 |
 | precision / recall | 1.000 / 1.000 |
-| decoys correctly rejected | 55 of 55 |
+| decoys correctly rejected | 86 of 86 |
 
-The decoys carry the measurement. 42 of them are renditions with a genuine burst
+The decoys carry the measurement. Most are renditions with a genuine burst
 that is *not* a regression, because the approved master has the same burst at
-the same presentation time; 13 are a bright-on-bright cohort that clears the
+the same presentation time; seventeen are a bright-on-bright cohort that clears the
 delta, area and rate floors and sits above the published 0.80 darker-image
 ceiling. Recall alone could be bought by flagging everything — precision is
 measured against those.

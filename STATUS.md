@@ -21,16 +21,16 @@ Updated: 2026-08-28
       pair; all four controls behave (`docs/LIVE-ACCEPTANCE.json`)
 - [x] Measurement stage from decoded frames (`safe_frame/ingest.py`), including a
       matched-luminance red alternation the luminance rule provably cannot see
-- [x] Catalogue corpus at scale: 9,600,000 transition rows, 3,200 renditions, 400 titles
+- [x] Catalogue corpus at scale: 10,176,000 transition rows, 3,392 renditions, 424 titles
 - [x] Published criteria evaluated inside ClickHouse in one pass (`sql/006_catalogue_regression.sql`)
-- [x] Catalogue sweep isolates 44 introduced regressions (31 general flash, 13 red
+- [x] Catalogue sweep isolates 66 introduced regressions (43 general flash, 23 red
       flash) and excludes every inherited one, for both rules
 - [x] Two published rules implemented and windowed independently: general flash
       and red flash (no luminance floor), both evaluated in one sweep
 - [x] SQL/Python parity suite: 45 cluster-backed cases agree exactly with the
       reference detector across both rules and the darker-image ceiling, plus a
       cluster-free guard that fails if the fixtures stop producing violations
-- [x] Persistent official mcp-clickhouse session, warmed at startup (sweep about 1.9s end to end over 9.6M rows; ~0.8s of that is the ClickHouse query, the rest MCP transport and serialisation)
+- [x] Persistent official mcp-clickhouse session, warmed at startup (sweep about 1.9s end to end over 10.2M rows; ~0.8s of that is the ClickHouse query, the rest MCP transport and serialisation)
 - [x] Official ClickHouse Agent Skills applied to schema and catalogue query;
       all 31 rules accounted for in docs/CLICKHOUSE-SKILLS-REVIEW.md, with four
       measured declines including a CRITICAL rule that benchmarking contradicted
@@ -55,7 +55,7 @@ Updated: 2026-08-28
 
 - [x] Multi-step ADK agent (`QcTriageAgent`): four read-only MCP tools it
       sequences itself, with the tool-call trace recorded and shown on the page
-- [x] Systemic root-cause analysis: per-transform regression rates turn 44
+- [x] Systemic root-cause analysis: per-transform regression rates turn 66
       findings into four implicated encoder profiles and three clean ones
 - [x] Impact stated on the product surface with sources, not only in the repo
 - [x] Partner integration checkable from the page itself: transport, read-only
@@ -79,7 +79,7 @@ Updated: 2026-08-28
       decision source, every fail-closed refusal logs why, in Cloud Logging shape
 
 - [x] Scored evaluation against an independently-derived ground truth:
-      44 planted, 44 found, precision and recall 1.000, all 55 decoys rejected
+      66 planted, 66 found, precision and recall 1.000, all 86 decoys rejected
       (`/v1/evaluation`, `sql/008_ground_truth.sql`)
 
 ## Release tasks

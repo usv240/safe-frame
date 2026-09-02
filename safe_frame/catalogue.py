@@ -220,8 +220,11 @@ async def evaluation() -> dict[str, Any]:
     expected: set[tuple[str, str]] = set()
     bright_decoys: set[str] = set()
     inherited_decoys: set[str] = set()
+    measured_assets: set[str] = set()
     for row in planted_rows:
         asset = str(row.get("asset_id", ""))
+        if row.get("measured"):
+            measured_assets.add(asset)
         if row.get("expect_general"):
             expected.add((asset, "general_flash"))
         if row.get("expect_red"):
@@ -234,17 +237,52 @@ async def evaluation() -> dict[str, Any]:
     found = {(str(r.get("asset_id", "")), str(r.get("rule", ""))) for r in found_rows}
     flagged_assets = {asset for asset, _ in found}
 
+    def ratio(numerator: int, denominator: int) -> float | None:
+        return round(numerator / denominator, 4) if denominator else None
+
     true_positive = sorted(expected & found)
     false_negative = sorted(expected - found)
     false_positive = sorted(found - expected)
     decoys = bright_decoys | inherited_decoys
 
-    def ratio(numerator: int, denominator: int) -> float | None:
-        return round(numerator / denominator, 4) if denominator else None
+    def score(subset: set[tuple[str, str]], observed: set[tuple[str, str]]) -> dict[str, Any]:
+        tp = len(subset & observed)
+        return {
+            "planted": len(subset),
+            "found": len(observed),
+            "true_positive": tp,
+            "false_negative": len(subset - observed),
+            "false_positive": len(observed - subset),
+            "precision": ratio(tp, len(observed)),
+            "recall": ratio(tp, len(subset)),
+        }
+
+    # The two cohorts differ in where their numbers came from, which is the
+    # whole point of scoring them apart: `measured_*` rows are the output of
+    # relative_luminance and red_flash_mask over constructed RGB frames, and
+    # `title_*` rows are values SQL chose. If the detector scored well on one
+    # and badly on the other, the corpus would be doing the work.
+    measured_expected = {(a, r) for a, r in expected if a in measured_assets}
+    measured_found = {(a, r) for a, r in found if a in measured_assets}
+    authored_expected = expected - measured_expected
+    authored_found = found - measured_found
 
     return {
         "planted": len(expected),
         "found": len(found),
+        "by_cohort": {
+            "measured_from_pixels": {
+                **score(measured_expected, measured_found),
+                "provenance": (
+                    "constructed RGB frames measured by "
+                    "safe_frame.ingest.frames_to_transitions; no value was chosen"
+                ),
+            },
+            "authored_metrics": {
+                **score(authored_expected, authored_found),
+                "provenance": "transition values written directly by sql/005_catalogue_generator.sql",
+            },
+        },
         "true_positive": len(true_positive),
         "false_negative": len(false_negative),
         "false_positive": len(false_positive),

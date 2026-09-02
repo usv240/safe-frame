@@ -76,16 +76,19 @@ the rules it satisfies with
 `ARRAY JOIN arrayFilter((name, keep) -> keep, ['general_flash','red_flash'], [...])`,
 windowed `PARTITION BY asset_id, rule`.
 
-Five runs of each against the live cluster, re-measured against the current sweep
-after the darker-image condition was added, `system` statistics read from the same
-response as the rows:
+Five runs of each against the live cluster, measured after the darker-image
+condition was added and before the measured cohort was seeded, `system`
+statistics read from the same response as the rows. The corpus has since grown to
+10,176,000 rows; this was not re-measured, and the shape of the result -- the
+second scan being nearly free because of granule skipping -- does not depend on
+the size:
 
 | | rows read | median | min | max |
 |---|---|---|---|---|
 | two passes, `UNION ALL` (shipped) | 10,263,552 | **834 ms** | 756 ms | 939 ms |
 | one pass, `ARRAY JOIN` fan-out | 9,600,000 | 1,064 ms | 989 ms | 1,353 ms |
 
-Identical 44-row results from both. The single-scan form is **27% slower**.
+Identical results from both. The single-scan form is **27% slower**.
 
 The interesting part is the rows-read column, and it is not what the rule
 predicts. "Two passes" over a 9.6M-row table should read 19.2M rows. It reads
@@ -120,8 +123,9 @@ second.
 | the refreshable view | 44 | **5.9 ms** |
 | `sql/006` evaluated live | 10,263,552 | 932 ms |
 
-Identical 44-row output. About **158x faster**, and the rule is plainly right for
-a production dashboard.
+Identical output at the time of measurement (44 rows; the corpus has since grown
+and the sweep now returns 66). About **158x faster**, and the rule is plainly
+right for a production dashboard.
 
 It is not enabled on the deployed cluster, and the reason is a product
 constraint rather than a technical one. Safe Frame's landing page claims that

@@ -52,8 +52,8 @@ Safe Frame is a master-to-rendition photosensitivity **regression** pre-check.
   blind spot, then inspect the single pair it ranks first. The tool-call sequence
   is returned with the brief so it can be checked rather than trusted.
 
-On the live corpus (400 titles, 3,200 renditions, 9,600,000 transition rows) the
-sweep returns 44 renditions that introduced a violation — 31 general flash, 13
+On the live corpus (424 titles, 3,392 renditions, 10,176,000 transition rows) the
+sweep returns 66 renditions that introduced a violation — 43 general flash, 23
 red flash — in about two seconds end to end, of which roughly 0.8s is the
 ClickHouse query itself. It correctly excludes every control cohort: titles whose
 *master* already violated, and a bright-on-bright cohort that the published
@@ -69,16 +69,16 @@ So the planted set is recovered independently — from the generator's own
 
 | | |
 |---|---|
-| planted | 44 |
-| found | 44 |
+| planted | 66 |
+| found | 66 |
 | false negatives | 0 |
 | false positives | 0 |
 | precision / recall | 1.000 / 1.000 |
-| decoys correctly rejected | 55 of 55 |
+| decoys correctly rejected | 86 of 86 |
 
-The decoys carry the result. 42 are renditions with a genuine burst that is *not*
+The decoys carry the result. Seventy are renditions with a genuine burst that is *not*
 a regression, because the approved master has the same burst at the same
-presentation time. 13 are a bright-on-bright cohort that clears the delta, area
+presentation time. seventeen are a bright-on-bright cohort that clears the delta, area
 and rate floors and sits above the published 0.80 darker-image ceiling. Recall
 alone could be bought by flagging everything; precision is measured against
 those.
@@ -93,22 +93,22 @@ built to fool it. It says nothing about real footage.
 
 ## Findings become an action
 
-44 failures is not an operational answer. The next query is the one that matters:
+66 failures is not an operational answer. The next query is the one that matters:
 of every transform in the catalogue, how many renditions did it produce and how
 many did it break?
 
 | Transform | Renditions | Regressed | Rule |
 |---|---|---|---|
-| `60fps_interp` | 400 | 16 (4.00%) | general flash |
-| `adbreak_insert` | 400 | 15 (3.75%) | general flash |
-| `subtitle_burnin` | 400 | 7 (1.75%) | red flash |
-| `social_crop_v` | 400 | 6 (1.50%) | red flash |
-| three others | 1,200 | 0 | — |
+| `60fps_interp` | 424 | 22 (5.19%) | general flash |
+| `adbreak_insert` | 424 | 21 (4.95%) | general flash |
+| `subtitle_burnin` | 424 | 12 (2.83%) | red flash |
+| `social_crop_v` | 424 | 11 (2.59%) | red flash |
+| three others | 1,272 | 0 | — |
 
 Four profiles out of eight account for everything, and the two rules cluster on
 *different* profiles — the frame-rate and ad-break paths introduce luminance
 flashes, the crop and subtitle paths introduce saturated-red ones. Two root
-causes, two owners, a handful of upstream fixes instead of 44 patches. And 13 of
+causes, two owners, a handful of upstream fixes instead of 66 patches. And 13 of
 the 44 come from profiles whose only failure mode is red flash, so a
 luminance-only checker passes every one of them.
 
