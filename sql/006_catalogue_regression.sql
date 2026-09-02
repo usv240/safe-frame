@@ -58,7 +58,8 @@
     `query-join-consider-alternatives` guidance. The single-scan alternative --
     filter once, then fan out to matching rules with ARRAY JOIN + arrayFilter --
     was built and measured against this exact query and is *slower*: median
-    1,064ms vs 834ms over five runs, identical 44-row results.
+    1,064ms vs 834ms over five runs, identical results. Measured on the
+    9.6M-row corpus, before the measured cohort was seeded.
 
     The rows-read column is the interesting part. Two passes over 9.6M rows
     should read 19.2M; it reads 10.26M, because per-granule min/max lets
