@@ -90,8 +90,12 @@
     }
   },
   "parity": {
-    "seeds": 40,
-    "agreement": "40/40 exact",
+    "claim": "sql/006_catalogue_regression.sql and safe_frame.detector implement the same published rule",
+    "cases": 46,
+    "agreement": "46/46 exact",
+    "verified_against": "the live self-hosted cluster through the official mcp-clickhouse stdio transport",
+    "elapsed_s": 179,
+    "runs_in_ci": "the `parity` job stands up a throwaway ClickHouse and runs all 46 on every commit; it fails if they skip",
     "rules_exercised": {
       "general_flash": 6,
       "red_flash": 5
@@ -100,8 +104,10 @@
       "six-versus-seven transition boundary",
       "same-direction burst must not violate",
       "red alternation under the luminance floor: red_flash only",
-      "four red and four luminance transitions in one second: neither rule fires"
-    ]
+      "four red and four luminance transitions in one second: neither rule fires",
+      "the 0.80 darker-image ceiling"
+    ],
+    "defect_this_found": "these tests needed a cluster, CI had none, so all 45 skipped everywhere and the green run read as a pass. Under that cover the parametrized case compared the SQL's first row against the detector's whole result list and could never have passed. The implementations did agree once the comparison was corrected -- but nothing had demonstrated it until now."
   },
   "query_shape_benchmark": {
     "question": "one scan with ARRAY JOIN fan-out, or two scans unioned",
@@ -181,7 +187,9 @@
   "defects_found_by_this_check": [
     "a `let` read from its temporal dead zone during theme restore threw at init and detached every listener; the page rendered and did nothing, and the whole pytest suite passed",
     "the chart placeholder was a child of the element the draw replaces, so every successful draw destroyed it and then threw, silently skipping the caption, table view and tooltip",
-    "the phone card layout had width:100% plus margins and overflowed the viewport by exactly the margin"
+    "the phone card layout had width:100% plus margins and overflowed the viewport by exactly the margin",
+    "the SQL/Python parity test -- cited as the proof that the catalogue sweep and the per-file detector cannot disagree -- had never executed: it was skipped in every environment, and its comparison was malformed in both branches",
+    "the persistent mcp-clickhouse worker was cached per configuration but its queue, lock and task belong to one event loop; a second loop in the same process raised 'Event loop is closed'. The service runs one loop and never hit it, so only a test suite could"
   ],
   "multi_step_agent": {
     "agent": "QcTriageAgent",

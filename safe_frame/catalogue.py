@@ -292,11 +292,16 @@ async def evaluation() -> dict[str, Any]:
             "total": len(decoys),
             "inherited": len(inherited_decoys),
             "bright": len(bright_decoys),
+            # The two cohorts are independent draws, so a rendition can be both.
+            # Without this the three counts look like they fail to add up.
+            "both": len(bright_decoys & inherited_decoys),
             "wrongly_flagged": len(decoys & flagged_assets),
             "why": (
                 "inherited decoys carry the same burst as their master at the same "
                 "presentation time, so nothing was introduced; bright decoys clear every "
-                "floor but sit above the published 0.80 darker-image ceiling"
+                "floor but sit above the published 0.80 darker-image ceiling; the two "
+                "cohorts are drawn independently, so 'both' counts the overlap and "
+                "inherited + bright - both = total"
             ),
         },
         "misses": [{"asset_id": a, "rule": r} for a, r in false_negative[:20]],

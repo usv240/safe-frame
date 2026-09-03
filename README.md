@@ -214,9 +214,18 @@ both themes.
 
 `tests/test_sql_parity.py` runs the reference Python detector and the ClickHouse
 criteria SQL over identical randomized rows and requires exact agreement on both
-rules. It executes real SQL, so it is skipped unless `MCP_CLICKHOUSE_COMMAND` and
-the ClickHouse connection variables point at a reachable cluster; the structural
-guards in `tests/test_clickhouse_mcp.py` catch threshold drift without one.
+rules — 46 cases, including the six-versus-seven boundary, the darker-image
+ceiling, and a red alternation at matched luminance. The `parity` CI job stands
+up a throwaway ClickHouse and runs them through the real official
+`mcp-clickhouse` transport on **every commit**, so the agreement is checkable by
+anyone rather than asserted here.
+
+That job exists because of a defect it would have caught. The tests need a
+cluster, CI had none, so they skipped everywhere — 45 green skips reading as a
+pass — and under that cover the parametrized case compared the SQL's first *row*
+against the detector's whole result list. It could never have passed. The two
+implementations did agree, once the comparison was fixed; but for weeks nothing
+demonstrated it. A test that cannot run is a claim, not evidence.
 
 The fixtures are self-authored synthetic measurements with known boundaries.
 They are engineering evidence, not clinical validation or certification. See

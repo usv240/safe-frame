@@ -14,10 +14,11 @@ The SQL half executes through the official read-only `mcp-clickhouse` transport,
 so this also exercises the same partner path the product uses at runtime.
 
 These tests execute real SQL, so they are skipped unless MCP_CLICKHOUSE_COMMAND
-and the ClickHouse connection variables point at a reachable cluster. Public CI
-has no cluster credentials and therefore skips them; the structural guards in
-`tests/test_clickhouse_mcp.py` run everywhere and catch threshold drift. Run
-these against a cluster before publishing any parity claim.
+and the ClickHouse connection variables point at a reachable cluster. The
+`parity` CI job stands up a throwaway ClickHouse and runs them through the real
+official mcp-clickhouse transport on every commit, and fails if they skip -- for
+most of this project's life they skipped everywhere anyone could look, which hid
+a defect in the comparison below that meant they had never once executed.
 """
 
 from __future__ import annotations
@@ -108,7 +109,7 @@ def test_fixtures_exercise_both_rules() -> None:
     assert ceiling_excluded >= 50, "the fixtures never test the darker-image ceiling"
 
 
-def _reference(rows: list[dict[str, object]]) -> dict[str, object] | None:
+def _reference(rows: list[dict[str, object]]) -> list[dict[str, object]]:
     metrics = [
         TransitionMetric(
             asset_id=str(row["asset_id"]),
@@ -164,7 +165,7 @@ async def test_sql_matches_reference_detector(seed: int) -> None:
     rows = _case(seed)
     expected = _reference(rows)
     returned = await parity_violations(rows)
-    actual = _normalise(returned[0]) if returned else None
+    actual = _normalise(returned)
     assert actual == expected, (
         f"seed {seed}: ClickHouse criteria SQL disagreed with the reference detector.\n"
         f"  python:     {expected}\n"

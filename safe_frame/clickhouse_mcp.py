@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import re
@@ -7,6 +8,7 @@ import shlex
 import time
 from contextlib import asynccontextmanager
 from typing import Any, AsyncIterator
+from weakref import WeakKeyDictionary
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -20,8 +22,16 @@ class ClickHouseNotConfigured(RuntimeError):
 
 _ASSET_ID = re.compile(r"^[A-Za-z0-9_-]{1,80}$")
 
-# One persistent official-server session per distinct configuration.
-_WORKERS: dict[tuple, McpWorker] = {}
+# One persistent official-server session per distinct configuration, per event
+# loop. The loop half matters: a worker's queue, lock and task all belong to the
+# loop that created them, so a worker cached across loops raises "Event loop is
+# closed" on its second user. The service runs a single loop for the life of the
+# process and never noticed; anything that runs more than one loop -- notably
+# every async test, which gets a fresh loop each -- did. Keying weakly on the
+# loop keeps the hot path identical and lets dead entries collect themselves.
+_WORKERS: WeakKeyDictionary[asyncio.AbstractEventLoop, dict[tuple, McpWorker]] = (
+    WeakKeyDictionary()
+)
 
 
 def _required(name: str) -> str:
@@ -62,16 +72,17 @@ class ClickHouseMcp:
                 yield session
 
     def _worker(self) -> McpWorker:
-        """One persistent session per distinct server configuration."""
+        """One persistent session per distinct server configuration and event loop."""
         key = (
             self.parameters.command,
             tuple(self.parameters.args),
             tuple(sorted((self.parameters.env or {}).items())),
         )
-        worker = _WORKERS.get(key)
+        per_loop = _WORKERS.setdefault(asyncio.get_running_loop(), {})
+        worker = per_loop.get(key)
         if worker is None:
             worker = McpWorker(self.parameters)
-            _WORKERS[key] = worker
+            per_loop[key] = worker
         return worker
 
     async def tools(self) -> list[str]:
