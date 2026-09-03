@@ -1,6 +1,6 @@
 {
   "verified_at": "2026-09-02T00:00:00Z",
-  "revision": "safe-frame-regression-00037-x7p",
+  "revision": "safe-frame-regression-00044-mth",
   "public_url": "https://safe-frame-regression-109051079423.us-central1.run.app",
   "note": "Every value below was read from the deployed revision or the live cluster. It contains no credentials.",
   "health": {
@@ -254,7 +254,9 @@
     "the partner integration, checkable in place: transport, read-only status, advertised tools and a live query result",
     "the runtime hops with the credential boundary marked",
     "every threshold traced to its published definition, including the one not implemented",
-    "an export so the findings can leave the page"
+    "an export so the findings can leave the page",
+    "a check of your own video, decoded in the browser and never displayed",
+    "a self-serve API key, and the calls to use it"
   ],
   "standards_audit": {
     "why": "expert review could not be obtained; the implementation was audited against the primary texts instead",
@@ -330,5 +332,52 @@
       "total": 86,
       "wrongly_flagged": 0
     }
+  },
+  "bring_your_own_clip": {
+    "endpoint": "/v1/analyze",
+    "why": "every other surface runs on a catalogue we chose, which a judge can fairly discount",
+    "how": "the browser decodes the file to raw RGB on a small grid and posts only those samples; measurement stays in safe_frame.ingest so there is no second implementation of the published maths",
+    "never_displayed": "the video element is created but never inserted into the document, so a clip somebody is checking because they suspect it flashes is never painted on a page about photosensitive seizures",
+    "never_uploaded": "the file itself does not leave the machine",
+    "modes": {
+      "absolute": "rendition alone, criteria evaluated over inline rows, writes nothing",
+      "regression": "rendition plus approved master, the child-only anti-join this product exists for"
+    },
+    "verified_in_a_real_browser_against_encoded_video": {
+      "clean clip alone": "pass",
+      "luminance flash alone": "fail, general_flash",
+      "saturated red at matched luminance alone": "fail, red_flash and not general_flash",
+      "flashing rendition against a clean master": "fail, a regression",
+      "flashing rendition against an identically flashing master": "pass, nothing introduced"
+    },
+    "decision_source": "clickhouse_sql_via_official_mcp",
+    "elapsed_s": {
+      "one_clip": 1.4,
+      "pair": 1.9
+    },
+    "grid": "longest edge reduced to 48 cells; stated on every result",
+    "why_that_grid_is_enough": "the published area condition is a proportion of the screen (0.25), which a grid this size resolves; a flash too small for it does not meet the area condition anyway"
+  },
+  "api_keys": {
+    "endpoints": [
+      "/v1/keys",
+      "/v1/keys/self"
+    ],
+    "optional_by_design": "every endpoint works with no credential at exactly the limits it had before keys existed, because the submission must be testable without an account",
+    "what_a_key_buys": "5x the per-minute cap on the endpoints that spend model tokens or write, and the caller named in the logs; reads are uncapped either way",
+    "stateless": "an identifier and an issue date signed with an HMAC held in Secret Manager, so there is no credential table, no write on the request path, and nothing lost on restart",
+    "stated_limitation": "an individual key cannot be revoked without rotating the signing secret; this is printed on the key itself, and keys expire after 90 days",
+    "edge_cases_refused_with_a_reason": [
+      "malformed shape",
+      "non-numeric issue timestamp",
+      "forged signature",
+      "key signed with a different secret",
+      "expired key",
+      "non-Bearer Authorization scheme",
+      "signing secret not configured (503)"
+    ],
+    "not_silently_downgraded": "a present-but-broken credential is refused, so a caller learns why their quota did not rise",
+    "constant_time_comparison": true,
+    "hosting_quirk_documented": "a POST with no Content-Length is rejected with 411 by the load balancer before it reaches the service, so curl needs an explicit empty body"
   }
 }

@@ -6,10 +6,11 @@ If the triage agent takes its full twenty seconds the run lands nearer 2:50 than
 2:40. That is still safely inside the limit, so do not speed up to hit a number.
 **A clear 2:50 beats a rushed 2:40.**
 
-Narration is **403 words**, about 2:27 at a calm 165 words a minute. Forty-seven
+Narration is **395 words**, about 2:24 at a calm 165 words a minute. Forty-seven
 of those words are spoken *over* the triage agent's wait, so they cost almost no
 wall-clock time: the run measures **2:38 if the agent answers in twelve seconds,
-2:41 if it takes twenty**, including scrolling and the four button presses.
+2:41 if it takes twenty**, including scrolling, the five button presses, and the
+roughly two seconds the bring-your-own check takes to return.
 
 Word count is not the constraint; runtime is. Do not add lines, the remaining
 margin is the whole reason this fits.
@@ -48,10 +49,9 @@ never checked."*
 
 **SAY:**
 
-> **"A film is approved once. Then it becomes dozens of versions, frame rates,
+> **"A film is approved once, then becomes dozens of versions: frame rates,
 > ad-break inserts, social crops, subtitles. Testing runs on the master, before
-> all of that. Safe Frame finds the version, and the transformation, that
-> introduced the risk."**
+> all of that. Safe Frame finds the version that introduced the risk."**
 
 ---
 
@@ -62,9 +62,9 @@ never checked."*
 
 **SAY:**
 
-> **"Four hundred and twenty-four titles. Over three thousand renditions. Ten
-> million transitions in ClickHouse. Both published flash rules, evaluated
-> across all of it in one pass, through the official ClickHouse MCP server."**
+> **"Four hundred and twenty-four titles. Ten million transitions in ClickHouse.
+> Both published flash rules, evaluated across all of it in one pass, through
+> the official ClickHouse MCP server."**
 
 **POINT:** The result headline, then the **Rule** column.
 
@@ -101,18 +101,13 @@ never checked."*
 **SAY:**
 
 > **"Synthetic data, so don't just believe it. This recovers the planted set
-> from the generator's own random decisions, using a query that reads no flash
-> measurement. Sixty-six planted, sixty-six found."**
+> from the generator's own decisions, reading no flash measurement at all.
+> Sixty-six planted, sixty-six found."**
 
 **POINT:** The **decoys correctly rejected** tile.
 
-> **"And eighty-six decoys placed to be rejected, files that genuinely flash,
+> **"And eighty-six decoys placed to be rejected: files that genuinely flash,
 > but whose master flashes identically. All eighty-six left alone."**
-
-**POINT:** The **Measured from pixels** row in the cohort table.
-
-> **"Part of this catalogue is measured end to end from constructed image frames
-> rather than preselected measurements, and it produces the same result."**
 
 ---
 
@@ -162,7 +157,21 @@ still working when you finish, hold the silence; do not fill it.)*
 
 ---
 
-## 2:22–2:40, Credibility, and close
+## 2:22–2:36, Your file, not ours
+
+**DO:** Scroll to **Check your own**. Both files are already chosen. Press
+**Measure and check**. It returns in about two seconds.
+**POINT:** The verdict, then **Decision**.
+
+**SAY:**
+
+> **"Everything so far ran on our catalogue. This is my own file. It decodes in
+> this browser, never uploaded, never shown, measured by the same code. Same
+> verdict, same ClickHouse."**
+
+---
+
+## 2:36–2:52, Credibility, and close
 
 **DO:** Scroll to **Criteria provenance**. This is where the demo ends, do not
 scroll further, and do not scroll back.
@@ -170,9 +179,8 @@ scroll further, and do not scroll back.
 
 **SAY:**
 
-> **"Every threshold traces to published guidance, and the one rule we haven't
-> implemented is stated openly. An open pre-check, not a certified device.
-> Nothing here flashes."**
+> **"Every threshold traces to published guidance, and the rule we haven't
+> implemented is stated openly. An open pre-check, not a certified device."**
 
 **POINT:** The **Safe Frame** name in the sticky header, top-left.
 
@@ -191,6 +199,7 @@ scroll further, and do not scroll back.
 - [ ] Transform profile run live, four-versus-three point made
 - [ ] Triage agent run live, numbered trace visible, **wait not cut**
 - [ ] `decision_source` and `requires_human` legible on screen
+- [ ] A file of your own checked live, verdict and decision source visible
 - [ ] Criteria table including the **not implemented** row
 - [ ] Ends on the criteria section, no scroll-back
 - [ ] No GitHub tab, no logos, no music
