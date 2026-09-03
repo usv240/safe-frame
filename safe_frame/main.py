@@ -10,6 +10,15 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, model_validator
 
 from .clickhouse_ingest import persist_violations
+from .apikeys import (
+    ANONYMOUS,
+    MAX_AGE_DAYS,
+    TIER_MULTIPLIER,
+    ApiKeyError,
+    configured as api_keys_configured,
+    identify,
+    mint,
+)
 from .analyze import (
     AREA_RESOLUTION_NOTE,
     MAX_FRAME_RATE,
@@ -129,17 +138,42 @@ def rate_limit(bucket: str, limit: int, window_s: float = 60.0):
     """
 
     async def guard(request: Request) -> None:
+        # A missing key is the supported anonymous tier. A key that is present
+        # and broken is refused rather than silently downgraded, or the caller
+        # would never learn why their quota did not rise.
+        try:
+            identity = identify(
+                request.headers.get("authorization"), request.headers.get("x-api-key")
+            )
+        except ApiKeyError as exc:
+            raise HTTPException(
+                401,
+                detail={
+                    "code": "invalid_api_key",
+                    "message": str(exc),
+                    "hint": "POST /v1/keys to mint one, or send no credential at all to use the anonymous tier.",
+                },
+            ) from exc
+
+        effective = limit * TIER_MULTIPLIER[identity.tier]
         now = time.monotonic()
-        key = (bucket, _client_key(request))
+        # Keyed callers get their own bucket, so one caller's quota cannot be
+        # consumed by another behind the same proxy address.
+        key = (bucket, identity.key_id or _client_key(request))
         recent = [t for t in _CALLS.get(key, ()) if now - t < window_s]
-        if len(recent) >= limit:
+        if len(recent) >= effective:
             raise HTTPException(
                 429,
                 detail={
                     "code": "rate_limited",
                     "message": (
-                        f"{bucket} is limited to {limit} calls per minute per client because it "
-                        "spends model tokens or writes. Every read endpoint is unlimited."
+                        f"{bucket} is limited to {effective} calls per minute for the "
+                        f"{identity.tier} tier because it spends model tokens or writes. "
+                        "Every read endpoint is unlimited."
+                    ),
+                    "hint": (
+                        None if identity.is_keyed
+                        else f"POST /v1/keys for a free key and {TIER_MULTIPLIER['keyed']}x this limit."
                     ),
                 },
             )
@@ -264,6 +298,60 @@ async def _integration_health() -> dict[str, bool]:
     value = {"clickhouse": clickhouse, "mcp_clickhouse": clickhouse, "google_vertex": google_vertex}
     _HEALTH_CACHE.update(checked=now, value=value)
     return value
+
+
+@app.post("/v1/keys", dependencies=[Depends(rate_limit("/v1/keys", 10))])
+async def create_api_key() -> dict[str, object]:
+    """Mint an API key. No account, no email, no approval.
+
+    A key is optional. Every endpoint works without one, at the limits this
+    service has always had, because the product has to be testable without a
+    signup. A key raises the per-minute cap on the endpoints that spend model
+    tokens or write, and names the caller in the logs.
+
+    The key is returned once. It is not stored anywhere, because there is
+    nowhere to store it: the key carries its own signature, and verifying it is
+    a signature check rather than a database lookup.
+    """
+    if not api_keys_configured():
+        raise HTTPException(
+            503,
+            detail={
+                "code": "api_keys_unavailable",
+                "message": (
+                    "This deployment has no signing secret configured, so it cannot issue keys. "
+                    "Every endpoint still works anonymously at the standard limits."
+                ),
+            },
+        )
+    try:
+        return {"data": mint()}
+    except ApiKeyError as exc:  # pragma: no cover - guarded by configured() above
+        raise HTTPException(503, detail={"code": "api_keys_unavailable", "message": str(exc)}) from exc
+
+
+@app.get("/v1/keys/self")
+async def describe_api_key(request: Request) -> dict[str, object]:
+    """Report which tier the caller is on, so a key can be checked before use."""
+    try:
+        identity = identify(
+            request.headers.get("authorization"), request.headers.get("x-api-key")
+        )
+    except ApiKeyError as exc:
+        raise HTTPException(401, detail={"code": "invalid_api_key", "message": str(exc)}) from exc
+    return {
+        "data": {
+            "tier": identity.tier,
+            "key_id": identity.key_id,
+            "quota_multiplier": TIER_MULTIPLIER[identity.tier],
+            "expires_after_days": MAX_AGE_DAYS if identity.is_keyed else None,
+            "keys_available": api_keys_configured(),
+            "note": (
+                "Anonymous access is fully supported and is how the judge path is meant to be "
+                "exercised. A key only raises limits on the endpoints that spend tokens or write."
+            ),
+        }
+    }
 
 
 @app.get("/health")

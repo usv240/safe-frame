@@ -750,6 +750,56 @@ body.tech .technical{display:block}
     </div>
   </section>
 
+  <section id="api">
+    <div class="wrap">
+      <p class="eyebrow">Build against it</p>
+      <h2>No account. No approval. A key only raises your limits.</h2>
+      <p class="lead" style="margin-top:var(--s-3)">Every endpoint on this service works without a credential, and the whole judge path is meant to be exercised that way. If you are building something against it, mint a key: it multiplies the per-minute cap on the endpoints that spend model tokens or write, and names your calls in the logs. Reads are never capped either way.</p>
+
+      <div class="controls">
+        <button class="btn btn-primary" id="key-run">Generate an API key</button>
+        <a class="btn" href="/docs" target="_blank" rel="noreferrer">Full OpenAPI reference</a>
+        <span class="note" id="key-status">Nothing is stored: the key carries its own signature.</span>
+      </div>
+
+      <div class="panel" style="padding:var(--s-4)">
+        <div id="key-out" hidden>
+          <dl class="facts">
+            <dt>Your key</dt><dd class="mono" id="key-value" style="overflow-wrap:anywhere">n/a</dd>
+            <dt>Tier</dt><dd id="key-tier">n/a</dd>
+            <dt>Expires</dt><dd id="key-exp">n/a</dd>
+          </dl>
+          <p class="note" style="margin-top:var(--s-3)" id="key-note"></p>
+        </div>
+        <p class="note" id="key-empty">Shown once, here, and never stored by us. Press the button above.</p>
+
+        <h3 style="margin-top:var(--s-5);font-size:1rem">Mint a key from the command line</h3>
+        <p class="note" style="margin-top:var(--s-2)">Send an explicit empty body. A POST with no <code class="mono">Content-Length</code> is rejected with <code class="mono">411</code> by the load balancer before it reaches the service, which is a quirk of the hosting rather than of this API.</p>
+        <pre class="sqlbox mono" style="margin-top:var(--s-2)"><code>curl -s -X POST https://safe-frame-regression-109051079423.us-central1.run.app/v1/keys   -H 'content-type: application/json' -d '{}'</code></pre>
+
+        <h3 style="margin-top:var(--s-5);font-size:1rem">Check a clip you have already measured</h3>
+        <pre class="sqlbox mono" style="margin-top:var(--s-2)"><code>curl -s https://safe-frame-regression-109051079423.us-central1.run.app/v1/samples &gt; pair.json
+
+curl -s -X POST https://safe-frame-regression-109051079423.us-central1.run.app/v1/scan \
+  -H 'content-type: application/json' \
+  -H 'Authorization: Bearer YOUR_KEY' \
+  -d @pair.json</code></pre>
+
+        <h3 style="margin-top:var(--s-5);font-size:1rem">Check frames directly</h3>
+        <p class="note" style="margin-top:var(--s-2)">Post decoded RGB samples and the service measures them for you, the same way this page does. Send <code class="mono">master</code> as well to ask the regression question instead of the absolute one.</p>
+        <pre class="sqlbox mono" style="margin-top:var(--s-2)"><code>POST /v1/analyze
+{
+  "rendition": {
+    "frames_b64": "&lt;base64 of raw RGB bytes, frame_count * height * width * 3&gt;",
+    "width": 48, "height": 27, "frame_count": 600, "frame_rate": 30
+  },
+  "master": { "...": "optional; omit for an absolute check" }
+}</code></pre>
+        <p class="note" style="margin-top:var(--s-3)">Or measure frames yourself with <code class="mono">safe_frame.ingest.frames_to_transitions</code> and post the transition rows to <code class="mono">/v1/scan</code> under your own asset identifiers. Identifiers belonging to the published catalogue are refused as write targets, so no caller can alter what another sees.</p>
+      </div>
+    </div>
+  </section>
+
   <section id="criteria">
     <div class="wrap">
       <p class="eyebrow">Criteria provenance</p>
@@ -1629,6 +1679,36 @@ $("#byo-run").addEventListener("click", async () => {
     button.disabled = false;
     button.removeAttribute("aria-busy");
     button.textContent = "Measure and check";
+  }
+});
+
+/* Mint an API key. Optional by design: the anonymous tier is how the judge path
+   is meant to be used, and a key only lifts the cap on the endpoints that spend
+   tokens or write. Shown once because nothing stores it. */
+$("#key-run").addEventListener("click", async () => {
+  const button = $("#key-run");
+  button.disabled = true; button.setAttribute("aria-busy", "true");
+  button.textContent = "Minting...";
+  try {
+    const r = await fetch("/v1/keys", { method: "POST" });
+    const p = await r.json();
+    if (!r.ok) throw new Error((p.detail && p.detail.message) || "Keys are unavailable.");
+    const d = p.data;
+    $("#key-value").textContent = d.api_key;
+    $("#key-tier").textContent = `keyed (${d.quota_multiplier}x the anonymous limit)`;
+    $("#key-exp").textContent = `${d.expires_after_days} days from now`;
+    $("#key-note").textContent = `${d.note} ${d.anonymous_still_works}`;
+    $("#key-empty").hidden = true;
+    $("#key-out").hidden = false;
+    $("#key-status").textContent = "Copy it now: this is the only time it is shown.";
+  } catch (err) {
+    $("#key-out").hidden = true;
+    $("#key-empty").hidden = false;
+    $("#key-empty").textContent = err.message || "Could not mint a key.";
+    $("#key-status").textContent = "Every endpoint still works without one.";
+  } finally {
+    button.disabled = false; button.removeAttribute("aria-busy");
+    button.textContent = "Generate an API key";
   }
 });
 </script>

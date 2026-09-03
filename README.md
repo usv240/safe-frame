@@ -143,9 +143,34 @@ failure mode is red flash, so a luminance-only checker passes all of them.
 
 ## Using it programmatically
 
-There is no API key, deliberately. Every read endpoint is open and
-unauthenticated so the product can be judged and tested without an account, a
-quota, or a signup, and `/docs` is the full OpenAPI surface.
+Every endpoint works with no credential at all, so the product can be judged and
+tested without an account, a quota, or a signup. `/docs` is the full OpenAPI
+surface.
+
+**Keys are optional and raise limits; they never gate access.** `POST /v1/keys`
+mints one with no signup and no approval, and `GET /v1/keys/self` reports which
+tier a caller is on. A key multiplies the per-minute cap on the endpoints that
+spend model tokens or write, by 5, and names the caller in the logs. Reads are
+uncapped either way.
+
+```bash
+# Google's load balancer rejects a POST with no Content-Length before it reaches
+# the service, so send an explicit empty body.
+curl -s -X POST "$BASE/v1/keys" -H 'content-type: application/json' -d '{}'
+
+curl -s "$BASE/v1/keys/self" -H "Authorization: Bearer $KEY"   # or X-API-Key
+```
+
+A key is stateless: an identifier and an issue date, signed with an HMAC the
+server holds. Verification is a signature check, so there is no credential table,
+no write on the request path, and nothing lost when an instance restarts. The
+cost of that is real and stated on the key itself: an individual key cannot be
+revoked without rotating the signing secret. Keys expire 90 days after issue,
+which bounds the exposure of a leaked one.
+
+A credential that is absent is the anonymous tier. A credential that is present
+and broken is refused with the reason, rather than silently downgraded, so a
+caller is never left wondering why their quota did not rise.
 
 Two consequences are handled rather than ignored:
 
@@ -158,9 +183,22 @@ Two consequences are handled rather than ignored:
 - **`/v1/triage` and `/v1/explain` spend model tokens.** They are capped per
   client per minute, as is the write path. No read endpoint is capped.
 
-To check your own content, measure frames with
-`safe_frame.ingest.frames_to_transitions` and POST the rows to `/v1/scan` under
-your own asset identifiers.
+To check your own content there are three routes, in increasing order of how
+much you have to do yourself:
+
+1. **Open the page and choose a video.** It is decoded in your browser, never
+   uploaded and never displayed, and only downscaled samples are sent. Add the
+   approved master as a second file to ask the regression question instead of
+   the absolute one.
+2. **`POST /v1/analyze`** with decoded RGB samples, if you want the service to
+   run the measurement stage for you.
+3. **Measure frames yourself** with `safe_frame.ingest.frames_to_transitions`
+   and POST the transition rows to `/v1/scan` under your own asset identifiers.
+
+Frames submitted for analysis are measured on a small grid, which the response
+states on every result. The published area condition is a proportion of the
+screen, so a grid of a few hundred cells resolves it; a flash too small for the
+grid does not meet the area condition in the first place.
 
 ## Decision boundary
 
@@ -182,6 +220,9 @@ Useful judge endpoints:
 - `/v1/catalogue/transform-risk`: per-transform regression rates, the systemic view
 - `/v1/evaluation`: the detector scored against the generator's planted ground truth
 - `/v1/triage`: the multi-step agent brief, with its tool-call sequence
+- `/v1/analyze`: measure frames you supply and get the same verdict; send a
+  master too for the regression question rather than the absolute one
+- `/v1/keys`, `/v1/keys/self`: mint an optional key, and check which tier you are on
 - `/v1/samples`: self-authored exact pass/fail metric pair
 - `/v1/scan`: submit raw transition metrics for a parent/child pair
 - `/v1/integrations/clickhouse/evidence`: advertised MCP tools and live query
