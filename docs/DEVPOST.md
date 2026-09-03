@@ -264,10 +264,22 @@ It is not equivalent to expert review and does not establish efficacy.
 - **A benchmark beats a best practice.** Twice: once where ClickHouse's guidance
   was right and we gained 3× by following it, once where it was wrong for our
   shape and we could only know by measuring.
-- **A green test suite can be decorative.** `pytest-asyncio` was never
-  installed, so every parity test was skipped rather than run, and the suite
-  stayed green while proving nothing. `required_plugins` now makes that failure
-  loud.
+- **A green test suite can be decorative — twice, the same way.** First
+  `pytest-asyncio` was never installed, so every parity test was skipped rather
+  than run and the suite stayed green while proving nothing. `required_plugins`
+  made that loud. It was not enough. Those tests need a ClickHouse cluster,
+  public CI had none, so all 45 went on skipping — and a skip reads exactly like
+  a pass in a summary line. Under that cover the central case compared the SQL's
+  first *row* against the detector's whole result list; it could never have
+  passed. Our proof that the catalogue sweep and the per-file detector cannot
+  disagree had never once executed.
+
+  The rule we actually needed was not "write the test" but **"make it
+  impossible for the test to quietly not run."** CI now stands up a throwaway
+  ClickHouse, runs all 46 cases through the real official `mcp-clickhouse`
+  transport on every commit, and **fails if they skip.** They pass in 68
+  seconds. The two implementations did agree all along — but for weeks nothing
+  demonstrated it, and we could not have known which.
 
 ## What's next
 
