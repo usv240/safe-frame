@@ -1,6 +1,6 @@
 {
   "verified_at": "2026-09-02T00:00:00Z",
-  "revision": "safe-frame-regression-00044-mth",
+  "revision": "safe-frame-regression-00045",
   "public_url": "https://safe-frame-regression-109051079423.us-central1.run.app",
   "note": "Every value below was read from the deployed revision or the live cluster. It contains no credentials.",
   "health": {
@@ -149,7 +149,8 @@
       "no console errors or uncaught exceptions on the judge path",
       "initialisation completes with the backend entirely absent",
       "a failing sweep reports failing closed rather than throwing",
-      "the evidence path completes: sweep, selection, timeline, draw, caption, table view"
+      "the evidence path completes: sweep, selection, timeline, draw, caption, table view",
+      "every in-page nav target lands clear of the sticky header at all four widths"
     ],
     "series_palette": {
       "validated_with": "the dataviz palette validator, against this page's own surfaces",
@@ -189,7 +190,8 @@
     "the chart placeholder was a child of the element the draw replaces, so every successful draw destroyed it and then threw, silently skipping the caption, table view and tooltip",
     "the phone card layout had width:100% plus margins and overflowed the viewport by exactly the margin",
     "the SQL/Python parity test -- cited as the proof that the catalogue sweep and the per-file detector cannot disagree -- had never executed: it was skipped in every environment, and its comparison was malformed in both branches",
-    "the persistent mcp-clickhouse worker was cached per configuration but its queue, lock and task belong to one event loop; a second loop in the same process raised 'Event loop is closed'. The service runs one loop and never hit it, so only a test suite could"
+    "the persistent mcp-clickhouse worker was cached per configuration but its queue, lock and task belong to one event loop; a second loop in the same process raised 'Event loop is closed'. The service runs one loop and never hit it, so only a test suite could",
+    "the code blocks in the API section reused .sqlbox, which is light-on-dark by design because it sits on the dark boundary panel; on a pale surface it rendered grey on grey. Now a .codebox with per-theme tokens at 12.7:1 light and 13.7:1 dark"
   ],
   "multi_step_agent": {
     "agent": "QcTriageAgent",
@@ -379,5 +381,18 @@
     "not_silently_downgraded": "a present-but-broken credential is refused, so a caller learns why their quota did not rise",
     "constant_time_comparison": true,
     "hosting_quirk_documented": "a POST with no Content-Length is rejected with 411 by the load balancer before it reaches the service, so curl needs an explicit empty body"
+  },
+  "navigation": {
+    "why": "ten live panels had no map and no way through but scrolling and hoping",
+    "hero_contents": "every panel named with a line of what it does, as jump links",
+    "header_nav": "the main six, sticky, with the section being read marked via IntersectionObserver",
+    "anchor_offset": "--header-h is measured at runtime with a ResizeObserver, because a fixed offset was right on desktop and hid every heading under the header on a phone",
+    "header_height": {
+      "phone": "124px (15% of viewport)",
+      "tablet": "98px",
+      "laptop": "68px",
+      "desktop": "68px"
+    },
+    "verified": "every nav target lands clear of the sticky header at 390, 768, 1280 and 1680 wide, with no horizontal overflow in either theme"
   }
 }

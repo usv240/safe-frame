@@ -15,8 +15,10 @@ roughly two seconds the bring-your-own check takes to return.
 Word count is not the constraint; runtime is. Do not add lines, the remaining
 margin is the whole reason this fits.
 
-The page is ordered to match this script, so the demo scrolls **downward once**
-and ends on the criteria table. Never scroll back up. The Safe Frame name sits in
+The page is ordered to match this script and the header nav is in that same
+order, so the demo moves **downward only** and ends on the criteria table.
+Use the nav rather than scrolling: it lands exactly on each panel, which is one
+fewer thing to fumble on camera. Never go back up. The Safe Frame name sits in
 the sticky header the entire time, so the close does not need to return to the
 hero.
 
@@ -43,7 +45,8 @@ hero.
 
 ## 0:00–0:16, The gap
 
-**DO:** Hero section, still. Do not scroll.
+**DO:** Hero section, still. Do not scroll. The contents map under the hero
+names every panel; the header nav repeats the main six and follows you down.
 **POINT:** The headline, *"The master passed. The version people watched was
 never checked."*
 
@@ -57,7 +60,7 @@ never checked."*
 
 ## 0:16–0:42, Run the sweep
 
-**DO:** Scroll to **Live catalogue sweep**. Press **Sweep the catalogue**.
+**DO:** Click **Sweep** in the header nav. Press **Sweep the catalogue**.
 **POINT:** The four counters while it runs.
 
 **SAY:**
@@ -95,7 +98,7 @@ never checked."*
 
 ## 1:10–1:34, Prove it isn't circular
 
-**DO:** Scroll to **Does it actually work**. Press **Score the detector**.
+**DO:** Click **Evidence** in the header nav. Press **Score the detector**.
 **POINT:** The four tiles, left to right.
 
 **SAY:**
@@ -113,7 +116,7 @@ never checked."*
 
 ## 1:34–1:54, Findings become an action
 
-**DO:** Scroll to **Systemic cause**. Press **Profile every transform**.
+**DO:** Click **Cause** in the header nav. Press **Profile every transform**.
 **POINT:** The four coloured bars, then the clean rows beneath them.
 
 **SAY:**
@@ -131,7 +134,7 @@ never checked."*
 
 ## 1:54–2:22, The agent
 
-**DO:** Scroll to **The agent's mission**. Press **Run the triage agent**.
+**DO:** Click **Agent** in the header nav. Press **Run the triage agent**.
 **POINT:** Keep the working state visible. Let the wait run.
 
 **SAY:**
@@ -159,7 +162,7 @@ still working when you finish, hold the silence; do not fill it.)*
 
 ## 2:22–2:36, Your file, not ours
 
-**DO:** Scroll to **Check your own**. Both files are already chosen. Press
+**DO:** Click **Your video** in the header nav. Both files are already chosen. Press
 **Measure and check**. It returns in about two seconds.
 **POINT:** The verdict, then **Decision**.
 
@@ -173,7 +176,7 @@ still working when you finish, hold the silence; do not fill it.)*
 
 ## 2:36–2:52, Credibility, and close
 
-**DO:** Scroll to **Criteria provenance**. This is where the demo ends, do not
+**DO:** Scroll down to **Criteria provenance**. This is where the demo ends, do not
 scroll further, and do not scroll back.
 **POINT:** Two or three threshold rows, then the greyed **not implemented** row.
 
@@ -216,7 +219,7 @@ their names:
 | Criterion | Where it lands |
 |---|---|
 | Technological Implementation | ten million rows in one pass through the official MCP server; the agent's real tool trace |
-| Design | one downward scroll: problem, evidence, cause, action |
+| Design | a named contents map, a nav that follows you, and one downward path: problem, evidence, cause, action |
 | Potential Impact | the red-flash case a luminance-only checker passes, and four profiles to fix instead of sixty-six files |
 | Quality of the Idea | a non-obvious master-versus-rendition comparison that existing file-level checks do not address, with the unimplemented rule named rather than hidden |
 

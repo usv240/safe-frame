@@ -23,6 +23,8 @@
 :root{
   color-scheme:light;
 
+  --code-bg:#f2ece0;--code-ink:#232825;--code-line:#ddd5c4;
+
   --paper:#faf7f0;
   --surface:#fffdf8;
   --surface-2:#f3eee3;
@@ -73,6 +75,7 @@
 
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
+    --code-bg:#100e0b;--code-ink:#ded9cd;--code-line:#2b261e;
     color-scheme:dark;
     --paper:#14120f;
     --surface:#1c1a16;
@@ -96,6 +99,7 @@
   }
 }
 :root[data-theme="dark"]{
+  --code-bg:#100e0b;--code-ink:#ded9cd;--code-line:#2b261e;
   color-scheme:dark;
   --paper:#14120f;
   --surface:#1c1a16;
@@ -431,6 +435,61 @@ body.tech .technical{display:block}
 .vlabel.pass{color:var(--good)}
 .vlabel.fail{color:var(--bad)}
 @media (prefers-reduced-motion:reduce){.drop{transition:none}}
+
+/* Code on a light surface. .sqlbox is light-on-dark by design because it sits
+   on the dark boundary panel; reusing it on a pale background gave grey on
+   grey, which is how this got noticed. */
+.codebox{
+  background:var(--code-bg);border:1px solid var(--code-line);border-radius:var(--r-md);
+  padding:var(--s-3);overflow-x:auto;font:var(--t-xs)/1.75 var(--mono);color:var(--code-ink)
+}
+.codebox code{color:inherit;background:none;padding:0;font:inherit}
+
+/* Navigation. Ten live panels is a lot of page, and until this existed the only
+   way through it was to scroll and hope. The hero lists them with a line each;
+   the header keeps the main six reachable from anywhere. */
+.sectionnav{display:flex;gap:var(--s-1);align-items:center;overflow-x:auto;
+  scrollbar-width:none;margin:0 var(--s-3);flex:1 1 auto;min-width:0}
+.sectionnav::-webkit-scrollbar{display:none}
+.sectionnav a{white-space:nowrap;padding:.35rem .6rem;border-radius:999px;font-size:.85rem;
+  color:var(--ink-2);text-decoration:none;border:1px solid transparent;transition:background .15s,color .15s}
+.sectionnav a:hover{color:var(--ink);background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.sectionnav a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sectionnav a[aria-current="true"]{color:var(--accent-ink);background:var(--accent);font-weight:600}
+
+.contents{margin-top:var(--s-5);border-top:1px solid var(--line);padding-top:var(--s-4)}
+.contents-title{color:var(--ink-3);font-size:.9rem;margin-bottom:var(--s-3)}
+.contents ol{list-style:none;margin:0;padding:0;display:grid;gap:var(--s-2);
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,15.5rem),1fr));counter-reset:c}
+.contents li{counter-increment:c}
+.contents a{display:block;padding:var(--s-3);border:1px solid var(--line);border-radius:var(--r-md);
+  background:var(--surface);text-decoration:none;height:100%;transition:border-color .15s,transform .15s}
+.contents a:hover{border-color:var(--accent);transform:translateY(-1px)}
+.contents a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.contents b{display:block;color:var(--ink);font-size:.95rem}
+.contents b::before{content:counter(c) ". ";color:var(--ink-3);font-weight:400}
+.contents span{display:block;margin-top:.15rem;color:var(--ink-3);font-size:.85rem;line-height:1.45}
+
+/* The header is sticky, so an anchor jump would otherwise land under it. Its
+   height changes with the viewport (the nav wraps on small screens), so the
+   offset is measured at runtime rather than guessed: a fixed value was correct
+   on desktop and put every heading under the header on a phone. */
+section[id],div[id]{scroll-margin-top:calc(var(--header-h,4.5rem) + .75rem)}
+
+@media (max-width:900px){
+  /* Compact on small screens: two rows of sticky chrome is already a lot of a
+     phone viewport, so the nav and toggles both shrink rather than stack tall. */
+  .topbar{flex-wrap:wrap;row-gap:var(--s-1)}
+  .sectionnav{order:3;flex-basis:100%;margin:0}
+  .sectionnav a{padding:.25rem .5rem;font-size:.8rem}
+  .toggles{gap:var(--s-1)}
+  .toggles .seg button{padding:.3rem .5rem;font-size:.78rem}
+}
+@media (prefers-reduced-motion:reduce){
+  .contents a,.sectionnav a{transition:none}
+  .contents a:hover{transform:none}
+  html{scroll-behavior:auto}
+}
 </style>
 </head>
 <body>
@@ -445,6 +504,14 @@ body.tech .technical{display:block}
       </svg>
       Safe Frame
     </span>
+    <nav class="sectionnav" aria-label="Sections of this page">
+      <a href="#sweep">Sweep</a>
+      <a href="#evaluation">Evidence</a>
+      <a href="#systemic">Cause</a>
+      <a href="#brief">Agent</a>
+      <a href="#byo">Your video</a>
+      <a href="#api">API</a>
+    </nav>
     <div class="toggles">
       <div class="seg" role="group" aria-label="Reading mode">
         <button id="m-plain" aria-pressed="true">Plain</button>
@@ -470,6 +537,22 @@ body.tech .technical{display:block}
       <b id="h-count">n/a</b>
       <span id="h-text">transition measurements are loaded and waiting to be searched.</span>
     </p>
+
+    <nav class="contents" aria-label="What is on this page">
+      <p class="contents-title">What is on this page. Every panel runs live.</p>
+      <ol>
+        <li><a href="#why"><b>Why this matters</b><span>The harm, the standards, and who signs off on it.</span></a></li>
+        <li><a href="#sweep"><b>Live catalogue sweep</b><span>Both flash rules across ten million rows, in one pass.</span></a></li>
+        <li><a href="#evaluation"><b>Does it actually work</b><span>Scored against a ground truth that reads no measurement.</span></a></li>
+        <li><a href="#systemic"><b>Systemic cause</b><span>Which conversions break files, and which never do.</span></a></li>
+        <li><a href="#brief"><b>The agent's mission</b><span>Gemini reads the database four ways and hands over a brief.</span></a></li>
+        <li><a href="#byo"><b>Check your own video</b><span>Your file, decoded here, never uploaded and never shown.</span></a></li>
+        <li><a href="#api"><b>Build against it</b><span>A key in one click, or use it with no credential at all.</span></a></li>
+        <li><a href="#criteria"><b>Criteria provenance</b><span>Every threshold traced, including the rule we did not implement.</span></a></li>
+        <li><a href="#runtime"><b>Runtime evidence</b><span>The live MCP handshake and where credentials stop.</span></a></li>
+        <li><a href="#boundary"><b>Decision boundary</b><span>ClickHouse decides. Gemini explains. A human acts.</span></a></li>
+      </ol>
+    </nav>
   </div>
 
   <section id="why">
@@ -775,10 +858,10 @@ body.tech .technical{display:block}
 
         <h3 style="margin-top:var(--s-5);font-size:1rem">Mint a key from the command line</h3>
         <p class="note" style="margin-top:var(--s-2)">Send an explicit empty body. A POST with no <code class="mono">Content-Length</code> is rejected with <code class="mono">411</code> by the load balancer before it reaches the service, which is a quirk of the hosting rather than of this API.</p>
-        <pre class="sqlbox mono" style="margin-top:var(--s-2)"><code>curl -s -X POST https://safe-frame-regression-109051079423.us-central1.run.app/v1/keys   -H 'content-type: application/json' -d '{}'</code></pre>
+        <pre class="codebox" style="margin-top:var(--s-2)"><code>curl -s -X POST https://safe-frame-regression-109051079423.us-central1.run.app/v1/keys   -H 'content-type: application/json' -d '{}'</code></pre>
 
         <h3 style="margin-top:var(--s-5);font-size:1rem">Check a clip you have already measured</h3>
-        <pre class="sqlbox mono" style="margin-top:var(--s-2)"><code>curl -s https://safe-frame-regression-109051079423.us-central1.run.app/v1/samples &gt; pair.json
+        <pre class="codebox" style="margin-top:var(--s-2)"><code>curl -s https://safe-frame-regression-109051079423.us-central1.run.app/v1/samples &gt; pair.json
 
 curl -s -X POST https://safe-frame-regression-109051079423.us-central1.run.app/v1/scan \
   -H 'content-type: application/json' \
@@ -787,7 +870,7 @@ curl -s -X POST https://safe-frame-regression-109051079423.us-central1.run.app/v
 
         <h3 style="margin-top:var(--s-5);font-size:1rem">Check frames directly</h3>
         <p class="note" style="margin-top:var(--s-2)">Post decoded RGB samples and the service measures them for you, the same way this page does. Send <code class="mono">master</code> as well to ask the regression question instead of the absolute one.</p>
-        <pre class="sqlbox mono" style="margin-top:var(--s-2)"><code>POST /v1/analyze
+        <pre class="codebox" style="margin-top:var(--s-2)"><code>POST /v1/analyze
 {
   "rendition": {
     "frames_b64": "&lt;base64 of raw RGB bytes, frame_count * height * width * 3&gt;",
@@ -1711,6 +1794,44 @@ $("#key-run").addEventListener("click", async () => {
     button.textContent = "Generate an API key";
   }
 });
+
+/* Mark the section being read in the header nav. IntersectionObserver rather
+   than a scroll handler, so this costs nothing while scrolling. */
+(() => {
+  const links = Array.from(document.querySelectorAll(".sectionnav a"));
+  if (!links.length || !("IntersectionObserver" in window)) return;
+  const byId = new Map(links.map((a) => [a.getAttribute("href").slice(1), a]));
+  const seen = new Map();
+  const spy = new IntersectionObserver((entries) => {
+    for (const entry of entries) seen.set(entry.target.id, entry.intersectionRatio);
+    let best = null, bestRatio = 0;
+    for (const [id, ratio] of seen) {
+      if (ratio > bestRatio) { best = id; bestRatio = ratio; }
+    }
+    for (const [id, link] of byId) {
+      if (id === best && bestRatio > 0) link.setAttribute("aria-current", "true");
+      else link.removeAttribute("aria-current");
+    }
+  }, { threshold: [0, 0.15, 0.4, 0.75] });
+  for (const id of byId.keys()) {
+    const el = document.getElementById(id);
+    if (el) spy.observe(el);
+  }
+})();
+
+/* Publish the sticky header's real height so anchor jumps clear it at every
+   width. ResizeObserver rather than a one-off read: the header changes height
+   when the nav wraps, and a stale value hides the heading a visitor just asked
+   for. */
+(() => {
+  const header = document.querySelector("header.top");
+  if (!header) return;
+  const publish = () => document.documentElement.style.setProperty(
+    "--header-h", `${Math.round(header.getBoundingClientRect().height)}px`);
+  publish();
+  if ("ResizeObserver" in window) new ResizeObserver(publish).observe(header);
+  else window.addEventListener("resize", publish, { passive: true });
+})();
 </script>
 </body>
 </html>
