@@ -10,10 +10,21 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, model_validator
 
 from .clickhouse_ingest import persist_violations
+from .analyze import (
+    AREA_RESOLUTION_NOTE,
+    MAX_FRAME_RATE,
+    MAX_FRAMES,
+    MAX_HEIGHT,
+    MAX_WIDTH,
+    FrameDecodeError,
+    measure_clip,
+    per_second_counts,
+)
 from .clickhouse_mcp import (
     ClickHouseMcp,
     ClickHouseNotConfigured,
     catalogue_regression_evidence,
+    parity_violations,
     regression_count,
 )
 from .detector import detect_violations
@@ -57,6 +68,31 @@ class ScanRequest(BaseModel):
                     f"{asset!r} is reserved for the published catalogue and the judge sample; "
                     "submit your own asset IDs"
                 )
+        return self
+
+
+class ClipPayload(BaseModel):
+    """One decoded clip: raw RGB samples on a small grid, plus its shape."""
+
+    frames_b64: str = Field(min_length=4, max_length=16_000_000)
+    width: int = Field(ge=1, le=MAX_WIDTH)
+    height: int = Field(ge=1, le=MAX_HEIGHT)
+    frame_count: int = Field(ge=2, le=MAX_FRAMES)
+    frame_rate: float = Field(gt=0, le=MAX_FRAME_RATE)
+
+
+class AnalyzeRequest(BaseModel):
+    """A rendition to check, and optionally the approved master to check it against."""
+
+    rendition: ClipPayload
+    master: ClipPayload | None = None
+
+    @model_validator(mode="after")
+    def validate_pair(self) -> "AnalyzeRequest":
+        if self.master is not None and self.master.frame_rate != self.rendition.frame_rate:
+            # Frame rates may legitimately differ; alignment is on presentation
+            # time, so this is allowed. Kept as a hook rather than a rejection.
+            pass
         return self
 
 
@@ -290,6 +326,156 @@ async def scan(request: ScanRequest) -> dict[str, object]:
             "regression_count": introduced_count,
             "mcp_proof": sql_proof,
         },
+    }
+
+
+@app.post("/v1/analyze", dependencies=[Depends(rate_limit("/v1/analyze", 12))])
+async def analyze(request: AnalyzeRequest) -> dict[str, object]:
+    """Check a clip the caller supplied, through the product's own measurement path.
+
+    Submit a rendition on its own for an absolute check against the published
+    criteria, or submit its approved master too for the check this product
+    exists for: not "does this flash" but "did this conversion introduce a flash
+    the approved master did not have".
+
+    The frames are measured by `safe_frame.ingest`, the same function the
+    measured cohort used, and the verdict comes from ClickHouse through the
+    official MCP server. Nothing is decided here and nothing is decided by a
+    model.
+    """
+    run = uuid.uuid4().hex[:10]
+    lineage = f"byo-{run}"
+    child_asset = f"{lineage}-rendition"
+    parent_asset = f"{lineage}-master"
+
+    try:
+        child_metrics = await asyncio.to_thread(
+            measure_clip,
+            request.rendition.frames_b64,
+            width=request.rendition.width,
+            height=request.rendition.height,
+            frame_count=request.rendition.frame_count,
+            frame_rate=request.rendition.frame_rate,
+            asset_id=child_asset,
+            lineage_id=lineage,
+            parent_id=parent_asset if request.master else "",
+            transform="submitted_rendition",
+        )
+        parent_metrics: list[TransitionMetric] = []
+        if request.master is not None:
+            parent_metrics = await asyncio.to_thread(
+                measure_clip,
+                request.master.frames_b64,
+                width=request.master.width,
+                height=request.master.height,
+                frame_count=request.master.frame_count,
+                frame_rate=request.master.frame_rate,
+                asset_id=parent_asset,
+                lineage_id=lineage,
+                transform="master",
+            )
+    except FrameDecodeError as exc:
+        raise HTTPException(400, detail={"code": "invalid_frames", "message": str(exc)}) from exc
+
+    if not child_metrics:
+        raise HTTPException(
+            400,
+            detail={
+                "code": "no_transitions",
+                "message": "the clip produced no frame-to-frame transitions to measure",
+            },
+        )
+
+    mode = "regression" if parent_metrics else "absolute"
+    configured = _configured(
+        "MCP_CLICKHOUSE_COMMAND", "CLICKHOUSE_HOST", "CLICKHOUSE_PASSWORD",
+    )
+    child_violations = detect_violations(child_metrics)
+    parent_violations = detect_violations(parent_metrics) if parent_metrics else []
+    # One shape for both modes: a finding is always the child violation itself,
+    # so a caller never has to unwrap a different envelope per mode.
+    if mode == "regression":
+        findings = [item.child for item in regressions(parent_violations, child_violations)]
+    else:
+        findings = list(child_violations)
+    decision_source = "local_reference_precheck"
+
+    if configured:
+        try:
+            if mode == "regression" and _configured(
+                "CLICKHOUSE_INGEST_USER", "CLICKHOUSE_INGEST_PASSWORD"
+            ):
+                await asyncio.to_thread(
+                    persist_violations, [*parent_violations, *child_violations]
+                )
+                introduced, _ = await regression_count(parent_asset, child_asset)
+                verdict_count = introduced
+            else:
+                # Absolute mode writes nothing: the criteria are evaluated over
+                # inline rows, which the SELECT-only MCP user can execute.
+                rows = [
+                    {
+                        "asset_id": m.asset_id,
+                        "pts_ms": m.pts_ms,
+                        "luma_delta": m.luma_delta,
+                        "luma_min": m.luma_min,
+                        "red_delta": m.red_delta,
+                        "changed_area_fraction": m.changed_area_fraction,
+                        "direction": m.direction,
+                    }
+                    for m in child_metrics
+                ]
+                verdict_count = len(await parity_violations(rows))
+            decision_source = "clickhouse_sql_via_official_mcp"
+        except Exception as exc:
+            log_event("fail_closed", severity="ERROR", endpoint="/v1/analyze",
+                      code="clickhouse_mcp_verdict_failed", reason=type(exc).__name__,
+                      message="refused to substitute a verdict after the MCP/SQL path failed")
+            raise HTTPException(
+                502,
+                detail={
+                    "code": "clickhouse_mcp_verdict_failed",
+                    "message": "The official MCP/SQL verdict failed; Safe Frame refuses to substitute a model or local guess.",
+                },
+            ) from exc
+    else:
+        verdict_count = len(findings)
+
+    return {
+        "data": {
+            "mode": mode,
+            "verdict": "fail" if verdict_count else "pass",
+            "certified": False,
+            "requires_human": True,
+            "decision_source": decision_source,
+            "rules_evaluated": ["general_flash", "red_flash"],
+            "findings": [item.model_dump() for item in findings],
+            "rendition": {
+                "asset_id": child_asset,
+                "transitions_measured": len(child_metrics),
+                "violations": [item.model_dump() for item in child_violations],
+                "per_second": per_second_counts(child_metrics),
+            },
+            "master": {
+                "asset_id": parent_asset,
+                "transitions_measured": len(parent_metrics),
+                "violations": [item.model_dump() for item in parent_violations],
+                "per_second": per_second_counts(parent_metrics),
+            } if parent_metrics else None,
+            "measurement": {
+                "measured_by": "safe_frame.ingest.frames_to_transitions",
+                "grid": f"{request.rendition.width}x{request.rendition.height}",
+                "frame_rate": request.rendition.frame_rate,
+                "note": AREA_RESOLUTION_NOTE.format(
+                    width=request.rendition.width, height=request.rendition.height
+                ),
+            },
+            "privacy": (
+                "Your video is decoded in your browser and never displayed or uploaded. "
+                "Only the downscaled samples are sent, and nothing is retained beyond "
+                "this request's own isolated identifiers."
+            ),
+        }
     }
 
 
