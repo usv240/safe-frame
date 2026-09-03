@@ -35,6 +35,7 @@ from .clickhouse_mcp import (
     catalogue_regression_evidence,
     parity_violations,
     regression_count,
+    submitted_regressions,
 )
 from .detector import detect_violations
 from .lineage import regressions
@@ -490,30 +491,34 @@ async def analyze(request: AnalyzeRequest) -> dict[str, object]:
 
     if configured:
         try:
-            if mode == "regression" and _configured(
-                "CLICKHOUSE_INGEST_USER", "CLICKHOUSE_INGEST_PASSWORD"
-            ):
-                await asyncio.to_thread(
-                    persist_violations, [*parent_violations, *child_violations]
+            # Neither mode writes. Frames a visitor supplied are measured in
+            # memory and evaluated over inline rows, so nothing derived from
+            # somebody's own video is stored anywhere. This path previously
+            # persisted the pair and ran the stored anti-join, which kept those
+            # measurements in the database indefinitely for no benefit.
+            def as_row(metric: TransitionMetric) -> dict[str, object]:
+                return {
+                    "asset_id": metric.asset_id,
+                    "pts_ms": metric.pts_ms,
+                    "luma_delta": metric.luma_delta,
+                    "luma_min": metric.luma_min,
+                    "red_delta": metric.red_delta,
+                    "changed_area_fraction": metric.changed_area_fraction,
+                    "direction": metric.direction,
+                }
+
+            if mode == "regression":
+                verdict_count = len(
+                    await submitted_regressions(
+                        [as_row(m) for m in [*parent_metrics, *child_metrics]],
+                        parent_asset=parent_asset,
+                        child_asset=child_asset,
+                    )
                 )
-                introduced, _ = await regression_count(parent_asset, child_asset)
-                verdict_count = introduced
             else:
-                # Absolute mode writes nothing: the criteria are evaluated over
-                # inline rows, which the SELECT-only MCP user can execute.
-                rows = [
-                    {
-                        "asset_id": m.asset_id,
-                        "pts_ms": m.pts_ms,
-                        "luma_delta": m.luma_delta,
-                        "luma_min": m.luma_min,
-                        "red_delta": m.red_delta,
-                        "changed_area_fraction": m.changed_area_fraction,
-                        "direction": m.direction,
-                    }
-                    for m in child_metrics
-                ]
-                verdict_count = len(await parity_violations(rows))
+                verdict_count = len(
+                    await parity_violations([as_row(m) for m in child_metrics])
+                )
             decision_source = "clickhouse_sql_via_official_mcp"
         except Exception as exc:
             log_event("fail_closed", severity="ERROR", endpoint="/v1/analyze",
@@ -558,11 +563,14 @@ async def analyze(request: AnalyzeRequest) -> dict[str, object]:
                     width=request.rendition.width, height=request.rendition.height
                 ),
             },
-            "privacy": (
-                "Your video is decoded in your browser and never displayed or uploaded. "
-                "Only the downscaled samples are sent, and nothing is retained beyond "
-                "this request's own isolated identifiers."
-            ),
+            "privacy": {
+                "file_never_uploaded": "the video is decoded in your browser; the file itself does not leave your machine",
+                "never_displayed": "it is never rendered on the page, so a clip you suspect of flashing is not played back at you",
+                "what_is_sent": "downscaled RGB samples only, held in memory for this request",
+                "what_is_stored": "nothing. Both modes evaluate the criteria over inline rows and write no database records",
+                "logs": "an entry is written only if the query fails, recording the endpoint and the exception type, never your data",
+                "identifiers": "generated per request and never linked to you",
+            },
         }
     }
 

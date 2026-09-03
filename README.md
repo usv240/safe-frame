@@ -12,7 +12,8 @@ every one of the 31 official ClickHouse Agent Skills rules was applied, measured
 or declined,
 [`docs/CRITERIA.md`](docs/CRITERIA.md) for where every threshold came from,
 [`docs/IMPACT.md`](docs/IMPACT.md) for who this is for and what has *not* been
-shown, and [`submission-evidence.json`](submission-evidence.json) for
+shown, [`docs/PRIVACY.md`](docs/PRIVACY.md) for exactly what each endpoint keeps
+and what it does not, and [`submission-evidence.json`](submission-evidence.json) for
 machine-readable proof.
 
 It is **not a certified, broadcaster-approved, or medical diagnostic device**.

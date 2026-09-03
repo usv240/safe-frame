@@ -442,6 +442,72 @@ ORDER BY asset_id, rule
 """.strip()
 
 
+
+def submitted_regression_sql(
+    rows: list[dict[str, Any]], *, parent_asset: str, child_asset: str
+) -> str:
+    """The child-minus-parent anti-join over inline rows, writing nothing.
+
+    /v1/analyze used to persist a submitted pair and then run the stored
+    anti-join, which meant measurements derived from somebody's own video stayed
+    in the database indefinitely. Nothing needs to be stored to answer the
+    question: both sides are evaluated and isolated in one statement over inline
+    values, which the SELECT-only MCP user can execute and which leaves nothing
+    behind.
+
+    The isolation is the same partition window as
+    sql/006_catalogue_regression.sql, keyed on rule so a master that already
+    flashed in luminance does not excuse a rendition that introduced a red
+    flash, with the same 100 ms presentation-time tolerance.
+    """
+    parent = _sql_string(_asset(parent_asset))
+    child = _sql_string(_asset(child_asset))
+    body = parity_sql(rows)
+    marker = "SELECT asset_id, rule, window_start_ms"
+    head = body[: body.index(marker)]
+    return f"""{head}SELECT asset_id, rule, window_start_ms, window_end_ms, transitions,
+       round(peak_changed_area_fraction, 6) AS peak_changed_area_fraction
+FROM
+(
+    SELECT
+        *,
+        minIf(window_start_ms, asset_id = {parent}) OVER (PARTITION BY rule) AS master_ws,
+        countIf(asset_id = {parent}) OVER (PARTITION BY rule) AS master_hits
+    FROM violations
+)
+WHERE asset_id = {child}
+  AND (master_hits = 0 OR abs(toInt64(window_start_ms) - toInt64(master_ws)) > 100)
+ORDER BY rule""".strip()
+
+
+async def submitted_regressions(
+    rows: list[dict[str, Any]], *, parent_asset: str, child_asset: str
+) -> list[dict[str, Any]]:
+    """Isolate a submitted rendition's introduced violations. Persists nothing."""
+    return _decode_rows(
+        await ClickHouseMcp().query(
+            submitted_regression_sql(rows, parent_asset=parent_asset, child_asset=child_asset)
+        )
+    )
+
+
+def _decode_rows(result: dict[str, Any]) -> list[dict[str, Any]]:
+    """Decode one mcp-clickhouse result into plain row dicts."""
+    if result["is_error"]:
+        raise RuntimeError(f"mcp-clickhouse returned an error: {result['content']}")
+    text = "\n".join(str(item.get("text", "")) for item in result["content"])
+    decoded = json.loads(text) if text.strip().startswith(("{", "[")) else text
+    if isinstance(decoded, str):
+        decoded = json.loads(decoded)
+    if isinstance(decoded, dict) and "rows" in decoded and "columns" in decoded:
+        columns = list(decoded["columns"])
+        return [dict(zip(columns, row)) for row in decoded["rows"]]
+    if isinstance(decoded, list):
+        return decoded
+    if isinstance(decoded, dict):
+        return [decoded]
+    raise RuntimeError(f"unexpected inline-criteria payload: {text[:400]}")
+
 async def parity_violations(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Run the criteria SQL through official mcp-clickhouse and decode the rows."""
     result = await ClickHouseMcp().query(parity_sql(rows))

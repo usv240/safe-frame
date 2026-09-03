@@ -179,3 +179,50 @@ def test_per_second_counts_track_the_burst() -> None:
     assert counts, "the chart series must not be empty for a flashing clip"
     assert max(item["general_flash"] for item in counts) > 6
     assert detect_violations(metrics), "fixture no longer violates"
+
+
+def test_analysing_a_submission_never_writes_to_the_database(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The privacy claim on every result is that nothing is stored. Enforce it.
+
+    This path used to persist the submitted pair and then run the stored
+    anti-join, which kept measurements derived from somebody's own video in the
+    database indefinitely.
+
+    The ClickHouse branch has to be forced on. Without credentials the handler
+    never enters it, so a first version of this test passed happily while a
+    re-introduced write sat in the very branch it was meant to guard.
+    """
+    from safe_frame import main as main_module
+
+    async def refuse(*args: object, **kwargs: object) -> object:
+        raise AssertionError("/v1/analyze must not persist anything a visitor submitted")
+
+    def refuse_sync(*args: object, **kwargs: object) -> int:
+        raise AssertionError("/v1/analyze must not persist anything a visitor submitted")
+
+    async def no_findings(*args: object, **kwargs: object) -> list[object]:
+        return []
+
+    monkeypatch.setattr(main_module, "_configured", lambda *names: True)
+    monkeypatch.setattr(main_module, "persist_violations", refuse_sync)
+    monkeypatch.setattr(main_module, "regression_count", refuse)
+    monkeypatch.setattr(main_module, "parity_violations", no_findings)
+    monkeypatch.setattr(main_module, "submitted_regressions", no_findings)
+
+    for body in (
+        {"rendition": _clip(flashing=True)},
+        {"rendition": _clip(flashing=True), "master": _clip()},
+    ):
+        response = client.post("/v1/analyze", json=body)
+        assert response.status_code == 200, response.text
+        assert response.json()["data"]["decision_source"] == "clickhouse_sql_via_official_mcp"
+
+
+def test_the_result_states_what_is_stored(client: TestClient) -> None:
+    data = _analyze(client, {"rendition": _clip()})
+    privacy = data["privacy"]
+    assert privacy["what_is_stored"].startswith("nothing")
+    for key in ("file_never_uploaded", "never_displayed", "what_is_sent", "logs"):
+        assert privacy[key]

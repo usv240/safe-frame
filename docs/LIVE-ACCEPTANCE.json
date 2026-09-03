@@ -191,7 +191,9 @@
     "the phone card layout had width:100% plus margins and overflowed the viewport by exactly the margin",
     "the SQL/Python parity test -- cited as the proof that the catalogue sweep and the per-file detector cannot disagree -- had never executed: it was skipped in every environment, and its comparison was malformed in both branches",
     "the persistent mcp-clickhouse worker was cached per configuration but its queue, lock and task belong to one event loop; a second loop in the same process raised 'Event loop is closed'. The service runs one loop and never hit it, so only a test suite could",
-    "the code blocks in the API section reused .sqlbox, which is light-on-dark by design because it sits on the dark boundary panel; on a pale surface it rendered grey on grey. Now a .codebox with per-theme tokens at 12.7:1 light and 13.7:1 dark"
+    "the code blocks in the API section reused .sqlbox, which is light-on-dark by design because it sits on the dark boundary panel; on a pale surface it rendered grey on grey. Now a .codebox with per-theme tokens at 12.7:1 light and 13.7:1 dark",
+    "/v1/analyze persisted every submitted pair and ran the stored anti-join, so measurements derived from a visitor's own video were kept indefinitely while the response claimed nothing was retained. Both modes now evaluate inline and write nothing, verified by counting rows either side of a live submission; six rows left by pre-fix testing were deleted",
+    "the first test written to guard that claim was vacuous: without ClickHouse credentials the handler never enters the branch containing the write, so re-introducing the write still passed. It now forces the branch on, and fails when mutated"
   ],
   "multi_step_agent": {
     "agent": "QcTriageAgent",
@@ -358,7 +360,10 @@
       "pair": 1.9
     },
     "grid": "longest edge reduced to 48 cells; stated on every result",
-    "why_that_grid_is_enough": "the published area condition is a proportion of the screen (0.25), which a grid this size resolves; a flash too small for it does not meet the area condition anyway"
+    "why_that_grid_is_enough": "the published area condition is a proportion of the screen (0.25), which a grid this size resolves; a flash too small for it does not meet the area condition anyway",
+    "what_is_stored": "nothing",
+    "verified_by_counting_rows": "the violations table was counted through MCP immediately before and after submitting a regression pair and an absolute clip: 0 rows written, and 0 byo-* rows remain",
+    "how_that_was_achieved": "both modes evaluate the criteria over inline rows via clickhouse_mcp.submitted_regression_sql and parity_sql, so the SELECT-only MCP user answers the question and no write path is reached; tests/test_analyze.py forces the ClickHouse branch on and fails if a write is reintroduced"
   },
   "api_keys": {
     "endpoints": [
@@ -394,5 +399,12 @@
       "desktop": "68px"
     },
     "verified": "every nav target lands clear of the sticky header at 390, 768, 1280 and 1680 wide, with no horizontal overflow in either theme"
+  },
+  "privacy": {
+    "document": "docs/PRIVACY.md",
+    "analyze": "the file is never uploaded and never displayed; downscaled samples are measured in memory; nothing is stored",
+    "scan": "does persist the transition rows it is given, on purpose, with no TTL. Stated plainly rather than glossed",
+    "api_keys": "no account, no user record, and the key is signed rather than saved, so there is no credential table",
+    "logs": "endpoint and exception type on failure only; never submitted data or model prose"
   }
 }

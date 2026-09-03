@@ -490,6 +490,14 @@ section[id],div[id]{scroll-margin-top:calc(var(--header-h,4.5rem) + .75rem)}
   .contents a:hover{transform:none}
   html{scroll-behavior:auto}
 }
+
+/* Short, checkable statements placed next to the control they describe, rather
+   than a policy page nobody opens before choosing a file. */
+.promises{list-style:none;margin:var(--s-4) 0 0;padding:0;display:grid;gap:var(--s-2);
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr))}
+.promises li{padding:var(--s-3);border-left:2px solid var(--accent);background:var(--surface);
+  border-radius:0 var(--r-md) var(--r-md) 0;font-size:.9rem;color:var(--ink-2);line-height:1.5}
+.promises b{color:var(--ink);display:block}
 </style>
 </head>
 <body>
@@ -797,6 +805,12 @@ section[id],div[id]{scroll-margin-top:calc(var(--header-h,4.5rem) + .75rem)}
       <p class="lead" style="margin-top:var(--s-3)">Choose a video and it is decoded <em>in this browser</em>. It is never uploaded, and never displayed on this page: only downscaled samples are sent, and they are measured by the same function the catalogue used. The verdict comes back from ClickHouse.</p>
       <p class="lead" style="margin-top:var(--s-3)">Add the approved master as well and the question changes from <em>does this flash</em> to the one this product exists for: <em>did this conversion introduce a flash the master did not have</em>. A clip that flashes is not a regression if its master flashed the same way.</p>
 
+      <ul class="promises">
+        <li><b>Never uploaded.</b> Decoded in this browser; the file does not leave your machine.</li>
+        <li><b>Never displayed.</b> A clip you suspect of flashing is not played back at you.</li>
+        <li><b>Nothing stored.</b> Downscaled samples are measured in memory and written nowhere.</li>
+      </ul>
+
       <div class="byo-grid">
         <label class="drop" for="byo-child">
           <b>Rendition</b>
@@ -839,6 +853,12 @@ section[id],div[id]{scroll-margin-top:calc(var(--header-h,4.5rem) + .75rem)}
       <h2>No account. No approval. A key only raises your limits.</h2>
       <p class="lead" style="margin-top:var(--s-3)">Every endpoint on this service works without a credential, and the whole judge path is meant to be exercised that way. If you are building something against it, mint a key: it multiplies the per-minute cap on the endpoints that spend model tokens or write, and names your calls in the logs. Reads are never capped either way.</p>
 
+      <ul class="promises">
+        <li><b>No account.</b> No email, no name, no approval step, and no user record.</li>
+        <li><b>Not stored.</b> The key is signed rather than saved, so there is no credential table.</li>
+        <li><b>Shown once.</b> We cannot recover it for you, because we never had it.</li>
+      </ul>
+
       <div class="controls">
         <button class="btn btn-primary" id="key-run">Generate an API key</button>
         <a class="btn" href="/docs" target="_blank" rel="noreferrer">Full OpenAPI reference</a>
@@ -878,6 +898,8 @@ curl -s -X POST https://safe-frame-regression-109051079423.us-central1.run.app/v
   },
   "master": { "...": "optional; omit for an absolute check" }
 }</code></pre>
+        <p class="note" style="margin-top:var(--s-3)"><b>One endpoint does store what you send it.</b> <code class="mono">/v1/scan</code> persists the transition rows you submit so the per-pair anti-join can read them back, under identifiers you choose, with no expiry. That is what the endpoint is for. If you would rather nothing were retained, use <code class="mono">/v1/analyze</code>, which answers the same question and writes nothing. Full detail in <a href="https://github.com/usv240/safe-frame/blob/main/docs/PRIVACY.md" target="_blank" rel="noreferrer">docs/PRIVACY.md</a>.</p>
+
         <p class="note" style="margin-top:var(--s-3)">Or measure frames yourself with <code class="mono">safe_frame.ingest.frames_to_transitions</code> and post the transition rows to <code class="mono">/v1/scan</code> under your own asset identifiers. Identifiers belonging to the published catalogue are refused as write targets, so no caller can alter what another sees.</p>
       </div>
     </div>
