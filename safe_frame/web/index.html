@@ -413,6 +413,24 @@ body.tech .technical{display:block}
 @media (prefers-contrast:more){
   :root{--line:var(--ink-3);--line-strong:var(--ink-2)}
 }
+
+/* Check your own: file pickers, verdict banner. No preview surface anywhere --
+   the submitted video is decoded off-screen and never rendered, which is the
+   only defensible behaviour on a page about photosensitive seizures. */
+.byo-grid{display:grid;gap:var(--s-3);grid-template-columns:repeat(auto-fit,minmax(min(100%,17rem),1fr));margin-top:var(--s-5)}
+.drop{display:flex;flex-direction:column;gap:var(--s-1);padding:var(--s-4);background:var(--surface);
+  border:1px dashed var(--line);border-radius:var(--r-lg);cursor:pointer;transition:border-color .15s,background .15s}
+.drop:hover,.drop:focus-within{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 5%,var(--surface))}
+.drop b{font-size:.95rem}
+.drop b em{font-style:normal;font-weight:400;color:var(--ink-3)}
+.drop span{color:var(--ink-3);font-size:.9rem;overflow-wrap:anywhere}
+.drop input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.drop:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.verdictbar{display:flex;align-items:center;gap:var(--s-3);flex-wrap:wrap}
+.vlabel{font-weight:700;font-size:1.35rem;letter-spacing:.02em}
+.vlabel.pass{color:var(--good)}
+.vlabel.fail{color:var(--bad)}
+@media (prefers-reduced-motion:reduce){.drop{transition:none}}
 </style>
 </head>
 <body>
@@ -685,6 +703,49 @@ body.tech .technical{display:block}
             <dt>Model</dt><dd id="b-model">n/a</dd>
           </dl>
         </aside>
+      </div>
+    </div>
+  </section>
+
+  <section id="byo">
+    <div class="wrap">
+      <p class="eyebrow">Check your own</p>
+      <h2>Everything above ran on our catalogue. Run it on yours.</h2>
+      <p class="lead" style="margin-top:var(--s-3)">Choose a video and it is decoded <em>in this browser</em>. It is never uploaded, and never displayed on this page: only downscaled samples are sent, and they are measured by the same function the catalogue used. The verdict comes back from ClickHouse.</p>
+      <p class="lead" style="margin-top:var(--s-3)">Add the approved master as well and the question changes from <em>does this flash</em> to the one this product exists for: <em>did this conversion introduce a flash the master did not have</em>. A clip that flashes is not a regression if its master flashed the same way.</p>
+
+      <div class="byo-grid">
+        <label class="drop" for="byo-child">
+          <b>Rendition</b>
+          <span id="byo-child-name">Choose a video file</span>
+          <input type="file" id="byo-child" accept="video/*">
+        </label>
+        <label class="drop" for="byo-parent">
+          <b>Approved master <em>(optional)</em></b>
+          <span id="byo-parent-name">Choose a video file</span>
+          <input type="file" id="byo-parent" accept="video/*">
+        </label>
+      </div>
+
+      <div class="controls">
+        <button class="btn btn-primary" id="byo-run" disabled>Measure and check</button>
+        <span class="note" id="byo-status">Nothing is uploaded until you press this.</span>
+      </div>
+
+      <div class="panel" style="padding:var(--s-4)">
+        <p class="empty" id="byo-empty">Choose a video to check it against the published criteria.</p>
+        <div id="byo-out" hidden>
+          <div class="verdictbar"><span class="vlabel" id="byo-verdict">n/a</span><span class="note" id="byo-mode"></span></div>
+          <dl class="facts" style="margin-top:var(--s-4)">
+            <dt>Findings</dt><dd id="byo-findings">n/a</dd>
+            <dt>Transitions measured</dt><dd id="byo-count">n/a</dd>
+            <dt>Decision</dt><dd class="mono" id="byo-src">n/a</dd>
+            <dt>Measured by</dt><dd class="mono" id="byo-by">n/a</dd>
+          </dl>
+          <div id="byo-chart" style="margin-top:var(--s-4)"></div>
+          <p class="note" id="byo-note" style="margin-top:var(--s-3)"></p>
+          <p class="note" style="margin-top:var(--s-2)">This is an open pre-check against published criteria, not a certified or medical device, and it always requires human review.</p>
+        </div>
       </div>
     </div>
   </section>
@@ -1367,6 +1428,209 @@ $("#eval-run").onclick = async () => {
 };
 
 loadScale();
+
+/* ---------------------------------------------------------------------------
+   Check your own clip.
+
+   The file never leaves the machine. The browser decodes it to raw samples on
+   a small grid and posts only those; the server measures them with the same
+   safe_frame.ingest the catalogue used, so there is no second implementation
+   of the published maths to keep in step.
+
+   The video element is created but never inserted into the document and never
+   painted anywhere the visitor can see. On a page about photosensitive
+   seizures, showing a clip somebody is checking because they suspect it
+   flashes would be indefensible.
+--------------------------------------------------------------------------- */
+const BYO = { GRID: 48, FPS: 30, MAX_SECONDS: 20, MAX_FRAMES: 600 };
+const byoFiles = { child: null, parent: null };
+
+function byoBase64(bytes) {
+  // Chunked: String.fromCharCode.apply blows the argument limit on megabytes.
+  let out = "";
+  const step = 0x8000;
+  for (let i = 0; i < bytes.length; i += step) {
+    out += String.fromCharCode.apply(null, bytes.subarray(i, i + step));
+  }
+  return btoa(out);
+}
+
+function byoLoadMetadata(video) {
+  return new Promise((resolve, reject) => {
+    video.onloadedmetadata = () => resolve();
+    video.onerror = () => reject(new Error("That file could not be decoded as video in this browser."));
+  });
+}
+
+function byoSeek(video, time) {
+  return new Promise((resolve, reject) => {
+    video.onseeked = () => { video.onseeked = null; resolve(); };
+    video.onerror = () => reject(new Error("Decoding stopped partway through the file."));
+    video.currentTime = time;
+  });
+}
+
+async function byoDecode(file, onProgress) {
+  const video = document.createElement("video");   // never appended to the DOM
+  video.preload = "auto";
+  video.muted = true;
+  video.playsInline = true;
+  const url = URL.createObjectURL(file);
+  video.src = url;
+  try {
+    await byoLoadMetadata(video);
+    const duration = Math.min(video.duration || 0, BYO.MAX_SECONDS);
+    if (!isFinite(duration) || duration <= 0) throw new Error("That file reports no usable duration.");
+    const vw = video.videoWidth, vh = video.videoHeight;
+    if (!vw || !vh) throw new Error("That file reports no video dimensions.");
+
+    const scale = BYO.GRID / Math.max(vw, vh);
+    const gw = Math.max(2, Math.round(vw * scale));
+    const gh = Math.max(2, Math.round(vh * scale));
+    const count = Math.max(2, Math.min(BYO.MAX_FRAMES, Math.floor(duration * BYO.FPS)));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = gw; canvas.height = gh;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    const rgb = new Uint8Array(count * gh * gw * 3);
+
+    for (let i = 0; i < count; i += 1) {
+      await byoSeek(video, i / BYO.FPS);
+      ctx.drawImage(video, 0, 0, gw, gh);
+      const px = ctx.getImageData(0, 0, gw, gh).data;
+      let w = i * gh * gw * 3;
+      for (let j = 0; j < px.length; j += 4) {
+        rgb[w] = px[j]; rgb[w + 1] = px[j + 1]; rgb[w + 2] = px[j + 2];
+        w += 3;
+      }
+      if (i % 15 === 0) onProgress(i / count);
+    }
+    onProgress(1);
+    return { frames_b64: byoBase64(rgb), width: gw, height: gh, frame_count: count, frame_rate: BYO.FPS };
+  } finally {
+    video.removeAttribute("src");
+    video.load();
+    URL.revokeObjectURL(url);
+  }
+}
+
+function byoPick(which, inputId, labelId) {
+  const input = $(inputId);
+  input.addEventListener("change", () => {
+    const file = input.files && input.files[0];
+    byoFiles[which] = file || null;
+    $(labelId).textContent = file ? `${file.name} (${(file.size / 1048576).toFixed(1)} MB)` : "Choose a video file";
+    $("#byo-run").disabled = !byoFiles.child;
+  });
+}
+
+function byoRenderChart(child, parent) {
+  const host = $("#byo-chart");
+  host.replaceChildren();
+  if (!child || !child.length) return;
+  const series = parent && parent.length
+    ? [["Approved master", parent], ["Your rendition", child]]
+    : [["Your clip", child]];
+  let peak = 7;
+  for (const entry of series) {
+    for (const row of entry[1]) {
+      peak = Math.max(peak, row.general_flash, row.red_flash);
+    }
+  }
+  for (const entry of series) {
+    const name = entry[0], rows = entry[1];
+    const wrap = document.createElement("div");
+    wrap.style.marginTop = "var(--s-3)";
+    const title = document.createElement("p");
+    title.className = "note";
+    title.textContent = `${name}: qualifying transitions per second (the limit is 6)`;
+    wrap.appendChild(title);
+    const bars = document.createElement("div");
+    bars.style.cssText = "display:flex;gap:2px;align-items:flex-end;height:90px;margin-top:var(--s-2)";
+    for (const row of rows) {
+      const total = row.general_flash + row.red_flash;
+      const bar = document.createElement("div");
+      const colour = row.red_flash > row.general_flash ? "--series-red" : "--series-general";
+      bar.style.cssText = "flex:1 1 0;min-width:2px;border-radius:2px 2px 0 0;" +
+        `height:${Math.max(2, (total / peak) * 100)}%;background:var(${colour});` +
+        `opacity:${total > 6 ? 1 : 0.45}`;
+      bar.title = `second ${row.second}: ${row.general_flash} general, ${row.red_flash} red`;
+      bars.appendChild(bar);
+    }
+    wrap.appendChild(bars);
+    host.appendChild(wrap);
+  }
+  host.setAttribute("role", "img");
+  host.setAttribute("aria-label",
+    `Qualifying transitions per second. Peak ${peak}, against a limit of 6 per second.`);
+}
+
+byoPick("child", "#byo-child", "#byo-child-name");
+byoPick("parent", "#byo-parent", "#byo-parent-name");
+
+$("#byo-run").addEventListener("click", async () => {
+  const button = $("#byo-run");
+  const status = $("#byo-status");
+  button.disabled = true;
+  button.setAttribute("aria-busy", "true");
+  const say = (text) => { status.textContent = text; };
+  try {
+    button.textContent = "Decoding in your browser...";
+    const rendition = await byoDecode(byoFiles.child,
+      (p) => say(`Decoding your rendition: ${Math.round(p * 100)}%`));
+    let master = null;
+    if (byoFiles.parent) {
+      master = await byoDecode(byoFiles.parent,
+        (p) => say(`Decoding the master: ${Math.round(p * 100)}%`));
+    }
+    button.textContent = "Measuring and checking...";
+    say("Sending downscaled samples. The video itself stays on your machine.");
+    const body = master ? { rendition, master } : { rendition };
+    const r = await fetch("/v1/analyze", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const p = await r.json();
+    if (!r.ok) throw new Error((p.detail && p.detail.message) || "The check failed closed.");
+    const d = p.data;
+
+    const verdict = $("#byo-verdict");
+    verdict.textContent = d.verdict === "fail" ? "FAIL" : "PASS";
+    verdict.className = `vlabel ${d.verdict}`;
+    if (d.mode === "regression") {
+      $("#byo-mode").textContent = d.verdict === "fail"
+        ? "this rendition introduced a violation its approved master did not have"
+        : "nothing was introduced that the approved master did not already have";
+    } else {
+      $("#byo-mode").textContent = d.verdict === "fail"
+        ? "this clip meets the published criteria for a flash violation"
+        : "no violation of the published criteria was found";
+    }
+    $("#byo-findings").textContent = d.findings.length
+      ? d.findings.map((f) => `${f.rule.replace("_", " ")} at ${f.window_start_ms} ms, ${f.transitions} transitions`).join("; ")
+      : "none";
+    $("#byo-count").textContent = d.master
+      ? `${d.rendition.transitions_measured} rendition, ${d.master.transitions_measured} master`
+      : `${d.rendition.transitions_measured}`;
+    $("#byo-src").textContent = d.decision_source;
+    $("#byo-by").textContent = d.measurement.measured_by;
+    $("#byo-note").textContent = `${d.measurement.note} ${d.privacy}`;
+    byoRenderChart(d.rendition.per_second, d.master ? d.master.per_second : null);
+    $("#byo-empty").hidden = true;
+    $("#byo-out").hidden = false;
+    say("Done. Nothing was stored.");
+  } catch (err) {
+    $("#byo-out").hidden = true;
+    $("#byo-empty").hidden = false;
+    $("#byo-empty").textContent = err.message || "That clip could not be checked.";
+    say("Nothing was uploaded.");
+  } finally {
+    button.disabled = false;
+    button.removeAttribute("aria-busy");
+    button.textContent = "Measure and check";
+  }
+});
 </script>
 </body>
 </html>
