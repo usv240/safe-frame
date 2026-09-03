@@ -1,140 +1,219 @@
-# Demo video script — 2:52
+# Safe Frame — demo script
 
-Hard limit is 3:00; only the first 3:00 is evaluated.
+**Target 2:40–2:45. Hard limit 3:00** — only the first 3:00 is evaluated.
+
+The page is ordered to match this script, so the whole demo scrolls **downward
+once**. Never scroll back up; if you miss a beat, keep going.
 
 **Rules to honour while recording**
 
-- Show the product *executing*, not slides pretending to be execution.
-- No third-party logos, music, advertising, or footage. Everything on screen is
-  this app, this repository, this terminal.
+- Show the product executing. No slides, no mock-ups.
+- **Do not open the GitHub tab on camera.** It puts a third-party logo on screen
+  and spends product time. Put the repository link in the description.
+- No music, no third-party footage, nothing but this app.
 - English narration, or English subtitles.
 - Upload Public to YouTube or Vimeo before submitting.
-- Nothing in this demo flashes. Say so — it is the point.
+- Nothing in this demo flashes. Say so once, near the end.
 
-**Setup before you hit record**
+**Before you hit record**
 
-- Browser at 1440×900, zoom 100%, signed out, no extensions visible.
-- Run the sweep once to warm the MCP session, then reload so the recording
-  shows a genuine cold press of the button.
-- The triage agent takes ~20s. Do not cut it — the wait is the proof it is
-  really running four queries. Narrate over it.
-- Second tab: the GitHub repository at the root.
+- Browser at 1440×900, 100% zoom, signed out, no extensions or bookmarks bar.
+- Run the sweep once to warm the MCP session, then reload, so the recording
+  shows a genuine cold press.
+- The triage agent takes 12–20 seconds. Do not cut it — the wait is the proof.
+  Narrate over it.
+- Read numbers **off the screen**. The catalogue is live and a row you click may
+  differ by one or two from the figures below.
 
 ---
 
-## 0:00–0:15 — The problem, one sentence
+## 0:00–0:18 — The gap
 
-> *Hero on screen. Do not scroll.*
+**DO:** Hero section, still. Do not scroll.
+**POINT:** The headline, *"The master passed. The version people watched was
+never checked."*
 
-"A film is approved once. Then it becomes dozens of versions — frame rates,
-grades, social crops, ad-break inserts, burnt-in subtitles. Photosensitivity QC
-runs on the master, before all of that. When a conversion *introduces* a flash
-the approved master never had, nothing is looking."
+**SAY:**
 
-## 0:15–0:35 — Why it matters
+> **"A film is approved once. Then it becomes dozens of versions — different
+> frame rates, ad-break inserts, social crops, burnt-in subtitles.
+> Photosensitivity testing runs on the master, before all of that. If one of
+> those conversions introduces a dangerous flash, the approved master does not
+> protect the audience. Safe Frame finds the exact version, and the exact
+> transformation, that introduced the risk."**
 
-> *Scroll to the three fact cards.*
+---
 
-"Photosensitive epilepsy affects about one in four thousand people. In 1997 a
-single broadcast sent six hundred and eighty-five children to hospital. Ofcom
-Rule 2.12 and WCAG 2.3.1 both set thresholds — and every one of them judges *a
-file* against *a standard*. None judges a file against the version already
-signed off."
+## 0:18–0:45 — Run the sweep
 
-## 0:35–1:05 — The sweep, live
+**DO:** Scroll to **Live catalogue sweep**. Press **Sweep the catalogue**.
+**POINT:** The four counters while it runs.
 
-> *Scroll to the sweep. Point at the counters, press the button, wait.*
+**SAY:**
 
-"Four hundred and twenty-four titles, thirty-three hundred renditions, ten point two million
-transition measurements in ClickHouse. Both published flash rules evaluated
-across every row in one pass, through the official ClickHouse MCP server."
+> **"Four hundred and twenty-four titles. Over three thousand renditions. More
+> than ten million measured transitions, in ClickHouse. Both published flash
+> rules are evaluated across all of it in one pass, through the official
+> ClickHouse MCP server."**
 
-> *Result lands.*
+**POINT:** The result headline, then the **Rule** column.
 
-"Sixty-six renditions introduced a violation their master never had. Under two
-seconds. Forty-three general flash, twenty-three red flash."
+> **"Under two seconds. Sixty-six renditions introduced a violation their
+> approved master never had — forty-three luminance, twenty-three red."**
 
-## 1:05–1:22 — Prove it isn't circular
+---
 
-> *Scroll to "Does it actually work". Press **Score the detector**.*
+## 0:45–1:12 — The case other checkers miss
 
-"Obvious objection: you generated data with flashes in it and then found the
-flashes. So here is the planted set, recovered from the generator's own random
-seed by a query that reads no measurement at all — not luminance, not red, not
-area. Sixty-six planted, sixty-six found. Nothing missed, nothing invented."
+**DO:** Click any row whose **Rule** reads **Red flash**. Wait for the chart.
+**POINT:** The top track, then the bottom track.
 
-> *Point at the decoy tile.*
+**SAY:**
 
-"And eighty-six decoys placed to be rejected — renditions that really do flash,
-but whose master flashes identically, so nothing was introduced. All eighty-six
-correctly left alone. Recall you can fake by flagging everything. Precision
-against those decoys you cannot."
+> **"One finding. The approved master stays under the limit for its whole
+> runtime. The rendition that shipped crosses it — more than twenty qualifying
+> transitions inside one second, against a limit of six."**
 
-## 1:22–1:50 — The case a luminance checker misses
+**POINT:** Trace the **blue** series along the bottom track. It stays flat.
 
-> *Click a **red flash** row. Wait for the chart.*
+> **"But look at the luminance line on that same rendition. It barely moves.
+> Saturated red has its own published test, deliberately with no brightness
+> condition, because red flashing is hazardous even when brightness is steady.
+> A checker that only tests luminance passes this file. This one does not."**
 
-"Both tracks, same query, same scale. Top is the approved master — under the
-criterion for its whole runtime. Bottom is the rendition that shipped: one
-second, twenty-five qualifying transitions."
+---
 
-> *Point at the blue series on the bottom track — it is flat.*
+## 1:12–1:38 — Prove it isn't circular
 
-"And the luminance track on that rendition never moves. WCAG gives saturated red
-its own test, deliberately with no luminance condition, because red flashing is
-more provocative. A checker that only tests luminance passes this file."
+**DO:** Scroll to **Does it actually work**. Press **Score the detector**.
+**POINT:** The four tiles, left to right.
 
-## 1:50–2:10 — The systemic answer
+**SAY:**
 
-> *Scroll to Systemic cause. Press **Profile every transform**.*
+> **"This is synthetic data, so you should not simply believe the result. This
+> recovers what was planted from the generator's own random decisions, using a
+> query that reads no flash measurement at all. Sixty-six planted, sixty-six
+> found. Nothing missed. Nothing invented."**
 
-"Sixty-six findings sounds like sixty-six problems. It isn't. Four encoder
-profiles account for all of them, and three transforms introduce nothing.
-Frame-rate interpolation and ad-break insertion produce every luminance
-regression; subtitle burn-in and social crop produce every red one. That is two
-different root causes with two different owners — and twenty-three of the
-sixty-six are invisible to a luminance-only check."
+**POINT:** The **decoys correctly rejected** tile, then the cohort table below.
 
-## 2:10–2:38 — The agent's mission
+> **"And eighty-six decoys placed to be rejected — files that genuinely flash,
+> but whose master flashes identically, so nothing was introduced. All
+> eighty-six left alone. Recall you can fake by flagging everything; precision
+> against those decoys you cannot."**
 
-> *Scroll to the brief. Press **Run the triage agent**. Talk while it works.*
+**POINT:** The **Measured from pixels** row.
 
-"Now the Gemini agent, on Vertex through Google's ADK. It has four tools, every
-one a live ClickHouse query through MCP, and it sequences them itself — survey
-the sweep, profile the transforms, size the blind spot, then go deep on the one
-case it ranks first."
+> **"And part of this catalogue isn't authored numbers at all — it's measured
+> from actual frames. It scores the same."**
 
-> *Brief lands. Point at the numbered trace.*
+---
 
-"Those are the calls it actually made, recorded from the run. Every figure in
-the brief came back from SQL. And look at the boundary: decision source is
-`clickhouse_sql`, human required is `true`. The arithmetic decides, the model
-explains, a person acts."
+## 1:38–2:00 — Findings become an action
 
-## 2:38–2:52 — Restraint, and close
+**DO:** Scroll to **Systemic cause**. Press **Profile every transform**.
+**POINT:** The four coloured bars, then the clean rows beneath them.
 
-> *Scroll to the criteria table. Let the "not implemented" row sit on screen.*
+**SAY:**
 
-"Every threshold is quoted from the standard. We couldn't get a photosensitivity
-expert to review this, so we audited it against the published texts ourselves —
-and found our own detector wrong three times. The darker-image condition was
-missing entirely; adding it removed thirteen false positives. The rule we still
-don't implement is named right there rather than hidden. Open pre-check, not a
-certified device, synthetic catalogue. Apache-2.0, repo and app in the
-description. Safe Frame — find the version that introduced the risk, before an
-audience does."
+> **"Sixty-six findings are not sixty-six problems. Every one traces back to
+> four encoder profiles — and three profiles introduced nothing at all. That is
+> four configurations to fix upstream, instead of sixty-six files to patch by
+> hand."**
+
+**POINT:** The middle outcome tile.
+
+> **"Twenty-three of them are the red-flash cases a luminance-only workflow
+> would never have seen."**
+
+---
+
+## 2:00–2:28 — The agent
+
+**DO:** Scroll to **The agent's mission**. Press **Run the triage agent**.
+**POINT:** Keep the working state visible and talk over it.
+
+**SAY:**
+
+> **"Now Gemini, through Google's Agent Development Kit on Vertex AI. It has
+> four tools, each one a live ClickHouse query through MCP, and it decides the
+> order itself — survey the catalogue, profile the transforms, measure the
+> red-flash blind spot, then investigate the case it ranks first."**
+
+**POINT:** When the brief lands, run your cursor down the **numbered trace**.
+
+> **"That is the real sequence of calls from this run, not a scripted
+> animation. Every number in the brief came back from SQL."**
+
+**POINT:** `decision_source` and `requires_human` in the panel beside it.
+
+> **"And the boundary is explicit. ClickHouse makes the decision. Gemini
+> explains the evidence. A human is still responsible for acting."**
+
+---
+
+## 2:28–2:43 — Credibility, and close
+
+**DO:** Scroll to **Criteria provenance**.
+**POINT:** Two or three threshold rows, then the greyed **not implemented** row.
+
+**SAY:**
+
+> **"Every threshold traces to published guidance — and the one rule we have not
+> implemented is stated openly rather than hidden. This is an open pre-check,
+> not a certified medical or broadcast device, and nothing in this interface
+> flashes."**
+
+**DO:** Scroll back to the top so the product name is on screen as you finish.
+
+> **"Safe Frame finds the version that introduced the risk, names the system
+> that caused it, and hands a QC team evidence they can act on — before an
+> audience is exposed to it."**
 
 ---
 
 ## Shot checklist
 
 - [ ] Sweep pressed live, result not cut
-- [ ] Evaluation scored live: 44/44, and the decoy tile called out
-- [ ] A `red_flash` row selected, chart drawn on camera
-- [ ] The flat luminance track on that rendition pointed out explicitly
-- [ ] Transform profile run live, the four-profiles point made
-- [ ] Triage agent run live, numbered tool trace visible
-- [ ] `decision_source` and `requires_human` shown on screen
-- [ ] Criteria table including the "not implemented" row and the audit finding
-- [ ] Public URL and repo URL legible at normal playback size
+- [ ] A **Red flash** row selected, chart drawn on camera
+- [ ] The flat luminance line on that rendition traced explicitly
+- [ ] Evaluation scored live: **66/66**, decoys **86/86**, cohort row shown
+- [ ] Transform profile run live, four-versus-three point made
+- [ ] Triage agent run live, numbered trace visible, wait not cut
+- [ ] `decision_source` and `requires_human` legible on screen
+- [ ] Criteria table including the **not implemented** row
+- [ ] No GitHub tab, no logos, no music
 - [ ] Under 3:00, uploaded Public, English audio or subtitles
+
+---
+
+## Why this order
+
+The four judging criteria are **equally weighted** — there is no separate score
+for the video itself. So the run has to demonstrate all four without ever saying
+their names:
+
+| Criterion | Where it lands |
+|---|---|
+| Technological Implementation | ten million rows in one pass through the official MCP server; the agent's real tool trace |
+| Design | one downward scroll: problem, evidence, cause, action |
+| Potential Impact | the red-flash case a luminance-only checker passes, and four profiles to fix instead of sixty-six files |
+| Quality of the Idea | master-versus-rendition is the comparison nobody else makes, and the unimplemented rule is named rather than hidden |
+
+The arc is one sentence: **find the regression → prove it isn't circular → show
+what other checkers miss → name the cause → let the agent prioritise the work.**
+
+## Things deliberately left out
+
+Cut for time, and because each would dilute the arc rather than add to it. If a
+judge asks, they are all on the page or in the repository.
+
+- The `/v1/scan` per-pair API and the OpenAPI surface at `/docs`.
+- **Runtime evidence** — the live MCP handshake and the credential-boundary
+  diagram. Strong material, but the sweep already proves MCP is real.
+- **Decision boundary** — the SQL panel. The agent section makes the same point
+  faster, on camera, with live output.
+- The findings export, the Plain/Technical toggle, and the light/dark toggle.
+- The standards audit that found three defects in our own detector. It is the
+  best thing in the repository and there is no room for it; put a line about it
+  in the Devpost description instead.

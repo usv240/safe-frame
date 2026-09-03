@@ -583,6 +583,57 @@ body.tech .technical{display:block}
     </div>
   </section>
 
+  <section id="evaluation">
+    <div class="wrap">
+      <p class="eyebrow">Does it actually work</p>
+      <h2>Scored against a ground truth it cannot see.</h2>
+      <p class="lead" style="margin-top:var(--s-3)">The fair objection to a synthetic demonstration is that it is circular &mdash; data was generated with flashes in it, and then the flashes were found. So the planted set is recovered from the generator&rsquo;s own random decisions, <em>without reading a single measurement</em>, and compared against what the criteria returned.</p>
+      <p class="lead technical" style="margin-top:var(--s-3)"><code class="mono">sql/008_ground_truth.sql</code> recomputes the decisions that chose where to plant. It never touches <code class="mono">luma_delta</code>, <code class="mono">red_delta</code>, <code class="mono">luma_min</code>, <code class="mono">changed_area_fraction</code> or <code class="mono">direction</code>. Two queries, produced by independent means; agreement between them is a result rather than a restatement.</p>
+      <p class="lead" style="margin-top:var(--s-3)">The catalogue holds two kinds of row, and they are scored separately on purpose. Most are <em>authored</em> &mdash; SQL decided what each measurement should be. The <code class="mono">measured_*</code> titles are not: they are constructed RGB frames pushed through the same measurement code a decoder would feed, so every value is the output of <code class="mono">relative_luminance</code> and <code class="mono">red_flash_mask</code> over real pixel arrays. If the detector only scored well on numbers we wrote, the corpus would be doing the work.</p>
+
+      <div class="controls">
+        <button class="btn btn-primary" id="eval-run">Score the detector</button>
+      </div>
+
+      <div class="panel" style="padding:var(--s-4)">
+        <p class="empty" id="eval-empty">Press &ldquo;Score the detector&rdquo; to compute this live.</p>
+        <div id="eval-out" hidden>
+          <div class="matrix">
+            <div class="good"><b id="e-tp">&mdash;</b><span>found, and planted</span></div>
+            <div class="bad"><b id="e-fn">&mdash;</b><span>planted, and missed</span></div>
+            <div class="bad"><b id="e-fp">&mdash;</b><span>found, never planted</span></div>
+            <div class="good"><b id="e-dec">&mdash;</b><span>decoys correctly rejected</span></div>
+          </div>
+          <dl class="facts" style="margin-top:var(--s-4)">
+            <dt>Precision</dt><dd id="e-prec">&mdash;</dd>
+            <dt>Recall</dt><dd id="e-rec">&mdash;</dd>
+            <dt>Ground truth</dt><dd class="mono" id="e-gt">&mdash;</dd>
+            <dt>Detector</dt><dd class="mono" id="e-det">&mdash;</dd>
+          </dl>
+          <div class="scroll" style="max-height:none;margin-top:var(--s-4)">
+            <table><caption class="sr">Detection scored separately for each cohort of the catalogue.</caption>
+              <thead><tr><th scope="col">Cohort</th><th scope="col">Where the numbers came from</th><th scope="col">Planted</th><th scope="col">Found</th><th scope="col">Precision</th><th scope="col">Recall</th></tr></thead>
+              <tbody id="e-cohorts"></tbody>
+            </table>
+          </div>
+          <p class="muted" id="e-decoy" style="font-size:var(--t-sm);margin-top:var(--s-3)"></p>
+          <p class="muted" id="e-scope" style="font-size:var(--t-xs);margin-top:var(--s-3)"></p>
+        </div>
+      </div>
+
+      <div class="grid g-2" style="margin-top:var(--s-4)">
+        <div class="card">
+          <h3>Why the decoys are the point</h3>
+          <p class="muted" style="margin-top:var(--s-2);font-size:var(--t-sm)">Recall alone can be bought by flagging everything. The corpus carries renditions that carry a real burst and are still <em>not</em> regressions &mdash; because their approved master has the same burst at the same presentation time &mdash; and a cohort that clears every floor but sits above the published darker-image ceiling. Precision is measured against those.</p>
+        </div>
+        <div class="card">
+          <h3>What this does not show</h3>
+          <p class="muted" style="margin-top:var(--s-2);font-size:var(--t-sm)">Agreement with a synthetic ground truth we authored. It demonstrates that the implementation does what the criteria say at catalogue scale, and it is not evidence about real footage, not a comparison against a certified analyser, and not a clinical result.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section id="systemic">
     <div class="wrap">
       <p class="eyebrow">Systemic cause</p>
@@ -634,57 +685,6 @@ body.tech .technical{display:block}
             <dt>Model</dt><dd id="b-model">&mdash;</dd>
           </dl>
         </aside>
-      </div>
-    </div>
-  </section>
-
-  <section id="evaluation">
-    <div class="wrap">
-      <p class="eyebrow">Does it actually work</p>
-      <h2>Scored against a ground truth it cannot see.</h2>
-      <p class="lead" style="margin-top:var(--s-3)">The fair objection to a synthetic demonstration is that it is circular &mdash; data was generated with flashes in it, and then the flashes were found. So the planted set is recovered from the generator&rsquo;s own random decisions, <em>without reading a single measurement</em>, and compared against what the criteria returned.</p>
-      <p class="lead technical" style="margin-top:var(--s-3)"><code class="mono">sql/008_ground_truth.sql</code> recomputes the decisions that chose where to plant. It never touches <code class="mono">luma_delta</code>, <code class="mono">red_delta</code>, <code class="mono">luma_min</code>, <code class="mono">changed_area_fraction</code> or <code class="mono">direction</code>. Two queries, produced by independent means; agreement between them is a result rather than a restatement.</p>
-      <p class="lead" style="margin-top:var(--s-3)">The catalogue holds two kinds of row, and they are scored separately on purpose. Most are <em>authored</em> &mdash; SQL decided what each measurement should be. The <code class="mono">measured_*</code> titles are not: they are constructed RGB frames pushed through the same measurement code a decoder would feed, so every value is the output of <code class="mono">relative_luminance</code> and <code class="mono">red_flash_mask</code> over real pixel arrays. If the detector only scored well on numbers we wrote, the corpus would be doing the work.</p>
-
-      <div class="controls">
-        <button class="btn btn-primary" id="eval-run">Score the detector</button>
-      </div>
-
-      <div class="panel" style="padding:var(--s-4)">
-        <p class="empty" id="eval-empty">Press &ldquo;Score the detector&rdquo; to compute this live.</p>
-        <div id="eval-out" hidden>
-          <div class="matrix">
-            <div class="good"><b id="e-tp">&mdash;</b><span>found, and planted</span></div>
-            <div class="bad"><b id="e-fn">&mdash;</b><span>planted, and missed</span></div>
-            <div class="bad"><b id="e-fp">&mdash;</b><span>found, never planted</span></div>
-            <div class="good"><b id="e-dec">&mdash;</b><span>decoys correctly rejected</span></div>
-          </div>
-          <dl class="facts" style="margin-top:var(--s-4)">
-            <dt>Precision</dt><dd id="e-prec">&mdash;</dd>
-            <dt>Recall</dt><dd id="e-rec">&mdash;</dd>
-            <dt>Ground truth</dt><dd class="mono" id="e-gt">&mdash;</dd>
-            <dt>Detector</dt><dd class="mono" id="e-det">&mdash;</dd>
-          </dl>
-          <div class="scroll" style="max-height:none;margin-top:var(--s-4)">
-            <table><caption class="sr">Detection scored separately for each cohort of the catalogue.</caption>
-              <thead><tr><th scope="col">Cohort</th><th scope="col">Where the numbers came from</th><th scope="col">Planted</th><th scope="col">Found</th><th scope="col">Precision</th><th scope="col">Recall</th></tr></thead>
-              <tbody id="e-cohorts"></tbody>
-            </table>
-          </div>
-          <p class="muted" id="e-decoy" style="font-size:var(--t-sm);margin-top:var(--s-3)"></p>
-          <p class="muted" id="e-scope" style="font-size:var(--t-xs);margin-top:var(--s-3)"></p>
-        </div>
-      </div>
-
-      <div class="grid g-2" style="margin-top:var(--s-4)">
-        <div class="card">
-          <h3>Why the decoys are the point</h3>
-          <p class="muted" style="margin-top:var(--s-2);font-size:var(--t-sm)">Recall alone can be bought by flagging everything. The corpus carries renditions that carry a real burst and are still <em>not</em> regressions &mdash; because their approved master has the same burst at the same presentation time &mdash; and a cohort that clears every floor but sits above the published darker-image ceiling. Precision is measured against those.</p>
-        </div>
-        <div class="card">
-          <h3>What this does not show</h3>
-          <p class="muted" style="margin-top:var(--s-2);font-size:var(--t-sm)">Agreement with a synthetic ground truth we authored. It demonstrates that the implementation does what the criteria say at catalogue scale, and it is not evidence about real footage, not a comparison against a certified analyser, and not a clinical result.</p>
-        </div>
       </div>
     </div>
   </section>
