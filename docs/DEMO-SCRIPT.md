@@ -1,10 +1,18 @@
 # Safe Frame — demo script
 
-**Target 2:40–2:45. Hard limit 3:00** — only the first 3:00 is evaluated.
+**Target 2:40–2:50. Hard limit 3:00** — only the first 3:00 is evaluated.
 
-Narration is **~380 words**. At a calm 165 words a minute that is about 2:18 of
-speech, leaving roughly 25 seconds for clicking, scrolling and the agent's wait.
-Do not add lines: the margin is the whole reason this fits.
+If the triage agent takes its full twenty seconds the run lands nearer 2:50 than
+2:40. That is still safely inside the limit, so do not speed up to hit a number.
+**A clear 2:50 beats a rushed 2:40.**
+
+Narration is **403 words** — about 2:27 at a calm 165 words a minute. Forty-seven
+of those words are spoken *over* the triage agent's wait, so they cost almost no
+wall-clock time: the run measures **2:38 if the agent answers in twelve seconds,
+2:41 if it takes twenty**, including scrolling and the four button presses.
+
+Word count is not the constraint; runtime is. Do not add lines — the remaining
+margin is the whole reason this fits.
 
 The page is ordered to match this script, so the demo scrolls **downward once**
 and ends on the criteria table. Never scroll back up. The Safe Frame name sits in
@@ -78,9 +86,9 @@ never checked."*
 
 **POINT:** Trace the **blue** series along the bottom track. It stays flat.
 
-> **"But the luminance line here barely moves. Saturated red has its own
-> published test, with no brightness condition — red flashing is hazardous even
-> at steady brightness. A luminance-only checker passes this file. This one
+> **"But the luminance line here barely moves. Saturated red has its own test,
+> with no brightness condition. The published rule evaluates red flashing even at
+> steady brightness. A luminance-only checker passes this file. This one
 > doesn't."**
 
 ---
@@ -133,11 +141,14 @@ never checked."*
 
 **SAY:**
 
-> **"Now Gemini, through Google's Agent Development Kit on Vertex AI. Four
-> tools, each a live ClickHouse query through MCP. It chooses the order
-> itself."**
+> **"Now Gemini, through Google's Agent Development Kit on Vertex AI. Its four
+> tools run live ClickHouse queries through MCP: survey the catalogue, profile
+> the transforms, measure the red-flash blind spot, then investigate the case it
+> ranks highest — and which case that is, is the model's own call."**
 
-*(Pause here. The agent is working. Say nothing until the brief lands.)*
+*(The line above is written to run about fifteen seconds — roughly the length
+of the wait. Deliver it at the same pace as everything else. If the agent is
+still working when you finish, hold the silence; do not fill it.)*
 
 **POINT:** When the brief lands, run your cursor down the **numbered trace**.
 
