@@ -6,7 +6,7 @@ mattered:
 
 * `relative_luminance` applied the BT.709 coefficients directly to sRGB samples.
   WCAG's normative definition requires the channels to be **linearised first**
-  — sRGB is gamma-encoded, so weighting the encoded values overstates the
+  sRGB is gamma-encoded, so weighting the encoded values overstates the
   luminance of dark pixels and understates bright ones. Every threshold
   downstream is expressed against that definition, so the error propagated into
   the general-flash rule.
@@ -93,7 +93,7 @@ def changed_area_direct(previous: np.ndarray, current: np.ndarray, threshold: fl
     """Measure affected screen area directly, before any lossy tile aggregation.
 
     This is a fraction of the **frame**, which is a documented simplification of
-    the published area condition — see `docs/CRITERIA.md`.
+    the published area condition; see `docs/CRITERIA.md`.
     """
     delta = np.abs(relative_luminance(current) - relative_luminance(previous))
     return float(np.mean(delta >= threshold))

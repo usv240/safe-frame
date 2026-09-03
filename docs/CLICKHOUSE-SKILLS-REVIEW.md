@@ -7,7 +7,7 @@ Safe Frame's schema and its catalogue query.
 
 This records what each applicable rule said, what was measured, and what changed.
 Four rules were checked and deliberately **not** applied, each with the
-measurement that justified declining it — including both Materialized View
+measurement that justified declining it, including both Materialized View
 rules, one of which is 158x faster than what ships and is still not enabled, for
 a reason stated in full below. A review where every rule "passed" would not be
 worth publishing.
@@ -92,7 +92,7 @@ Identical results from both. The single-scan form is **27% slower**.
 
 The interesting part is the rows-read column, and it is not what the rule
 predicts. "Two passes" over a 9.6M-row table should read 19.2M rows. It reads
-10.26M. The second pass — the red predicate — reads only about 664,000 rows,
+10.26M. The second pass, the red predicate, reads only about 664,000 rows,
 because ClickHouse keeps per-granule min/max for every column and can skip a
 granule outright when no row in it can satisfy `red_delta >= 0.20`. The red
 cohort is a small, clustered fraction of the corpus, so roughly 93% of the second
@@ -109,7 +109,7 @@ than the milliseconds: if one rule's transitions ever padded the other's window,
 the sweep would report violations that neither rule actually supports.
 
 
-### `query-mv-refreshable` (HIGH) — applicable, built, measured, deliberately not enabled
+### `query-mv-refreshable` (HIGH), applicable, built, measured, deliberately not enabled
 
 > Use refreshable MVs for complex joins and batch workflows.
 
@@ -138,7 +138,7 @@ and wrong for "this was computed just now".
 The DDL ships so a real deployment can create it in one statement. The
 demonstration keeps paying the 932ms on purpose.
 
-### `query-mv-incremental` (HIGH) — measured as not applicable to this criterion
+### `query-mv-incremental` (HIGH), measured as not applicable to this criterion
 
 > Incremental MVs apply the view's query to new data blocks at insert time.
 
@@ -157,8 +157,8 @@ buckets surviving count(s)+count(s+1) > 6 380,758
 ```
 
 The pre-filter eliminates **0.8%** of the search space. Normal content in this
-corpus runs at about 4.2 qualifying transitions per second — deliberately just
-under the criterion — so two adjacent seconds sum to roughly 8 or 9 and clear a
+corpus runs at about 4.2 qualifying transitions per second, deliberately just
+under the criterion, so two adjacent seconds sum to roughly 8 or 9 and clear a
 threshold of 6 almost everywhere. The criterion is a *rolling* window over data
 that is dense just below the limit, which is the case a bucketed pre-aggregation
 cannot help with.
@@ -170,13 +170,13 @@ selectivity.
 
 Declined on the measurement, not on the difficulty.
 
-### `schema-pk-cardinality-order` (CRITICAL) — declined, no measurable benefit
+### `schema-pk-cardinality-order` (CRITICAL), declined, no measurable benefit
 
 The rule says order the sorting key from low to high cardinality. Ours is
-`ORDER BY (lineage_id, asset_id, pts_ms)` — 400, then 3,200, then 3,000 distinct.
+`ORDER BY (lineage_id, asset_id, pts_ms)`, 400, then 3,200, then 3,000 distinct.
 
 `EXPLAIN PLAN` showed ClickHouse inserting `Sorting (Sorting for window 'PARTITION BY
-asset_id ORDER BY pts_ms')` — the table's existing order was not being reused for the
+asset_id ORDER BY pts_ms')`, the table's existing order was not being reused for the
 window. That suggested a sorting key matching the window key exactly might remove the
 sort.
 
@@ -194,21 +194,21 @@ max), but not faster, and the current key additionally keeps a lineage contiguou
 which the per-pair `/v1/scan` path filters on. Not worth a migration. The experiment
 table was dropped.
 
-### `query-index-skipping-indices` — not applicable
+### `query-index-skipping-indices`, not applicable
 
 A `minmax` skip index on `luma_delta` would let granules be skipped where no value
 clears the 0.10 floor. It would do nothing here: the generator places a qualifying
 transition every 6th sample, so every 8192-row granule contains qualifying rows and
 none can be skipped. Adding the index would cost storage and skip nothing.
 
-### `insert-optimize-avoid-final` — not a finding
+### `insert-optimize-avoid-final`, not a finding
 
 `regression_sql` reads `FROM safe_frame.violations FINAL`. The rule is about
 `OPTIMIZE TABLE ... FINAL`, and states explicitly that the `FINAL` *modifier* in a
 SELECT against a `ReplacingMergeTree` "may be necessary for deduplicated results and
 is generally fine to use". `violations` is a `ReplacingMergeTree`, so this stays.
 
-### `schema-partition-start-without` — compliant
+### `schema-partition-start-without`, compliant
 
 `transitions` has no `PARTITION BY`. The rule advises starting without partitioning
 absent a data-lifecycle requirement, and there is none: the corpus is regenerated
@@ -234,9 +234,9 @@ simply skipped. 31 rules; the ten written up above are marked *(above)*.
 | `insert-mutation-avoid-delete` | **Followed.** Nothing issues `ALTER TABLE ... DELETE`. The catalogue is rebuilt with `TRUNCATE` plus a deterministic regenerate, which is a partition drop rather than a mutation. |
 | `insert-mutation-avoid-update` | **Followed.** Nothing issues `ALTER TABLE ... UPDATE`. `violations` is a `ReplacingMergeTree` keyed on `(lineage_id, asset_id, rule, window_start_ms)`, so a re-scan supersedes rather than mutates. |
 | `insert-optimize-avoid-final` | *(above)* |
-| `query-index-skipping-indices` | *(above)* — and see the granule-skipping measurement under `query-join-consider-alternatives`, which is the same mechanism arriving without an explicit index. |
+| `query-index-skipping-indices` | *(above)*, and see the granule-skipping measurement under `query-join-consider-alternatives`, which is the same mechanism arriving without an explicit index. |
 | `query-join-choose-algorithm` | **Not applicable.** The sweep has no join left in it; the isolation step is a partition window. The only join is the per-pair `LEFT ANTI JOIN` over at most a handful of rows, where the algorithm cannot matter. |
-| `query-join-consider-alternatives` | *(above, twice — applied once, declined once)* |
+| `query-join-consider-alternatives` | *(above, twice, applied once, declined once)* |
 | `query-join-filter-before` | **Followed.** Both sides of the per-pair anti-join are filtered to two `asset_id` values inside their CTEs before the join. |
 | `query-join-null-handling` | **Relevant and acted on.** The transform-risk query's `LEFT JOIN` fills misses with an empty `LowCardinality(String)` rather than NULL, so `countDistinct` counted a regression that clean transforms did not have. Fixed with `countDistinctIf(..., asset_id != '')`. |
 | `query-join-use-any` | **Not applicable.** No join here wants first-match semantics; the anti-join needs every parent row considered. |
@@ -245,7 +245,7 @@ simply skipped. 31 rules; the ten written up above are marked *(above)*.
 | `schema-json-when-to-use` | **Not applicable.** Every column is a known scalar. There is no semi-structured payload, so the JSON type would cost storage and clarity for nothing. |
 | `schema-partition-lifecycle` | **Not applicable.** There is no TTL or drop-by-age requirement; the corpus is a fixed reproducible set. |
 | `schema-partition-low-cardinality` | **Followed by not partitioning.** See `schema-partition-start-without`. |
-| `schema-partition-query-tradeoffs` | **Considered.** Partitioning by `lineage_id` would give 400 partitions over 9.6M rows, roughly 24k rows each — far below the guidance's floor, and the sweep reads every title anyway, so it would add parts without removing work. |
+| `schema-partition-query-tradeoffs` | **Considered.** Partitioning by `lineage_id` would give 400 partitions over 9.6M rows, roughly 24k rows each, far below the guidance's floor, and the sweep reads every title anyway, so it would add parts without removing work. |
 | `schema-partition-start-without` | *(above)* |
 | `schema-pk-cardinality-order` | *(above)* |
 | `schema-pk-filter-on-orderby` | **Followed.** `ORDER BY (lineage_id, asset_id, pts_ms)`; the per-pair query filters on `asset_id` and the timeline groups on `pts_ms`, both inside the key. |

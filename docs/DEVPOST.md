@@ -6,7 +6,7 @@ Paste-ready copy for each required field. Track: **ClickHouse**.
 
 ## Elevator pitch (200 char limit)
 
-Find the rendition that introduced a photosensitivity risk its approved master never had — across a whole catalogue, in one ClickHouse query.
+Find the rendition that introduced a photosensitivity risk its approved master never had, across a whole catalogue, in one ClickHouse query.
 
 ---
 
@@ -14,7 +14,7 @@ Find the rendition that introduced a photosensitivity risk its approved master n
 
 A film is approved once. Then it becomes dozens of derived assets: frame-rate
 conversions, tone-maps, downscales, social crops, ad-break inserts, burnt-in
-subtitles. Photosensitivity QC is mature — Harding-style analysers test
+subtitles. Photosensitivity QC is mature, Harding-style analysers test
 luminance flashes, red flashes and spatial patterns, and standard encoding
 practice puts the quality gate at ingest, before transcode, because a defective
 master multiplies across the whole delivery ladder.
@@ -26,7 +26,7 @@ audience actually watches can carry a risk that the approved master never had,
 and nothing in the normal pipeline is asking that question.
 
 Photosensitive epilepsy affects roughly 1 in 4,000 people. In 1997 a single
-broadcast sent 685 children to hospital in Japan. The obligation is real too —
+broadcast sent 685 children to hospital in Japan. The obligation is real too, 
 Ofcom Rule 2.12, WCAG 2.3.1. So we built the one check we could not find:
 did *this transformation* introduce a violation that was absent from the
 approved parent?
@@ -36,13 +36,13 @@ approved parent?
 Safe Frame is a master-to-rendition photosensitivity **regression** pre-check.
 
 - It aligns an approved master and every rendition on **presentation time**,
-  never frame index — a 24→60 fps conversion renumbers every frame but preserves
+  never frame index, a 24→60 fps conversion renumbers every frame but preserves
   pts, so frame index is not a valid lineage key.
 - It evaluates the published criteria across every transition measurement in the
   catalogue **inside ClickHouse in a single pass**, and isolates child-only
   violations in the same query.
 - It attributes each regression to the transform that produced it.
-- It draws the two tracks — approved master and shipped rendition — on one
+- It draws the two tracks: approved master and shipped rendition, on one
   shared scale, so "the master stayed under the criterion for its whole runtime
   and the rendition did not" is read off measurements rather than asserted.
 - A **multi-step** Google ADK agent on Gemini turns the findings into a QC brief,
@@ -53,8 +53,8 @@ Safe Frame is a master-to-rendition photosensitivity **regression** pre-check.
   is returned with the brief so it can be checked rather than trusted.
 
 On the live corpus (424 titles, 3,392 renditions, 10,176,000 transition rows) the
-sweep returns 66 renditions that introduced a violation — 43 general flash, 23
-red flash — in about two seconds end to end, of which roughly 0.8s is the
+sweep returns 66 renditions that introduced a violation, 43 general flash, 23
+red flash, in about two seconds end to end, of which roughly 0.8s is the
 ClickHouse query itself. It correctly excludes every control cohort: titles whose
 *master* already violated, and a bright-on-bright cohort that the published
 darker-image condition does not apply to.
@@ -63,9 +63,9 @@ darker-image condition does not apply to.
 
 A synthetic corpus invites one fair objection: bursts were planted, then found.
 
-So the planted set is recovered independently — from the generator's own
+So the planted set is recovered independently, from the generator's own
 `sipHash64` decisions, by a query that reads **no measurement column at all**
-(`sql/008_ground_truth.sql`) — and compared against what the criteria returned.
+(`sql/008_ground_truth.sql`), and compared against what the criteria returned.
 
 | | |
 |---|---|
@@ -103,10 +103,10 @@ many did it break?
 | `adbreak_insert` | 424 | 21 (4.95%) | general flash |
 | `subtitle_burnin` | 424 | 12 (2.83%) | red flash |
 | `social_crop_v` | 424 | 11 (2.59%) | red flash |
-| three others | 1,272 | 0 | — |
+| three others | 1,272 | 0 |, |
 
 Four profiles out of eight account for everything, and the two rules cluster on
-*different* profiles — the frame-rate and ad-break paths introduce luminance
+*different* profiles, the frame-rate and ad-break paths introduce luminance
 flashes, the crop and subtitle paths introduce saturated-red ones. Two root
 causes, two owners, a handful of upstream fixes instead of 66 patches. And 13 of
 the 44 come from profiles whose only failure mode is red flash, so a
@@ -129,7 +129,7 @@ The red rule carries no luminance floor on purpose, and that is the most
 consequential decision in the detector. WCAG gives saturated red its own test
 because people are more sensitive to red flashing than to other colours. A
 saturated red alternating with a colour of matched relative luminance moves
-`luma_delta` almost not at all — so gating the red rule on luminance would
+`luma_delta` almost not at all, so gating the red rule on luminance would
 recreate the exact blind spot the separate test exists to close. Our test suite
 demonstrates this from pixels: measured luminance swing stays under 0.01 while
 saturated red swings past 0.9, the general rule stays silent, and the red rule
@@ -143,12 +143,12 @@ invent a violation that neither published test supports.
 ## How we built it
 
 **Google Cloud**
-- **Google ADK** (`google-adk`) — real `LlmAgent` + `Runner`; every tool either
+- **Google ADK** (`google-adk`), real `LlmAgent` + `Runner`; every tool either
   is bound to a validated asset pair or runs a fixed ClickHouse query through MCP.
-- **Gemini 2.5 Flash on Vertex AI** (`google-genai`) — orchestration and
+- **Gemini 2.5 Flash on Vertex AI** (`google-genai`), orchestration and
   narration only; it never produces a verdict.
-- **Cloud Run** — the public app, on a dedicated `safe-frame-runtime` identity.
-- **Secret Manager** — two database passwords, nothing else.
+- **Cloud Run**: the public app, on a dedicated `safe-frame-runtime` identity.
+- **Secret Manager**: two database passwords, nothing else.
 
 **ClickHouse (partner track)**
 - Every catalogue read and every verdict goes through the **official
@@ -181,7 +181,7 @@ The public catalogue is **self-authored synthetic measurement**, generated
 server-side by `sql/005_catalogue_generator.sql` and deterministic under
 `sipHash64`, so it reproduces byte-identically. It contains no footage, no
 music, no third-party logos and no found datasets. It carries deliberate control
-cohorts whose *master* already violates — the sweep must exclude those, or the
+cohorts whose *master* already violates, the sweep must exclude those, or the
 anti-join would look correct while doing nothing.
 
 There is no flashing media anywhere in the product or the demo.
@@ -191,21 +191,21 @@ There is no flashing media anywhere in the product or the demo.
 **Two data planes silently disagreeing.** The catalogue sweep evaluated criteria
 live over the transitions table, while the per-pair endpoints and the agent read
 a `violations` table the catalogue never populated. Clicking a flagged rendition
-and asking the agent returned "no photosensitivity events were detected" — for a
+and asking the agent returned "no photosensitivity events were detected", for a
 row the sweep had just reported. The fix was to make the per-pair query evaluate
 the criteria over transitions and union that with the persisted rows *before* the
 anti-join, so no two surfaces can disagree about one pair.
 
 **A parity claim that was true but empty.** Our randomized SQL-vs-Python parity
-tests agreed 40 times out of 40 — because the fixtures never produced a
+tests agreed 40 times out of 40, because the fixtures never produced a
 violation at all. Agreement about nothing is not evidence. We changed the
 fixture generator to draw transition spacing per case and added a guard test
 that fails if either rule stops firing.
 
 **A CRITICAL vendor rule that benchmarking contradicted.** ClickHouse's own
-guidance says to avoid repeated scans. Evaluating both rules in one pass —
+guidance says to avoid repeated scans. Evaluating both rules in one pass, 
 filter once, then fan each surviving row out to the rules it satisfies with
-`ARRAY JOIN arrayFilter(...)` — halves the rows read. We built it, measured it
+`ARRAY JOIN arrayFilter(...)`, halves the rows read. We built it, measured it
 five times against the two-pass `UNION ALL` form, and it was **56% slower**
 (median 1,096 ms vs 703 ms), because unnesting an array per surviving row costs
 more than a second scan whose predicate is very selective. We shipped the form
@@ -219,7 +219,7 @@ found three defects, all of which changed results:
 
 - **Relative luminance was never linearised.** We applied the BT.709 coefficients
   directly to gamma-encoded sRGB. Every threshold is expressed against WCAG's
-  definition, so the error propagated — including into the test fixture built
+  definition, so the error propagated, including into the test fixture built
   from the same wrong assumption, which was therefore passing for the wrong reason.
 - **The darker-image condition was missing entirely.** The general-flash test
   applies only "where the relative luminance of the darker image is below 0.80".
@@ -240,7 +240,7 @@ It is not equivalent to expert review and does not establish efficacy.
 
 - A verdict path where **arithmetic owns the decision** and the model is
   structurally unable to override it, including a fail-closed 502.
-- Two implementations of one safety rule — Python and ClickHouse SQL — held to
+- Two implementations of one safety rule: Python and ClickHouse SQL, held to
   exact agreement by tests that run through the same read-only MCP transport the
   product uses.
 - Every threshold traceable to a quoted published definition, and the one rule we
@@ -264,11 +264,11 @@ It is not equivalent to expert review and does not establish efficacy.
 - **A benchmark beats a best practice.** Twice: once where ClickHouse's guidance
   was right and we gained 3× by following it, once where it was wrong for our
   shape and we could only know by measuring.
-- **A green test suite can be decorative — twice, the same way.** First
+- **A green test suite can be decorative, twice, the same way.** First
   `pytest-asyncio` was never installed, so every parity test was skipped rather
   than run and the suite stayed green while proving nothing. `required_plugins`
   made that loud. It was not enough. Those tests need a ClickHouse cluster,
-  public CI had none, so all 45 went on skipping — and a skip reads exactly like
+  public CI had none, so all 45 went on skipping, and a skip reads exactly like
   a pass in a summary line. Under that cover the central case compared the SQL's
   first *row* against the detector's whole result list; it could never have
   passed. Our proof that the catalogue sweep and the per-file detector cannot
@@ -278,13 +278,13 @@ It is not equivalent to expert review and does not establish efficacy.
   impossible for the test to quietly not run."** CI now stands up a throwaway
   ClickHouse, runs all 46 cases through the real official `mcp-clickhouse`
   transport on every commit, and **fails if they skip.** They pass in 68
-  seconds. The two implementations did agree all along — but for weeks nothing
+  seconds. The two implementations did agree all along, but for weeks nothing
   demonstrated it, and we could not have known which.
 
 ## What's next
 
 Container decoding in front of the measurement stage (ffmpeg/PyAV), the spatial
-pattern rule, and — most importantly — review by a qualified broadcast
+pattern rule, and, most importantly, review by a qualified broadcast
 accessibility or photosensitive-epilepsy professional. We have not had one, and
 `docs/IMPACT.md` says so explicitly alongside everything else we have not shown:
 no clinical validation, no comparison against a certified analyser, no real
@@ -314,7 +314,7 @@ Caddy · Docker · GitHub Actions
 - [ ] Public repository URL
 - [ ] Public video URL (YouTube/Vimeo, ≤3:00, English or subtitled)
 - [ ] Text description (features, functionality, technologies, data sources,
-      findings and learnings) — all covered above
+      findings and learnings), all covered above
 - [ ] Team members added on Devpost
 - [ ] Every link opened signed out and confirmed working
 - [ ] Repo license shows Apache-2.0 in the About section

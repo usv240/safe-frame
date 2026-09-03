@@ -23,15 +23,15 @@
    were returned, and the ClickHouse time.
 3. Read the **Rule** column. `General flash` is the luminance rule. `Red flash` is a
    saturated-red alternation whose luminance change stays *under* the general-flash
-   floor — a luminance-only checker passes those renditions. The two rules are
+   floor, a luminance-only checker passes those renditions. The two rules are
    attributed to different transforms, so the table shows which conversion did what.
 4. Look at the evidence chart. Both tracks come from one query over one table on a
    shared scale: the approved master stays under the criterion for its whole runtime,
    and the rendition crosses it in one second. Pick a **red flash** row and note that
-   its general-flash track never moves — that is the case a luminance-only check
+   its general-flash track never moves: that is the case a luminance-only check
    passes. The same numbers are available as a table under the chart.
 5. Scroll to **Systemic cause** and press *Profile every transform*. Four encoder
-   profiles account for every finding and three transforms introduce nothing — so
+   profiles account for every finding and three transforms introduce nothing, so
    this is a small number of upstream fixes rather than 66 renditions to patch.
    Note that the two rules cluster on *different* profiles.
 6. Scroll to **The agent's mission** and press *Run the triage agent*. It takes

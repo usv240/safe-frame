@@ -1,17 +1,17 @@
-# Safe Frame — demo script
+# Safe Frame, demo script
 
-**Target 2:40–2:50. Hard limit 3:00** — only the first 3:00 is evaluated.
+**Target 2:40–2:50. Hard limit 3:00**, only the first 3:00 is evaluated.
 
 If the triage agent takes its full twenty seconds the run lands nearer 2:50 than
 2:40. That is still safely inside the limit, so do not speed up to hit a number.
 **A clear 2:50 beats a rushed 2:40.**
 
-Narration is **403 words** — about 2:27 at a calm 165 words a minute. Forty-seven
+Narration is **403 words**, about 2:27 at a calm 165 words a minute. Forty-seven
 of those words are spoken *over* the triage agent's wait, so they cost almost no
 wall-clock time: the run measures **2:38 if the agent answers in twelve seconds,
 2:41 if it takes twenty**, including scrolling and the four button presses.
 
-Word count is not the constraint; runtime is. Do not add lines — the remaining
+Word count is not the constraint; runtime is. Do not add lines, the remaining
 margin is the whole reason this fits.
 
 The page is ordered to match this script, so the demo scrolls **downward once**
@@ -33,14 +33,14 @@ hero.
 - Browser at 1440×900, 100% zoom, signed out, no extensions or bookmarks bar.
 - Run the sweep once to warm the MCP session, then reload, so the recording
   shows a genuine cold press.
-- The triage agent takes 12–20 seconds. Do not cut it — the wait is the proof.
+- The triage agent takes 12–20 seconds. Do not cut it: the wait is the proof.
   The narration for that beat is deliberately short so you can talk over it.
 - Read numbers **off the screen**. The catalogue is live and a row you click may
   differ by one or two from the figures below.
 
 ---
 
-## 0:00–0:16 — The gap
+## 0:00–0:16, The gap
 
 **DO:** Hero section, still. Do not scroll.
 **POINT:** The headline, *"The master passed. The version people watched was
@@ -48,14 +48,14 @@ never checked."*
 
 **SAY:**
 
-> **"A film is approved once. Then it becomes dozens of versions — frame rates,
+> **"A film is approved once. Then it becomes dozens of versions, frame rates,
 > ad-break inserts, social crops, subtitles. Testing runs on the master, before
 > all of that. Safe Frame finds the version, and the transformation, that
 > introduced the risk."**
 
 ---
 
-## 0:16–0:42 — Run the sweep
+## 0:16–0:42, Run the sweep
 
 **DO:** Scroll to **Live catalogue sweep**. Press **Sweep the catalogue**.
 **POINT:** The four counters while it runs.
@@ -69,11 +69,11 @@ never checked."*
 **POINT:** The result headline, then the **Rule** column.
 
 > **"Under two seconds. Sixty-six renditions introduced a violation their
-> approved master never had — forty-three luminance, twenty-three red."**
+> approved master never had, forty-three luminance, twenty-three red."**
 
 ---
 
-## 0:42–1:10 — The case other checkers miss
+## 0:42–1:10, The case other checkers miss
 
 **DO:** Click any row whose **Rule** reads **Red flash**. Wait for the chart.
 **POINT:** The top track, then the bottom track.
@@ -81,7 +81,7 @@ never checked."*
 **SAY:**
 
 > **"The approved master stays under the limit for its whole runtime. The
-> rendition that shipped crosses it — more than twenty qualifying transitions in
+> rendition that shipped crosses it, more than twenty qualifying transitions in
 > one second, against a limit of six."**
 
 **POINT:** Trace the **blue** series along the bottom track. It stays flat.
@@ -93,30 +93,30 @@ never checked."*
 
 ---
 
-## 1:10–1:34 — Prove it isn't circular
+## 1:10–1:34, Prove it isn't circular
 
 **DO:** Scroll to **Does it actually work**. Press **Score the detector**.
 **POINT:** The four tiles, left to right.
 
 **SAY:**
 
-> **"Synthetic data — so don't just believe it. This recovers the planted set
+> **"Synthetic data, so don't just believe it. This recovers the planted set
 > from the generator's own random decisions, using a query that reads no flash
 > measurement. Sixty-six planted, sixty-six found."**
 
 **POINT:** The **decoys correctly rejected** tile.
 
-> **"And eighty-six decoys placed to be rejected — files that genuinely flash,
+> **"And eighty-six decoys placed to be rejected, files that genuinely flash,
 > but whose master flashes identically. All eighty-six left alone."**
 
 **POINT:** The **Measured from pixels** row in the cohort table.
 
 > **"Part of this catalogue is measured end to end from constructed image frames
-> rather than preselected measurements — and it produces the same result."**
+> rather than preselected measurements, and it produces the same result."**
 
 ---
 
-## 1:34–1:54 — Findings become an action
+## 1:34–1:54, Findings become an action
 
 **DO:** Scroll to **Systemic cause**. Press **Profile every transform**.
 **POINT:** The four coloured bars, then the clean rows beneath them.
@@ -124,7 +124,7 @@ never checked."*
 **SAY:**
 
 > **"Sixty-six findings are not sixty-six problems. Every one traces back to
-> four encoder profiles — and three introduced nothing. Four configurations to
+> four encoder profiles, and three introduced nothing. Four configurations to
 > fix upstream, instead of sixty-six files to patch."**
 
 **POINT:** The middle outcome tile.
@@ -134,7 +134,7 @@ never checked."*
 
 ---
 
-## 1:54–2:22 — The agent
+## 1:54–2:22, The agent
 
 **DO:** Scroll to **The agent's mission**. Press **Run the triage agent**.
 **POINT:** Keep the working state visible. Let the wait run.
@@ -144,9 +144,9 @@ never checked."*
 > **"Now Gemini, through Google's Agent Development Kit on Vertex AI. Its four
 > tools run live ClickHouse queries through MCP: survey the catalogue, profile
 > the transforms, measure the red-flash blind spot, then investigate the case it
-> ranks highest — and which case that is, is the model's own call."**
+> ranks highest, and which case that is, is the model's own call."**
 
-*(The line above is written to run about fifteen seconds — roughly the length
+*(The line above is written to run about fifteen seconds, roughly the length
 of the wait. Deliver it at the same pace as everything else. If the agent is
 still working when you finish, hold the silence; do not fill it.)*
 
@@ -162,22 +162,22 @@ still working when you finish, hold the silence; do not fill it.)*
 
 ---
 
-## 2:22–2:40 — Credibility, and close
+## 2:22–2:40, Credibility, and close
 
-**DO:** Scroll to **Criteria provenance**. This is where the demo ends — do not
+**DO:** Scroll to **Criteria provenance**. This is where the demo ends, do not
 scroll further, and do not scroll back.
 **POINT:** Two or three threshold rows, then the greyed **not implemented** row.
 
 **SAY:**
 
-> **"Every threshold traces to published guidance — and the one rule we haven't
+> **"Every threshold traces to published guidance, and the one rule we haven't
 > implemented is stated openly. An open pre-check, not a certified device.
 > Nothing here flashes."**
 
 **POINT:** The **Safe Frame** name in the sticky header, top-left.
 
 > **"Safe Frame finds the version that introduced the risk, names the system
-> that caused it, and gives QC teams evidence to act on — before an audience is
+> that caused it, and gives QC teams evidence to act on, before an audience is
 > exposed."**
 
 ---
@@ -192,7 +192,7 @@ scroll further, and do not scroll back.
 - [ ] Triage agent run live, numbered trace visible, **wait not cut**
 - [ ] `decision_source` and `requires_human` legible on screen
 - [ ] Criteria table including the **not implemented** row
-- [ ] Ends on the criteria section — no scroll-back
+- [ ] Ends on the criteria section, no scroll-back
 - [ ] No GitHub tab, no logos, no music
 - [ ] Under 3:00, uploaded Public, English audio or subtitles
 
@@ -200,7 +200,7 @@ scroll further, and do not scroll back.
 
 ## Why this order
 
-The four judging criteria are **equally weighted** — there is no separate score
+The four judging criteria are **equally weighted**: there is no separate score
 for the video itself. So the run has to demonstrate all four without ever saying
 their names:
 
@@ -220,9 +220,9 @@ Cut for time, and because each would dilute the arc rather than add to it. If a
 judge asks, they are all on the page or in the repository.
 
 - The `/v1/scan` per-pair API and the OpenAPI surface at `/docs`.
-- **Runtime evidence** — the live MCP handshake and the credential-boundary
+- **Runtime evidence**: the live MCP handshake and the credential-boundary
   diagram. Strong material, but the sweep already proves MCP is real.
-- **Decision boundary** — the SQL panel. The agent section makes the same point
+- **Decision boundary**: the SQL panel. The agent section makes the same point
   faster, on camera, with live output.
 - The findings export, the Plain/Technical toggle, and the light/dark toggle.
 - The standards audit that found three defects in our own detector. It is the
@@ -231,10 +231,10 @@ judge asks, they are all on the page or in the repository.
 
 ## If you overrun
 
-Cut in this order. Never cut the red-flash beat or the four-profile result —
+Cut in this order. Never cut the red-flash beat or the four-profile result, 
 they carry Potential Impact and Quality of the Idea between them.
 
 1. The **Measured from pixels** line (23 words).
-2. The `decision_source` / `requires_human` line (15 words) — the fields stay
+2. The `decision_source` / `requires_human` line (15 words), the fields stay
    visible on screen either way.
 3. The second half of the criteria line, from *"An open pre-check"* (10 words).

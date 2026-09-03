@@ -20,8 +20,8 @@ Three Flashes or Below Threshold* and the WCAG relative-luminance definition:
 
 | Test | Safe Frame | Published definition |
 |---|---|---|
-| General flash — amplitude | `luma_delta >= 0.10` | "a pair of opposing changes in relative luminance of 10% or more of the maximum relative luminance" |
-| General flash — darker image | `luma_min < 0.80` | "…**where the relative luminance of the darker image is below 0.80**". The Ofcom/ITU broadcast form states the same condition in absolute units — a change of 20 cd/m² or more, applying only when the darker image is below 160 cd/m² — which is the same 0.80 fraction of a 200 cd/m² reference display |
+| General flash, amplitude | `luma_delta >= 0.10` | "a pair of opposing changes in relative luminance of 10% or more of the maximum relative luminance" |
+| General flash, darker image | `luma_min < 0.80` | "…**where the relative luminance of the darker image is below 0.80**". The Ofcom/ITU broadcast form states the same condition in absolute units, a change of 20 cd/m² or more, applying only when the darker image is below 160 cd/m², which is the same 0.80 fraction of a 200 cd/m² reference display |
 | Red flash | a saturated-red transition, **no luminance condition** | "any pair of opposing transitions involving a saturated red". Ofcom's broadcast guidance is explicit that this holds "irrespective of luminance" |
 | Saturated red | `R / (R + G + B) >= 0.8` in either state, and `\|Δ (R−G−B)×320\| > 20` | "for either or both states involved in each transition, R/(R+G+B) >= 0.8, and the change in the value of (R-G-B)x320 is > 20" |
 | Relative luminance | `0.2126 R + 0.7152 G + 0.0722 B` over **linearised** sRGB | "if RsRGB <= 0.04045 then R = RsRGB/12.92 else R = ((RsRGB+0.055)/1.055) ^ 2.4" |
@@ -38,7 +38,7 @@ applied the BT.709 coefficients directly to sRGB samples. sRGB is gamma-encoded,
 so weighting the encoded values overstates the luminance of dark pixels and
 understates bright ones. Every threshold downstream is expressed against WCAG's
 definition, so the error propagated into the general-flash rule and into the
-matched-luminance test fixture — which was constructed from the raw
+matched-luminance test fixture, which was constructed from the raw
 coefficients and therefore passed for the wrong reason.
 
 **2. The darker-image condition was missing entirely.** The general-flash test
@@ -47,14 +47,14 @@ Safe Frame checked the amplitude, the area and the rate, and never the darker
 image, so a high-amplitude alternation between two near-white states was
 reported as a violation. It is not one.
 
-The corpus now carries a control cohort for exactly this — a bright-on-bright
+The corpus now carries a control cohort for exactly this, a bright-on-bright
 alternation in `hdr10_passthrough` that clears the delta, area and rate floors
 with `luma_min` at 0.86. Measured against the live catalogue:
 
 | | regressions returned |
 |---|---|
-| with the darker-image condition (shipped) | **44** — 43 general flash, 23 red flash |
-| without it (what we shipped before this audit) | 57 — 44 general flash, 13 red flash |
+| with the darker-image condition (shipped) | **44**, 43 general flash, 23 red flash |
+| without it (what we shipped before this audit) | 57, 44 general flash, 13 red flash |
 
 Thirteen false positives, every one of them an `hdr10_passthrough` rendition
 that the published test does not apply to.
@@ -86,13 +86,13 @@ gap analysis of the international guidelines finds that WCAG is the outlier here
 > "All of the guidelines except WCAG require flashes be constrained to 25% of
 > the screen."
 >
-> — Jordan, J. B. and Vanderheiden, G. C., *International Guidelines for
+>, Jordan, J. B. and Vanderheiden, G. C., *International Guidelines for
 > Photosensitive Epilepsy: Gap Analysis and Recommendations*, ACM Transactions
 > on Accessible Computing 17(3), 2024. <https://doi.org/10.1145/3694790>
 
-So the frame-fraction test matches the broadcast and ISO family — including the
+So the frame-fraction test matches the broadcast and ISO family, including the
 Ofcom/ITU phrasing, which is "no more than three flashes in a one second period
-occupying more than a quarter of the screen area" — and is more permissive than
+occupying more than a quarter of the screen area", and is more permissive than
 WCAG's angular test. On a large screen viewed closely, a region smaller than a
 quarter of the frame can subtend a 10-degree field, so against WCAG specifically
 this can under-report. We have not implemented the angular test.
@@ -101,8 +101,8 @@ this can under-report. We have not implemented the angular test.
 the fraction of the frame whose pixels satisfied the saturated-red transition
 test, and the SQL thresholds it at 0.20 while the general rule uses the
 published 0.25 for `changed_area_fraction`. That makes the red rule the more
-sensitive of the two by design — it errs toward flagging, which is the safer
-direction for a pre-check — but 0.20 is our number, not one from the standard,
+sensitive of the two by design: it errs toward flagging, which is the safer
+direction for a pre-check, but 0.20 is our number, not one from the standard,
 and it is the only threshold in the detector of which that is true.
 
 **The published area test is over flashes "occurring concurrently".** Safe Frame
@@ -116,7 +116,7 @@ percentage-based measurements with a more permissive rate. Safe Frame implements
 the WCAG formulation throughout; a file that passes here is not thereby
 compliant with every regime.
 
-**Most of the catalogue is authored rather than measured — but no longer all of
+**Most of the catalogue is authored rather than measured, but no longer all of
 it.** 400 of the 424 titles are generated as transition metrics: SQL decided what
 `luma_delta`, `luma_min` and `red_delta` should be and wrote them. The remaining
 24 titles (`measured_*`, 576,000 rows) are constructed RGB frame sequences pushed
@@ -126,7 +126,7 @@ nothing was chosen.
 
 `/v1/evaluation` scores the two cohorts separately for exactly this reason. They
 agree: precision and recall are 1.000 on both. That is what rules out the corpus
-doing the detector's work — if the numbers had only behaved because we wrote
+doing the detector's work, if the numbers had only behaved because we wrote
 them, the measured cohort would have scored differently.
 
 What remains unmeasured is real *content*. The frames are constructed, not

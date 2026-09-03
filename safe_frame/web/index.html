@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="Find the rendition that introduced a photosensitivity risk the approved master never had. Live ClickHouse regression sweep across a distribution catalogue.">
 <meta name="color-scheme" content="light dark">
-<title>Safe Frame — rendition regression pre-check</title>
+<title>Safe Frame: rendition regression pre-check</title>
 <style>
 /* ============================================================================
    Safe Frame design tokens.
@@ -983,13 +983,13 @@ async function select(row, tr) {
   $("#d-child").textContent = row.asset_id;
   $("#d-rule").innerHTML = `<span class="chip ${row.rule}">${ruleLabel(row.rule)}</span>`;
   $("#d-transform").textContent = row.transform;
-  $("#d-window").textContent = `${row.window_start_ms}–${row.window_end_ms} ms`;
+  $("#d-window").textContent = `${row.window_start_ms} to ${row.window_end_ms} ms`;
   $("#d-trans").textContent = `${row.transitions} in 1000 ms`;
   $("#d-area").textContent = `${Math.round(row.peak_changed_area_fraction * 100)}%`;
   $("#d-verdict").textContent = `introduced ${ruleLabel(row.rule).toLowerCase()}`;
   $("#d-note").textContent = (RULE[row.rule] || {}).note || "";
   $("#out").hidden = true;
-  $("#chart-title").textContent = `Qualifying transitions per second — ${row.lineage_id}`;
+  $("#chart-title").textContent = `Qualifying transitions per second: ${row.lineage_id}`;
 
   timelineData = null;
   setStatus("Reading both tracks from ClickHouse…");
@@ -1189,8 +1189,8 @@ function renderRisk(d) {
   host.hidden = false;
   $("#risk-empty").hidden = true;
   $("#risk-cap").textContent =
-    `Every transform in the catalogue, computed live. Bars are the rule split — ` +
-    `blue is general flash, red is red flash — scaled to the worst transform. ` +
+    `Every transform in the catalogue, computed live. Bars are the rule split: ` +
+    `blue is general flash, red is red flash, scaled to the worst transform. ` +
     `${d.transforms_clean} of ${d.profiles.length} transforms introduced nothing.`;
 
   const implicated = d.profiles.filter((p) => p.regressed);
@@ -1299,7 +1299,7 @@ $("#mcp-run").onclick = async () => {
     if (!r.ok) throw new Error((p.detail && p.detail.message) || "MCP evidence unavailable.");
     const d = p.data;
     $("#mcp-transport").textContent = d.transport;
-    $("#mcp-ro").textContent = d.read_only ? "denied — the server is started read-only" : "ENABLED";
+    $("#mcp-ro").textContent = d.read_only ? "denied (the server is started read-only)" : "ENABLED";
     const chips = $("#mcp-tools");
     chips.replaceChildren();
     for (const [name, present] of Object.entries(d.required_tools_advertised || {})) {
@@ -1332,8 +1332,8 @@ $("#eval-run").onclick = async () => {
     $("#e-fn").textContent = d.false_negative;
     $("#e-fp").textContent = d.false_positive;
     $("#e-dec").textContent = `${d.decoys.total - d.decoys.wrongly_flagged} of ${d.decoys.total}`;
-    $("#e-prec").textContent = d.precision === null ? "—" : d.precision.toFixed(3);
-    $("#e-rec").textContent = d.recall === null ? "—" : d.recall.toFixed(3);
+    $("#e-prec").textContent = d.precision === null ? "n/a" : d.precision.toFixed(3);
+    $("#e-rec").textContent = d.recall === null ? "n/a" : d.recall.toFixed(3);
     $("#e-gt").textContent = d.ground_truth_source;
     $("#e-det").textContent = d.detector_source;
     const cohorts = $("#e-cohorts");
@@ -1346,8 +1346,8 @@ $("#eval-run").onclick = async () => {
       tr.innerHTML =
         `<td><strong>${label}</strong></td><td class="muted" style="white-space:normal">${c.provenance}</td>` +
         `<td>${c.planted}</td><td>${c.found}</td>` +
-        `<td>${c.precision === null ? "—" : c.precision.toFixed(3)}</td>` +
-        `<td>${c.recall === null ? "—" : c.recall.toFixed(3)}</td>`;
+        `<td>${c.precision === null ? "n/a" : c.precision.toFixed(3)}</td>` +
+        `<td>${c.recall === null ? "n/a" : c.recall.toFixed(3)}</td>`;
       cohorts.append(tr);
     }
     $("#e-decoy").textContent =

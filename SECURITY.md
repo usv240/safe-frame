@@ -10,8 +10,8 @@ Report vulnerabilities privately through GitHub security advisories for
   `safe_frame.*`, and the MCP server also forces write/drop access off. That is
   the credential the public request path uses for every read.
 - **The ingest user is not least-privileged, and that is a known gap.** It was
-  created with broad grants — table DDL, and also role and user administration
-  and the external-source engines — where INSERT and SELECT on `safe_frame.*`
+  created with broad grants, table DDL, and also role and user administration
+  and the external-source engines, where INSERT and SELECT on `safe_frame.*`
   plus table DDL for regenerating the corpus would be sufficient. It is used by
   the application only to insert violation rows. The credential is held in
   Secret Manager, mounted into the runtime, and never returned by the API, but

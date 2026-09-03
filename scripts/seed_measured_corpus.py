@@ -6,8 +6,8 @@ lineage isolation and the controls at scale, but it never runs the measurement
 stage, and `docs/CRITERIA.md` said so as a standing gap.
 
 This closes it. Each asset here is built as an actual sequence of RGB frames,
-pushed through `safe_frame.ingest.frames_to_transitions` — the same function the
-product would use on decoded video — and the resulting rows are inserted
+pushed through `safe_frame.ingest.frames_to_transitions`, the same function the
+product would use on decoded video, and the resulting rows are inserted
 alongside the authored ones. Nothing about the numbers is chosen; they fall out
 of `relative_luminance` and `red_flash_mask` over real pixel arrays.
 
@@ -130,7 +130,7 @@ def frames_for(idx: int, transform: str):
     """Yield the frame sequence for one asset.
 
     Baseline changes only every sixth frame, so roughly 4.2 transitions a second
-    qualify — deliberately just under the criterion, so ordinary content never
+    qualify: deliberately just under the criterion, so ordinary content never
     trips the rule and the bursts are the only thing that can.
     """
     p = plan(idx, transform)

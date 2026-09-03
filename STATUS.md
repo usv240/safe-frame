@@ -84,9 +84,9 @@ Updated: 2026-08-28
 
 ## Release tasks
 
-- [ ] Record and publish the under-three-minute demo — script ready in
+- [ ] Record and publish the under-three-minute demo, script ready in
       `docs/DEMO-SCRIPT.md`
-- [ ] Complete Devpost submission — paste-ready copy in `docs/DEVPOST.md`
+- [ ] Complete Devpost submission, paste-ready copy in `docs/DEVPOST.md`
 - [ ] Obtain qualified external review before making any stronger efficacy claim
       (not obtained; the standards audit in `docs/CRITERIA.md` is a checkable
       substitute, not an equivalent)

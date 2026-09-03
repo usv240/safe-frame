@@ -9,7 +9,7 @@ decision to a human.
 explanation. It answers "what happened to this rendition?"
 
 `QcTriageAgent` is the multi-step one, and it answers the question a QC lead
-actually has at 9am: *forty-four findings — what do I do first, and why is this
+actually has at 9am: *forty-four findings: what do I do first, and why is this
 happening?* It has four tools over the same read-only MCP transport and has to
 sequence them itself:
 
@@ -234,6 +234,8 @@ async def triage_catalogue(operator_id: str) -> dict[str, object]:
             "'Review first', 'Required human action'.\n"
             "Prefer the upstream fix: if one transform accounts for many regressions, say "
             "that fixing that profile is one action rather than N. Keep it under 300 words. "
+            "Write in plain ASCII punctuation: use commas, colons or full stops, and never "
+            "an em dash or en dash. This brief is rendered verbatim in the product UI.\n"
             + _BOUNDARY
         ),
         tools=[

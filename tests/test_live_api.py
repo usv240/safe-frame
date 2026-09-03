@@ -148,7 +148,7 @@ def test_scan_refuses_to_write_over_the_published_catalogue():
     """`/v1/scan` persists what it is given, and the anti-join reads the same table.
 
     Without this, an anonymous caller could write a violation onto an approved
-    master in the published corpus and suppress a real child-only finding —
+    master in the published corpus and suppress a real child-only finding,
     turning a documented `fail` into a `pass` on a public URL.
     """
     for reserved in ("approved-master", "title_0022__master", "title_0001__60fps_interp"):

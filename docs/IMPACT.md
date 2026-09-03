@@ -21,7 +21,7 @@ this particular implementation is not established.
   [Background](https://en.wikipedia.org/wiki/Photosensitive_epilepsy)
 
 That incident is why the red-flash rule exists as a separate test, and why
-Safe Frame implements it without a luminance floor — see
+Safe Frame implements it without a luminance floor, see
 [`CRITERIA.md`](CRITERIA.md).
 
 ## The obligation is documented
@@ -44,8 +44,8 @@ a defective master multiplies across the whole delivery ladder. That reasoning
 is correct, and that gate is doing its job.
 
 What it does not do is check what happens *after* sign-off. A single title
-becomes many derived assets — frame-rate conversions, tone-maps, downscales,
-social crops, ad-break insertions, subtitle burn-ins — and each transform is an
+becomes many derived assets, frame-rate conversions, tone-maps, downscales,
+social crops, ad-break insertions, subtitle burn-ins, and each transform is an
 opportunity to introduce a violation into a file whose parent was already
 approved. A per-file check run before the transform cannot see that, and a
 per-file check run after it has no memory of the parent, so it cannot say
@@ -71,12 +71,12 @@ transforms introduce nothing at all.
 | `adbreak_insert` | 424 | 21 (4.95%) | general flash |
 | `subtitle_burnin` | 424 | 12 (2.83%) | red flash |
 | `social_crop_v` | 424 | 11 (2.59%) | red flash |
-| three others | 1,272 | 0 | — |
+| three others | 1,272 | 0 |, |
 
 Two consequences follow, and both are the kind of thing a QC lead can act on:
 
 1. **This is a handful of upstream fixes, not 66 patches.** The failures cluster
-   by profile, and the two rules cluster by *different* profiles — the
+   by profile, and the two rules cluster by *different* profiles, the
    frame-rate and ad-break paths introduce luminance flashes, the crop and
    subtitle-burn paths introduce saturated-red ones. Those are two separate
    conversations with two separate owners.
@@ -109,7 +109,7 @@ The decoys carry the measurement. Most are renditions with a genuine burst
 that is *not* a regression, because the approved master has the same burst at
 the same presentation time; seventeen are a bright-on-bright cohort that clears the
 delta, area and rate floors and sits above the published 0.80 darker-image
-ceiling. Recall alone could be bought by flagging everything — precision is
+ceiling. Recall alone could be bought by flagging everything, precision is
 measured against those.
 
 What this establishes is narrow and worth stating exactly: the implementation

@@ -36,17 +36,17 @@ alignment because frame-rate conversion makes it invalid.
 ## Two rules, windowed independently
 
 Published guidance is not one rule, and the thresholds are not ours to pick.
-Every one traces to WCAG 2.3.1 — see [`docs/CRITERIA.md`](docs/CRITERIA.md) for
+Every one traces to WCAG 2.3.1; see [`docs/CRITERIA.md`](docs/CRITERIA.md) for
 the quoted definitions. Safe Frame implements two of the three tests:
 
-- **general flash** — luminance alternation at or above a 0.10 delta.
-- **red flash** — saturated-red alternation at or above a 0.20 red delta, with
+- **general flash**: luminance alternation at or above a 0.10 delta.
+- **red flash**: saturated-red alternation at or above a 0.20 red delta, with
   **no luminance floor at all**. A red/blue alternation can hold luminance
   almost flat and still be the higher-risk sequence, so gating it on luminance
   would reproduce the exact blind spot the rule exists to close.
 
 Each rule gets its own 1000 ms window, so one rule's qualifying transitions can
-never pad the other's count, and the anti-join is keyed on `rule` — a master
+never pad the other's count, and the anti-join is keyed on `rule`: a master
 that already flashed in luminance does not excuse a rendition that introduced a
 red flash. Both rules are evaluated in ClickHouse in a single pass over the
 catalogue.
@@ -84,7 +84,7 @@ measures a swing below 0.01 and stays silent while the red rule fires.
 - Two real Google ADK agents on Gemini 2.5 Flash via Vertex AI, both of which
   must retrieve evidence through MCP and always require human QC.
   `RegressionExplainer` is single-step: one validated pair, one tool.
-  `QcTriageAgent` is the multi-step one — it has four tools over the same
+  `QcTriageAgent` is the multi-step one: it has four tools over the same
   read-only MCP transport and sequences them itself: survey the sweep, profile
   every transform to find the systemic cause, size the luminance blind spot,
   then go deep on the one pair it ranks first. The tool-call sequence is
@@ -106,8 +106,8 @@ measures a swing below 0.01 and stays silent while the red rule fires.
 The fair objection to a synthetic demonstration is that it is circular: data was
 generated with flashes in it, and then the flashes were found.
 
-`sql/008_ground_truth.sql` answers that. It recovers the planted set from the decisions that chose where to plant, and reads **no measurement column at all**
-— not `luma_delta`, not `red_delta`, not `luma_min`, not
+`sql/008_ground_truth.sql` answers that. It recovers the planted set from the decisions that chose where to plant, and reads **no measurement column at all**,
+not `luma_delta`, not `red_delta`, not `luma_min`, not
 `changed_area_fraction`, not `direction`. `/v1/evaluation` runs it alongside the
 sweep and reports the confusion matrix. Two queries produced by independent
 means; agreement between them is a result rather than a restatement.
@@ -115,7 +115,7 @@ means; agreement between them is a result rather than a restatement.
 On the live corpus: **66 planted, 66 found, precision 1.000, recall 1.000**, and
 all 86 decoys correctly rejected.
 
-The decoys are the part that makes the number worth anything — recall alone can
+The decoys are the part that makes the number worth anything, because recall alone can
 be bought by flagging everything. They are renditions that carry a real burst
 and are still not regressions, because their approved master has the same burst
 at the same presentation time, plus a bright-on-bright cohort that clears every
@@ -135,7 +135,7 @@ asks the next question: of every transform in the catalogue, how many renditions
 did it produce and how many did it break?
 
 On the live corpus that turns 66 findings into four implicated encoder profiles
-and three clean ones — `60fps_interp` and `adbreak_insert` produce every
+and three clean ones. `60fps_interp` and `adbreak_insert` produce every
 luminance regression between them, `subtitle_burnin` and `social_crop_v` produce
 every red one. That is a small number of upstream configurations to fix rather
 than 66 renditions to patch, and 23 of the 66 come from profiles whose only
@@ -165,28 +165,28 @@ your own asset identifiers.
 ## Decision boundary
 
 `POST /v1/scan` computes the parent and child violations, persists them, and then
-asks ClickHouse—through official MCP—to execute the published child-minus-parent
+asks ClickHouse, through official MCP, to execute the published child-minus-parent
 anti-join. The same anti-join backs `/v1/catalogue/regressions` and the evidence
 the ADK agent reads, so no two surfaces can disagree about one pair. If MCP fails or the SQL count cannot be parsed, the live API returns
 502. It never substitutes a Gemini verdict or a local guess.
 
 Useful judge endpoints:
 
-- `/` — the catalogue sweep, no flashing media
-- `/health` — cached live Vertex and MCP/ClickHouse round-trips
-- `/v1/catalogue/shape` — size of the corpus, read live
-- `/v1/catalogue/sweep` — both rules evaluated across the whole catalogue
-- `/v1/catalogue/regressions` — SQL/MCP verdict for one asset pair
-- `/v1/catalogue/timeline` — per-second qualifying transitions for a master and one
+- `/`: the catalogue sweep, no flashing media
+- `/health`: cached live Vertex and MCP/ClickHouse round-trips
+- `/v1/catalogue/shape`: size of the corpus, read live
+- `/v1/catalogue/sweep`: both rules evaluated across the whole catalogue
+- `/v1/catalogue/regressions`: SQL/MCP verdict for one asset pair
+- `/v1/catalogue/timeline`: per-second qualifying transitions for a master and one
   rendition, on one shared scale; this is what the evidence chart draws
-- `/v1/catalogue/transform-risk` — per-transform regression rates: the systemic view
-- `/v1/evaluation` — the detector scored against the generator's planted ground truth
-- `/v1/triage` — the multi-step agent brief, with its tool-call sequence
-- `/v1/samples` — self-authored exact pass/fail metric pair
-- `/v1/scan` — submit raw transition metrics for a parent/child pair
-- `/v1/integrations/clickhouse/evidence` — advertised MCP tools and live query
-- `/v1/explain` — ADK explanation grounded in MCP evidence
-- `/docs` — complete OpenAPI surface
+- `/v1/catalogue/transform-risk`: per-transform regression rates, the systemic view
+- `/v1/evaluation`: the detector scored against the generator's planted ground truth
+- `/v1/triage`: the multi-step agent brief, with its tool-call sequence
+- `/v1/samples`: self-authored exact pass/fail metric pair
+- `/v1/scan`: submit raw transition metrics for a parent/child pair
+- `/v1/integrations/clickhouse/evidence`: advertised MCP tools and live query
+- `/v1/explain`: ADK explanation grounded in MCP evidence
+- `/docs`: complete OpenAPI surface
 
 ## Verification
 
@@ -214,15 +214,15 @@ both themes.
 
 `tests/test_sql_parity.py` runs the reference Python detector and the ClickHouse
 criteria SQL over identical randomized rows and requires exact agreement on both
-rules — 46 cases, including the six-versus-seven boundary, the darker-image
+rules, 46 cases, including the six-versus-seven boundary, the darker-image
 ceiling, and a red alternation at matched luminance. The `parity` CI job stands
 up a throwaway ClickHouse and runs them through the real official
 `mcp-clickhouse` transport on **every commit**, so the agreement is checkable by
 anyone rather than asserted here.
 
 That job exists because of a defect it would have caught. The tests need a
-cluster, CI had none, so they skipped everywhere — 45 green skips reading as a
-pass — and under that cover the parametrized case compared the SQL's first *row*
+cluster, CI had none, so they skipped everywhere, 45 green skips reading as a
+pass, and under that cover the parametrized case compared the SQL's first *row*
 against the detector's whole result list. It could never have passed. The two
 implementations did agree, once the comparison was fixed; but for weeks nothing
 demonstrated it. A test that cannot run is a claim, not evidence.
