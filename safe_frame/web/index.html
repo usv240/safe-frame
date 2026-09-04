@@ -168,7 +168,9 @@ header.top{
 .seg{display:flex;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:3px}
 .seg button{
   font:600 var(--t-xs)/1 var(--sans);letter-spacing:.04em;border:0;background:transparent;color:var(--ink-2);
-  padding:.5rem .8rem;border-radius:999px;cursor:pointer;white-space:nowrap
+  padding:.5rem .8rem;border-radius:999px;cursor:pointer;white-space:nowrap;
+  /* WCAG 2.5.8 wants 24px. These measured 22. */
+  min-height:26px;display:inline-flex;align-items:center;justify-content:center
 }
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
 
@@ -222,7 +224,7 @@ section,[id]{scroll-margin-top:11rem}
 .btn:hover{border-color:var(--ink-3)}
 .btn-primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .btn-primary:hover{filter:brightness(1.06)}
-.btn[disabled]{opacity:.5;cursor:default}
+.btn[disabled],.btn[disabled]:hover{background:var(--surface-2);border-color:var(--line);color:var(--ink-3);opacity:1;cursor:not-allowed;box-shadow:none;transform:none}
 .btn[aria-busy="true"]{cursor:progress}
 
 /* ---------- results table ---------- */
@@ -245,7 +247,7 @@ tbody tr{cursor:pointer}
 tbody tr:hover td{background:var(--surface-2)}
 tbody tr[aria-selected="true"] td{background:color-mix(in srgb,var(--accent) 12%,var(--surface))}
 tbody tr:focus-visible{outline:2.5px solid var(--focus);outline-offset:-2px}
-.empty{padding:var(--s-6) var(--s-4);text-align:center;color:var(--ink-3)}
+.empty{padding:var(--s-4) var(--s-4);text-align:center;color:var(--ink-3);font-size:.9rem;font-style:italic}
 
 @media (max-width:46rem){
   /* `hidden`, not `visible`: with overflow-y already auto, a `visible` value on
@@ -470,7 +472,7 @@ body.tech .technical{display:block}
 .sectionnav a[aria-current="true"]{color:var(--accent-ink);background:var(--accent);font-weight:600}
 
 .contents{margin-top:var(--s-5);border-top:1px solid var(--line);padding-top:var(--s-4)}
-.contents-title{color:var(--ink-3);font-size:.9rem;margin-bottom:var(--s-3)}
+.contents-title{color:var(--ink-2);font-size:.9rem;margin-bottom:var(--s-3)}
 .contents ol{list-style:none;margin:0;padding:0;display:grid;gap:var(--s-2);
   grid-template-columns:repeat(auto-fit,minmax(min(100%,15.5rem),1fr));counter-reset:c}
 .contents li{counter-increment:c}
@@ -487,12 +489,14 @@ body.tech .technical{display:block}
    offset is measured at runtime rather than guessed: a fixed value was correct
    on desktop and put every heading under the header on a phone. */
 section[id],div[id]{scroll-margin-top:calc(var(--header-h,4.5rem) + .75rem)}
+main section[id]{padding-block:var(--s-5)}
 
 @media (max-width:900px){
   /* Compact on small screens: two rows of sticky chrome is already a lot of a
      phone viewport, so the nav and toggles both shrink rather than stack tall. */
-  .topbar{flex-wrap:wrap;row-gap:var(--s-1)}
-  .sectionnav{order:3;flex-basis:100%;margin:0}
+  .topbar{flex-wrap:wrap;row-gap:var(--s-1);padding:var(--s-2) 0}
+  .navwrap{order:3;flex-basis:100%;margin:0}
+  .sectionnav{margin:0;flex:1 1 auto;min-width:0}
   .sectionnav a{padding:.25rem .5rem;font-size:.8rem}
   .toggles{gap:var(--s-1)}
   .toggles .seg button{padding:.3rem .5rem;font-size:.78rem}
@@ -617,6 +621,68 @@ section[id],div[id]{scroll-margin-top:calc(var(--header-h,4.5rem) + .75rem)}
 .tag{font-weight:700}
 .tag.warn{background:var(--bad);color:var(--bad-ink)}
 .tag.safe{background:color-mix(in srgb,var(--good) 20%,transparent);color:var(--good)}
+
+/* The hero action. Nothing was pressable above the fold before this. */
+.herocta{display:flex;gap:var(--s-3);align-items:center;flex-wrap:wrap;margin:var(--s-5) 0 var(--s-4)}
+.herocta .note{flex:1 1 20rem;margin:0;max-width:46ch}
+.btn-lg{padding:.7rem 1.25rem;font-size:.95rem}
+
+/* The header nav scrolls sideways on a phone, and two of its seven items were
+   simply off the edge with nothing to suggest they existed. A fade on the
+   overflowing edge says there is more, and the active chip is scrolled into
+   view so the current section is never the hidden one. */
+.navwrap{position:relative;flex:1 1 auto;min-width:0;display:flex}
+.navwrap::after{content:"";position:absolute;inset-block:0;right:0;width:2.2rem;pointer-events:none;
+  background:linear-gradient(to right,transparent,var(--paper));opacity:0;transition:opacity .15s}
+.navwrap[data-more="true"]::after{opacity:1}
+.sectionnav{scroll-behavior:smooth}
+
+/* A file dropped anywhere the page does not handle makes the browser navigate
+   away to that file, losing every result on the page. These zones are called
+   drop zones, so they now accept a drop, and the rest of the document refuses
+   one instead of unloading. */
+.drop{border-width:2px}
+.drop.over{border-color:var(--accent);border-style:solid;
+  background:color-mix(in srgb,var(--accent) 9%,var(--surface))}
+.drop .hint{color:var(--ink-3);font-size:.82rem}
+
+@media (prefers-reduced-motion:reduce){.sectionnav{scroll-behavior:auto}.navwrap::after{transition:none}}
+
+/* Read-on-request blocks. Used for the three tallest things on the page, each
+   of which is reference material rather than argument: a reader following the
+   thread does not need them open, and a reader checking a claim wants them
+   whole. The summary states what is inside rather than saying "more". */
+.fold{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);
+  padding:var(--s-3) var(--s-4);margin-top:var(--s-4)}
+.fold > summary{cursor:pointer;color:var(--ink-2);font-size:.9rem;line-height:1.5;
+  list-style:none;display:flex;gap:var(--s-2);align-items:baseline;min-height:24px}
+.fold > summary::-webkit-details-marker{display:none}
+.fold > summary::before{content:"+";color:var(--accent);font-weight:700;font-size:1rem;flex:0 0 auto}
+.fold[open] > summary::before{content:"\2212"}
+.fold > summary:hover{color:var(--ink)}
+.fold > summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+.fold[open] > summary{margin-bottom:var(--s-3);padding-bottom:var(--s-3);border-bottom:1px solid var(--line)}
+#api .fold{margin-top:var(--s-5)}
+#api .fold h3:first-of-type{margin-top:0 !important}
+
+.contents details > summary{list-style:none;cursor:pointer;min-height:24px}
+.contents details > summary::-webkit-details-marker{display:none}
+.contents details:not([open]) > summary::after{content:" Show the map.";color:var(--accent)}
+.contents details > summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.contents details[open] > summary{margin-bottom:var(--s-3)}
+
+.sweepmore:not(:empty){padding:var(--s-3) var(--s-4);border-top:1px solid var(--line)}
+
+/* Per-component detail, closed until asked for. */
+.compmore{margin-top:var(--s-2);border-top:1px solid var(--line);padding-top:var(--s-2)}
+.compmore > summary{cursor:pointer;font-size:.78rem;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--ink-2);list-style:none;min-height:24px;display:flex;align-items:center;gap:.4rem}
+.compmore > summary::-webkit-details-marker{display:none}
+.compmore > summary::before{content:"+";color:var(--accent);font-weight:700;font-size:.95rem}
+.compmore[open] > summary::before{content:"\2212"}
+.compmore > summary:hover{color:var(--ink)}
+.compmore > summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+.compmore p{margin-top:var(--s-2)}
 </style>
 </head>
 <body>
@@ -631,7 +697,7 @@ section[id],div[id]{scroll-margin-top:calc(var(--header-h,4.5rem) + .75rem)}
       </svg>
       Safe Frame
     </span>
-    <nav class="sectionnav" aria-label="Sections of this page">
+    <div class="navwrap"><nav class="sectionnav" aria-label="Sections of this page">
       <a href="#sweep">Sweep</a>
       <a href="#evaluation">Evidence</a>
       <a href="#systemic">Cause</a>
@@ -639,7 +705,7 @@ section[id],div[id]{scroll-margin-top:calc(var(--header-h,4.5rem) + .75rem)}
       <a href="#byo">Your video</a>
       <a href="#api">API</a>
       <a href="#stack">Stack</a>
-    </nav>
+    </nav></div>
     <div class="toggles">
       <div class="seg" role="group" aria-label="Reading mode">
         <button id="m-plain" aria-pressed="true">Plain</button>
@@ -660,6 +726,12 @@ section[id],div[id]{scroll-margin-top:calc(var(--header-h,4.5rem) + .75rem)}
     <h1>The master passed. The version people watched was never checked.</h1>
     <p class="lead plain">One film becomes dozens of cuts, grades, frame rates and ad-break versions. Safe Frame searches a whole distribution catalogue for a photosensitivity risk that a conversion introduced, even when the approved master was clean.</p>
     <p class="lead technical">Transition measurements are aligned on presentation time in ClickHouse. Both published flash rules are evaluated across every rendition in a single pass through the official <code class="mono">mcp-clickhouse</code> server, and master/rendition isolation happens inside the same query. Gemini explains the rows; SQL decides.</p>
+    <div class="herocta">
+      <button class="btn btn-primary btn-lg" id="run-all">Run every live check</button>
+      <a class="btn btn-lg" href="#byo">Check your own video</a>
+      <p class="note" id="run-all-status">Four panels, queried from ClickHouse when you press it. Nothing here is pre-rendered.</p>
+    </div>
+
     <p class="lead" style="font-size:var(--t-base);margin-bottom:var(--s-4)"><strong>Who this is for:</strong> the studio crew that ships the versions, distribution QC and encoding teams who sign off a master and then send dozens of derived assets out the door.</p>
     <p class="headline-stat" id="headline">
       <b id="h-count">n/a</b>
@@ -667,7 +739,8 @@ section[id],div[id]{scroll-margin-top:calc(var(--header-h,4.5rem) + .75rem)}
     </p>
 
     <nav class="contents" aria-label="What is on this page">
-      <p class="contents-title">What is on this page. Every panel runs live.</p>
+      <details id="contents-fold" open>
+        <summary class="contents-title">What is on this page. Eleven panels, every one of them live.</summary>
       <ol>
         <li><a href="#why"><b>Why this matters</b><span>The harm, the standards, and who signs off on it.</span></a></li>
         <li><a href="#sweep"><b>Live catalogue sweep</b><span>Both flash rules across ten million rows, in one pass.</span></a></li>
@@ -681,6 +754,7 @@ section[id],div[id]{scroll-margin-top:calc(var(--header-h,4.5rem) + .75rem)}
         <li><a href="#runtime"><b>Runtime evidence</b><span>The live MCP handshake and where credentials stop.</span></a></li>
         <li><a href="#boundary"><b>Decision boundary</b><span>ClickHouse decides. Gemini explains. A human acts.</span></a></li>
       </ol>
+      </details>
     </nav>
   </div>
 
@@ -764,6 +838,7 @@ section[id],div[id]{scroll-margin-top:calc(var(--header-h,4.5rem) + .75rem)}
             </tbody>
           </table>
         </div>
+        <div id="sweep-more" class="sweepmore"></div>
       </div>
 
       <div class="evidence" id="evidence" hidden>
@@ -980,11 +1055,13 @@ section[id],div[id]{scroll-margin-top:calc(var(--header-h,4.5rem) + .75rem)}
         <label class="drop" for="byo-child">
           <b>Rendition</b>
           <span id="byo-child-name">Choose a video file</span>
+          <span class="hint">or drag one here. It is decoded in this browser.</span>
           <input type="file" id="byo-child" accept="video/*">
         </label>
         <label class="drop" for="byo-parent">
           <b>Approved master <em>(optional)</em></b>
           <span id="byo-parent-name">Choose a video file</span>
+          <span class="hint">or drag one here. It is decoded in this browser.</span>
           <input type="file" id="byo-parent" accept="video/*">
         </label>
       </div>
@@ -1057,6 +1134,8 @@ section[id],div[id]{scroll-margin-top:calc(var(--header-h,4.5rem) + .75rem)}
           <p class="note" id="api-summary" hidden></p>
         </div>
 
+        <details class="fold">
+          <summary>Request and response examples: mint a key, check a measured pair, post frames directly.</summary>
         <h3 style="margin-top:var(--s-5);font-size:1rem">Mint a key from the command line</h3>
         <p class="note" style="margin-top:var(--s-2)">Send an explicit empty body. A POST with no <code class="mono">Content-Length</code> is rejected with <code class="mono">411</code> by the load balancer before it reaches the service, which is a quirk of the hosting rather than of this API.</p>
         <pre class="codebox" style="margin-top:var(--s-2)"><code>curl -s -X POST https://safe-frame-regression-109051079423.us-central1.run.app/v1/keys   -H 'content-type: application/json' -d '{}'</code></pre>
@@ -1082,6 +1161,7 @@ curl -s -X POST https://safe-frame-regression-109051079423.us-central1.run.app/v
         <p class="note" style="margin-top:var(--s-3)"><b>One endpoint does store what you send it.</b> <code class="mono">/v1/scan</code> persists the transition rows you submit so the per-pair anti-join can read them back, under identifiers you choose, with no expiry. That is what the endpoint is for. If you would rather nothing were retained, use <code class="mono">/v1/analyze</code>, which answers the same question and writes nothing. Full detail in <a href="https://github.com/usv240/safe-frame/blob/main/docs/PRIVACY.md" target="_blank" rel="noreferrer">docs/PRIVACY.md</a>.</p>
 
         <p class="note" style="margin-top:var(--s-3)">Or measure frames yourself with <code class="mono">safe_frame.ingest.frames_to_transitions</code> and post the transition rows to <code class="mono">/v1/scan</code> under your own asset identifiers. Identifiers belonging to the published catalogue are refused as write targets, so no caller can alter what another sees.</p>
+        </details>
       </div>
     </div>
   </section>
@@ -1091,7 +1171,8 @@ curl -s -X POST https://safe-frame-regression-109051079423.us-central1.run.app/v
       <p class="eyebrow">Criteria provenance</p>
       <h2>Every threshold traces to a published definition.</h2>
       <p class="lead" style="margin-top:var(--s-3)">Nothing here is a number we chose. Each one is the published criterion, and the one rule we have not implemented is named rather than implied.</p>
-      <div class="panel" style="margin-top:var(--s-4)">
+      <details class="fold" style="margin-top:var(--s-4)">
+        <summary>Every threshold, side by side with the document it comes from, including the rule we did not implement.</summary>
         <div class="scroll" style="max-height:none">
           <table class="prov">
             <thead><tr><th scope="col">What is tested</th><th scope="col">Threshold in Safe Frame</th><th scope="col">Published definition</th></tr></thead>
@@ -1134,7 +1215,7 @@ curl -s -X POST https://safe-frame-regression-109051079423.us-central1.run.app/v
             </tbody>
           </table>
         </div>
-      </div>
+      </details>
       <div class="grid g-2" style="margin-top:var(--s-4)">
         <div class="card">
           <h3>What auditing against the source found</h3>
@@ -1365,9 +1446,37 @@ function renderSweep(d) {
     const pick = () => select(row, tr);
     tr.onclick = pick;
     tr.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } };
+    if (i >= SWEEP_VISIBLE) tr.hidden = true;
     body.append(tr);
     if (i === 0) queueMicrotask(pick);
   });
+  sweepShowMore(d.regressions.length);
+}
+
+/* How many findings to lay out before asking. Twelve fills a laptop panel and
+   is more than enough to pick a row from; the rest are one press away. On a
+   phone each finding is a stacked card rather than a table row, so twelve of
+   them is 4,000px of scroll and six is the same information. */
+const SWEEP_VISIBLE = innerWidth < 736 ? 6 : 12;
+
+function sweepShowMore(total) {
+  const host = $("#sweep-more");
+  host.replaceChildren();
+  if (total <= SWEEP_VISIBLE) return;
+  const button = document.createElement("button");
+  button.className = "btn btn-quiet";
+  button.textContent = `Show the other ${total - SWEEP_VISIBLE} findings`;
+  button.setAttribute("aria-expanded", "false");
+  button.addEventListener("click", () => {
+    const rows = [...$("#rows").children];
+    const collapsed = rows.some((r) => r.hidden);
+    rows.forEach((r, i) => { if (i >= SWEEP_VISIBLE) r.hidden = !collapsed; });
+    button.textContent = collapsed
+      ? `Show only the first ${SWEEP_VISIBLE}`
+      : `Show the other ${total - SWEEP_VISIBLE} findings`;
+    button.setAttribute("aria-expanded", collapsed ? "true" : "false");
+  });
+  host.append(button);
 }
 
 $("#run").onclick = async () => {
@@ -1868,12 +1977,20 @@ async function byoDecode(file, onProgress) {
   }
 }
 
+/* A 40 KB sample rendered as "0.0 MB", which looks like a file that failed to
+   load rather than a small one. Scale the unit to the file. */
+function byoSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1048576) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / 1048576).toFixed(1)} MB`;
+}
+
 function byoPick(which, inputId, labelId) {
   const input = $(inputId);
   input.addEventListener("change", () => {
     const file = input.files && input.files[0];
     byoFiles[which] = file || null;
-    $(labelId).textContent = file ? `${file.name} (${(file.size / 1048576).toFixed(1)} MB)` : "Choose a video file";
+    $(labelId).textContent = file ? `${file.name} (${byoSize(file.size)})` : "Choose a video file";
     $("#byo-run").disabled = !byoFiles.child;
   });
 }
@@ -2111,12 +2228,30 @@ $("#stack-run").addEventListener("click", async () => {
         status.className = "ver";
         status.textContent = c.version ? `${c.status} · ${c.version}` : c.status;
         card.appendChild(status);
-        for (const [cls, text] of [["role", c.role], ["how", c.how], ["depth", c.depth], ["ev", c.evidence], ["ref", c.reference]]) {
-          if (!text) continue;
-          const el = document.createElement("p");
-          el.className = cls;
-          el.textContent = text;
-          card.appendChild(el);
+        // The role stays visible: with the dot it answers "is it live and what
+        // for", which is the question the panel exists to answer. The four
+        // paragraphs behind it are for the one component somebody is checking.
+        if (c.role) {
+          const role = document.createElement("p");
+          role.className = "role";
+          role.textContent = c.role;
+          card.appendChild(role);
+        }
+        const detail = [["how", c.how], ["depth", c.depth], ["ev", c.evidence], ["ref", c.reference]]
+          .filter(([, text]) => text);
+        if (detail.length) {
+          const more = document.createElement("details");
+          more.className = "compmore";
+          const summary = document.createElement("summary");
+          summary.textContent = "How it is used";
+          more.appendChild(summary);
+          for (const [cls, text] of detail) {
+            const el = document.createElement("p");
+            el.className = cls;
+            el.textContent = text;
+            more.appendChild(el);
+          }
+          card.appendChild(more);
         }
         grid.appendChild(card);
       }
@@ -2352,6 +2487,104 @@ $("#api-run").addEventListener("click", async () => {
   button.removeAttribute("aria-busy");
   button.textContent = "Run every endpoint again";
 });
+
+/* Run the four panels that are answered by SQL, in order, from one press. The
+   page asked for five separate clicks before anything on it showed a result,
+   and a visitor with two minutes made none of them. The agent is deliberately
+   not in this list: it spends model tokens, and it has its own button. */
+$("#run-all").addEventListener("click", async () => {
+  const button = $("#run-all");
+  const status = $("#run-all-status");
+  const steps = [
+    ["#run", "the catalogue sweep"],
+    ["#eval-run", "the accuracy score"],
+    ["#risk-run", "the transform profile"],
+    ["#stack-run", "the live stack"],
+  ];
+  button.disabled = true;
+  button.setAttribute("aria-busy", "true");
+  document.querySelector("#sweep").scrollIntoView({ block: "start" });
+
+  const settled = (el) => new Promise((resolve) => {
+    if (!el.hasAttribute("aria-busy")) return resolve();
+    const observer = new MutationObserver(() => {
+      if (!el.hasAttribute("aria-busy")) { observer.disconnect(); resolve(); }
+    });
+    observer.observe(el, { attributes: true, attributeFilter: ["aria-busy"] });
+  });
+
+  let done = 0;
+  for (const [selector, what] of steps) {
+    const target = $(selector);
+    if (!target) continue;
+    button.textContent = `Running ${what}...`;
+    status.textContent = `${done + 1} of ${steps.length}: ${what}.`;
+    target.click();
+    // give the handler a tick to set aria-busy before watching for it to clear
+    await new Promise((r) => setTimeout(r, 60));
+    await settled(target);
+    done += 1;
+  }
+  button.disabled = false;
+  button.removeAttribute("aria-busy");
+  button.textContent = "Run every live check again";
+  status.textContent = `${done} panels answered from ClickHouse. Scroll, or use the header, to read them.`;
+});
+
+/* Tell the visitor when the header nav has more items than fit, and keep the
+   section they are in inside the visible part of it. */
+const navScroller = document.querySelector(".sectionnav");
+const navWrap = document.querySelector(".navwrap");
+function navOverflow() {
+  const more = navScroller.scrollWidth - navScroller.clientWidth - navScroller.scrollLeft > 2;
+  navWrap.dataset.more = more ? "true" : "false";
+}
+navScroller.addEventListener("scroll", navOverflow, { passive: true });
+addEventListener("resize", navOverflow);
+navOverflow();
+new MutationObserver(() => {
+  const current = navScroller.querySelector('a[aria-current="true"]');
+  if (current) current.scrollIntoView({ block: "nearest", inline: "nearest" });
+  navOverflow();
+}).observe(navScroller, { attributes: true, subtree: true, attributeFilter: ["aria-current"] });
+
+/* Accept a dropped video, and stop a missed drop from navigating the browser
+   away to the file and taking every result on the page with it. */
+for (const [id, labelId] of [["#byo-child", "#byo-child-name"],
+                             ["#byo-parent", "#byo-parent-name"]]) {
+  const input = $(id);
+  const zone = input.closest(".drop");
+  const stop = (event) => { event.preventDefault(); event.stopPropagation(); };
+  zone.addEventListener("dragenter", (e) => { stop(e); zone.classList.add("over"); });
+  zone.addEventListener("dragover", (e) => { stop(e); e.dataTransfer.dropEffect = "copy"; zone.classList.add("over"); });
+  zone.addEventListener("dragleave", (e) => { stop(e); if (!zone.contains(e.relatedTarget)) zone.classList.remove("over"); });
+  zone.addEventListener("drop", (e) => {
+    stop(e);
+    zone.classList.remove("over");
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (!file) return;
+    if (!file.type.startsWith("video/")) {
+      $(labelId).textContent = `${file.name} is not a video file.`;
+      return;
+    }
+    const box = new DataTransfer();
+    box.items.add(file);
+    input.files = box.files;
+    input.dispatchEvent(new Event("change"));
+  });
+}
+for (const type of ["dragover", "drop"]) {
+  addEventListener(type, (event) => {
+    if (event.target.closest && event.target.closest(".drop")) return;
+    event.preventDefault();
+  });
+}
+
+/* The contents map is eleven cards. Three abreast on a laptop that is 376px
+   and worth the room; one abreast on a phone it is 1,123px, which buries the
+   first real section. Open on a wide screen, closed on a narrow one. */
+const contentsFold = document.querySelector("#contents-fold");
+if (contentsFold && innerWidth < 760) contentsFold.open = false;
 </script>
 </body>
 </html>

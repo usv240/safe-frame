@@ -1,6 +1,6 @@
 {
   "verified_at": "2026-09-02T00:00:00Z",
-  "revision": "safe-frame-regression-00049-jh7",
+  "revision": "safe-frame-regression-00061-srj",
   "public_url": "https://safe-frame-regression-109051079423.us-central1.run.app",
   "note": "Every value below was read from the deployed revision or the live cluster. It contains no credentials.",
   "health": {
@@ -221,7 +221,15 @@
     "clicking a second sample scenario left the previous verdict on screen while the new one computed, so a judge clicking through them could read a stale FAIL over a running PASS; the panel is now cleared as each run begins",
     "--bad was referenced nine times and never defined, so the FAIL verdict was never red, the safety warning border was not drawn, and the FLASHES tag rendered white on white. Now defined per theme with --bad-ink, measured 6.54:1 light and 8.30:1 dark",
     "the decision-boundary panel was painted with var(--ink), which inverted it to a light panel in dark mode while the SQL box and eyebrow still assumed a dark ground: 1.92:1 and 1.17:1 measured. It now carries its own fixed palette and is dark in both themes",
-    "the inactive reading-mode and theme toggles sat at 4.03:1 in light, just under the requirement"
+    "the inactive reading-mode and theme toggles sat at 4.03:1 in light, just under the requirement",
+    "nothing above the fold was pressable at any width: the first control was roughly 1,500px down the page, so a judge who did not scroll saw no evidence at all. The hero now runs the four SQL-backed panels from one press",
+    "the header nav scrolls sideways on a phone and two of its seven items, API and Stack, were off the edge with no affordance saying so. There is now a fade on the overflowing edge, and the active chip is scrolled into view",
+    "the five segmented toggle buttons measured 22px tall, under the 24px in WCAG 2.5.8. The inline citation links also measure under it and are exempt, being sized by the line height of the prose around them",
+    "eight empty panels held 819px of blank bordered box on landing, which reads as a page that failed to load rather than one waiting for a press",
+    "disabled buttons were the brand colour at 50% opacity, rendering as a muddy tan that reads as a button that failed to paint. Now neutral, with cursor:not-allowed",
+    "the file zones carry class 'drop' and had no drop handler, so a dropped video made the browser navigate away to that file and discard every result on the page. They now accept a drop, and the rest of the document refuses one",
+    "a picked file under 1MB reported itself as '0.0 MB', which reads as a file that failed to load rather than a small one",
+    "the contents-map summary measured 4.36:1 in light mode, under the 4.5:1 requirement, having been muted body copy before it became a control"
   ],
   "multi_step_agent": {
     "agent": "QcTriageAgent",
@@ -447,7 +455,12 @@
       "laptop": "68px",
       "desktop": "68px"
     },
-    "verified": "every nav target lands clear of the sticky header at 390, 768, 1280 and 1680 wide, with no horizontal overflow in either theme"
+    "verified": "every nav target lands clear of the sticky header at 390, 768, 1280 and 1680 wide, with no horizontal overflow in either theme",
+    "fold_actions": [
+      "Run every live check",
+      "Check your own video"
+    ],
+    "header_nav_overflow": "seven chips; on a 390px phone five fit and the rest scroll, with a fade on the overflowing edge and the active chip scrolled into view"
   },
   "privacy": {
     "document": "docs/PRIVACY.md",
@@ -477,5 +490,40 @@
     },
     "note": "Playwright and pytest report no version in production because they are development dependencies and are not installed in the container, which is the honest result",
     "long_form": "docs/STACK.md"
+  },
+  "page_length": {
+    "why_it_is_recorded": "Scroll depth is a usability number and it was never measured, so it was never managed. These are document.documentElement.scrollHeight, read from the deployed revision in a real browser.",
+    "landing": {
+      "laptop_1280": {
+        "before": 11806,
+        "after": 9422,
+        "change": "-20%"
+      },
+      "phone_390": {
+        "before": 17163,
+        "after": 13034,
+        "change": "-24%"
+      }
+    },
+    "after_running_every_live_check": {
+      "laptop_1280": {
+        "before": 13356,
+        "after": 12412
+      },
+      "phone_390": {
+        "before": 37071,
+        "after": 19973,
+        "change": "-46%"
+      }
+    },
+    "how": [
+      "the API request and response examples open on request; the runner above them already exercises every endpoint, and /docs still serves the reference",
+      "the threshold provenance table opens on request, behind a summary that states the claim rather than saying 'details'",
+      "the hero contents map stays open on a wide screen and closes on a narrow one, where eleven stacked cards were 1,123px",
+      "section padding cut from 154px to 67px, eleven times over",
+      "the sweep lays out its first 12 findings on a laptop and 6 on a phone, where each finding is a stacked card; every row stays in the document and one press shows the rest",
+      "each stack component shows its status and role, with method, depth, evidence and citation behind a per-card disclosure"
+    ],
+    "nothing_removed": "Every fact that was on the page before is still on it. The changes are about when it is laid out, not whether it is there."
   }
 }
