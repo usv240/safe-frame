@@ -1818,7 +1818,7 @@ async function byoSubmit(rendition, master, say) {
     : `${d.rendition.transitions_measured}`;
   $("#byo-src").textContent = d.decision_source;
   $("#byo-by").textContent = d.measurement.measured_by;
-  $("#byo-note").textContent = `${d.measurement.note} ${d.privacy.what_is_stored}`;
+  $("#byo-note").textContent = `${d.measurement.note} Kept afterwards: ${d.privacy.what_is_stored}.`;
   byoRenderChart(d.rendition.per_second, d.master ? d.master.per_second : null);
   $("#byo-empty").hidden = true;
   $("#byo-out").hidden = false;
