@@ -301,6 +301,8 @@ self-authored and synthetic, and contains no filmed footage.
 | [`docs/IMPACT.md`](docs/IMPACT.md) | who this is for, and what has not been shown |
 | [`docs/PRIVACY.md`](docs/PRIVACY.md) | what each endpoint keeps, and what it does not |
 | [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) | the honest edges |
+| [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | how the cluster and the service are stood up, and the credential split |
+| [`SECURITY.md`](SECURITY.md) | the reporting route, and one privilege gap we have not closed |
 | [`docs/PRIOR-ART.md`](docs/PRIOR-ART.md) | what already exists, and what we could not find |
 | [`docs/LIVE-ACCEPTANCE.json`](docs/LIVE-ACCEPTANCE.json) | measurements read from the deployment |
 | [`submission-evidence.json`](submission-evidence.json) | machine-readable proof |
