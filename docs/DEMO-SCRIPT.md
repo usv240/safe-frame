@@ -6,11 +6,15 @@ If the triage agent takes its full twenty seconds the run lands nearer 2:50 than
 2:40. That is still safely inside the limit, so do not speed up to hit a number.
 **A clear 2:50 beats a rushed 2:40.**
 
-Narration is **400 words**, about 2:25 at a calm 165 words a minute. Forty-seven
+Narration is **385 words**, about 2:20 at a calm 165 words a minute. Forty-seven
 of those words are spoken *over* the triage agent's wait, so they cost almost no
-wall-clock time: the run measures **2:44 if the agent answers in twelve seconds,
-2:47 if it takes twenty**, including scrolling, the six button presses, and the
+wall-clock time: the run measures **2:39 if the agent answers in twelve seconds,
+2:41 if it takes twenty**, including scrolling, the six button presses, and the
 few seconds the bring-your-own check and the stack check take to return.
+
+That leaves about twenty seconds of margin, and the margin is the point. It is
+what absorbs a slower delivery, a fumbled click, or an agent having a bad
+minute. Anything you add spends it.
 
 Nine beats, and they are not equal. The red-flash case and the four-profile
 result carry Potential Impact and Quality of the Idea between them; the agent
@@ -96,10 +100,9 @@ never checked."*
 
 **POINT:** Trace the **blue** series along the bottom track. It stays flat.
 
-> **"But the luminance line here barely moves. Saturated red has its own test,
-> with no brightness condition. The published rule evaluates red flashing even at
-> steady brightness. A luminance-only checker passes this file. This one
-> doesn't."**
+> **"But the luminance line here barely moves. Saturated red has its own
+> published test, which applies even at steady brightness. A luminance-only
+> checker passes this file. This one doesn't."**
 
 ---
 
@@ -175,7 +178,7 @@ seconds.
 
 > **"Everything so far ran on our catalogue. This decodes a video in the browser
 > and runs the same check on it. Nothing uploaded, nothing shown, nothing
-> stored. The picker beside it takes your own file."**
+> stored."**
 
 *Use the sample button rather than the file picker. A file dialog on camera is
 slow, shows your own filesystem, and can fail in a way you cannot recover from
@@ -205,8 +208,7 @@ about four seconds. This is where the demo ends.
 **SAY:**
 
 > **"And none of that is on my word. ClickHouse just reported its own version,
-> the MCP server listed its own tools, Vertex answered. Green means it replied
-> just now."**
+> the MCP server listed its own tools, and Vertex answered."**
 
 **POINT:** The **Safe Frame** name in the sticky header, top-left.
 
@@ -255,12 +257,14 @@ what other checkers miss → name the cause → let the agent prioritise the wor
 Cut for time, and because each would dilute the arc rather than add to it. If a
 judge asks, they are all on the page or in the repository.
 
-- The `/v1/scan` per-pair API and the OpenAPI surface at `/docs`.
-- **Runtime evidence**: the live MCP handshake and the credential-boundary
-  diagram. Strong material, but the sweep already proves MCP is real.
+- **Build against it**: API keys and the OpenAPI surface at `/docs`. Useful to
+  anyone integrating, worth nothing to the four criteria.
+- **Runtime evidence**: the MCP handshake and the credential-boundary diagram.
+  The closing stack check now carries that point in less time.
 - **Decision boundary**: the SQL panel. The agent section makes the same point
   faster, on camera, with live output.
-- The findings export, the Plain/Technical toggle, and the light/dark toggle.
+- The sample-file player, the findings export, the Plain/Technical toggle, and
+  the light/dark toggle.
 - The standards audit that found three defects in our own detector. It is the
   best thing in the repository and there is no room for it; put a line about it
   in the Devpost description instead.
@@ -270,7 +274,12 @@ judge asks, they are all on the page or in the repository.
 Cut in this order. Never cut the red-flash beat or the four-profile result, 
 they carry Potential Impact and Quality of the Idea between them.
 
-1. The **Measured from pixels** line (23 words).
-2. The `decision_source` / `requires_human` line (15 words), the fields stay
+1. The `decision_source` / `requires_human` line (15 words). The fields stay
    visible on screen either way.
-3. The second half of the criteria line, from *"An open pre-check"* (10 words).
+2. The criteria beat entirely (16 words). The greyed **not implemented** row
+   still reads on camera without narration over it.
+3. The **twenty-three red-flash cases** line (14 words), but only if you must:
+   it is the single sentence that names the blind spot in numbers.
+
+Never cut the agent's opening line. It is written to run the length of the
+agent's wait, so removing it does not save time, it creates dead air.
