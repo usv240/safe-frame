@@ -127,6 +127,26 @@ def build_stack(
             reference="docs/CLICKHOUSE-SKILLS-REVIEW.md",
         ),
         _entry(
+            "refreshable_mv",
+            "Refreshable materialized view",
+            "partner",
+            "Built, measured, and deliberately switched off.",
+            "ClickHouse's own guidance (query-mv-refreshable, impact HIGH) says a fixed "
+            "answer that many people reload should not be re-derived per request. The "
+            "view exists and works: 44 rows in 5.9ms against 10,263,552 rows in 932ms "
+            "for the same output, about 158 times faster.",
+            "declined",
+            evidence="not created on the deployed cluster, on purpose",
+            depth="This page claims that nothing on it is a pre-computed answer: press "
+            "the button and the criteria are evaluated in front of you, with the elapsed "
+            "time reported. Serving that button from a view refreshed five minutes ago "
+            "would make the demonstration a lookup and the claim false. Five minutes of "
+            "staleness is right for an operations dashboard and wrong for \"this was "
+            "computed just now\". The DDL ships so a real deployment can create it in "
+            "one statement; this one keeps paying the 932ms on purpose.",
+            reference="sql/007_refreshable_regressions.sql",
+        ),
+        _entry(
             "gemini",
             f"Gemini 2.5 Flash on Vertex AI ({os.getenv('GEMINI_MODEL', 'gemini-2.5-flash')})",
             "google",
@@ -259,12 +279,14 @@ def build_stack(
             "live": sum(1 for c in components if c["status"] == "live"),
             "active": sum(1 for c in components if c["status"] == "active"),
             "applied": sum(1 for c in components if c["status"] == "applied"),
+            "declined": sum(1 for c in components if c["status"] == "declined"),
             "unreachable": sum(1 for c in components if c["status"] == "unreachable"),
         },
         "legend": {
             "live": "a round trip to a remote system completed just now",
             "active": "in use in the process serving this request",
             "applied": "used to build or verify this project, not part of the request path",
+            "declined": "available and understood, and not used, for a stated reason",
             "unreachable": "configured but not answering right now",
         },
     }
