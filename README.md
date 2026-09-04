@@ -10,6 +10,8 @@ Start with [`JUDGING.md`](JUDGING.md) for the shortest verified judge path,
 [`docs/CLICKHOUSE-SKILLS-REVIEW.md`](docs/CLICKHOUSE-SKILLS-REVIEW.md) for how
 every one of the 31 official ClickHouse Agent Skills rules was applied, measured
 or declined,
+[`docs/STACK.md`](docs/STACK.md) for every component and the measurements behind
+each choice,
 [`docs/CRITERIA.md`](docs/CRITERIA.md) for where every threshold came from,
 [`docs/IMPACT.md`](docs/IMPACT.md) for who this is for and what has *not* been
 shown, [`docs/PRIVACY.md`](docs/PRIVACY.md) for exactly what each endpoint keeps

@@ -40,6 +40,7 @@ from .clickhouse_mcp import (
 from .detector import detect_violations
 from .lineage import regressions
 from .models import TransitionMetric
+from .stack import build_stack
 from .telemetry import log_event
 
 
@@ -588,6 +589,43 @@ async def catalogue_regressions(parent_asset: str, child_asset: str) -> dict[str
             "decision_source": "clickhouse_sql_via_official_mcp",
             "mcp": proof,
         }
+    }
+
+
+@app.get("/v1/stack")
+async def stack() -> dict[str, object]:
+    """What this service is built from, and which parts are answering right now.
+
+    The status on each component is earned rather than decorative: `live` means a
+    round trip completed during this request, `active` means the thing is in the
+    process serving you, and `applied` means it built or verified the project but
+    is not in the request path. Claiming a green light for a library that merely
+    appears in requirements.txt would be the easiest thing on this page to fake,
+    so it is the one thing here that is not asserted.
+    """
+    integrations = await _integration_health()
+    version: str | None = None
+    tools: list[str] = []
+    if integrations.get("clickhouse"):
+        try:
+            client = ClickHouseMcp()
+            rows = await client.query("SELECT version() AS version")
+            if not rows["is_error"]:
+                text = "".join(str(item.get("text", "")) for item in rows["content"])
+                for token in text.replace('"', " ").replace(",", " ").split():
+                    if token[:1].isdigit() and "." in token:
+                        version = token
+                        break
+            tools = await client.tools()
+        except Exception:
+            version, tools = None, []
+    return {
+        "data": build_stack(
+            clickhouse_live=bool(integrations.get("clickhouse")),
+            vertex_live=bool(integrations.get("google_vertex")),
+            clickhouse_version=version,
+            mcp_tools=tools,
+        )
     }
 
 

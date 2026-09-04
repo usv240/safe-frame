@@ -498,6 +498,29 @@ section[id],div[id]{scroll-margin-top:calc(var(--header-h,4.5rem) + .75rem)}
 .promises li{padding:var(--s-3);border-left:2px solid var(--accent);background:var(--surface);
   border-radius:0 var(--r-md) var(--r-md) 0;font-size:.9rem;color:var(--ink-2);line-height:1.5}
 .promises b{color:var(--ink);display:block}
+
+/* Live stack. The dot colour is the claim, so it is driven by the status the
+   API returns and never by markup written here. */
+.stackgrid{display:grid;gap:var(--s-3);margin-top:var(--s-4);
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,20rem),1fr))}
+.comp{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);padding:var(--s-4)}
+.comp header{display:flex;align-items:baseline;gap:.5rem;margin:0;padding:0;background:none;position:static;border:0}
+.dot{width:.6rem;height:.6rem;border-radius:50%;flex:0 0 auto;position:relative;top:-.1rem}
+.dot.live{background:var(--good);box-shadow:0 0 0 3px color-mix(in srgb,var(--good) 22%,transparent)}
+.dot.active{background:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 20%,transparent)}
+.dot.applied{background:var(--ink-3)}
+.dot.unreachable,.dot.configured{background:var(--bad)}
+.comp h3{font-size:1rem;margin:0;line-height:1.3}
+.comp .ver{font:var(--t-xs) var(--mono);color:var(--ink-3)}
+.comp .role{color:var(--ink);font-size:.92rem;margin-top:var(--s-2)}
+.comp .how{color:var(--ink-2);font-size:.88rem;margin-top:var(--s-2);line-height:1.55}
+.comp .depth{color:var(--ink-2);font-size:.85rem;margin-top:var(--s-2);line-height:1.55;
+  border-left:2px solid var(--line);padding-left:var(--s-3)}
+.comp .ev{color:var(--ink-3);font-size:.8rem;margin-top:var(--s-2)}
+.comp .ref{font:var(--t-xs) var(--mono);color:var(--ink-3);margin-top:var(--s-1);overflow-wrap:anywhere}
+.legend{display:flex;flex-wrap:wrap;gap:var(--s-3);margin-top:var(--s-4);
+  font-size:.85rem;color:var(--ink-3)}
+.legend span{display:inline-flex;align-items:center;gap:.4rem}
 </style>
 </head>
 <body>
@@ -519,6 +542,7 @@ section[id],div[id]{scroll-margin-top:calc(var(--header-h,4.5rem) + .75rem)}
       <a href="#brief">Agent</a>
       <a href="#byo">Your video</a>
       <a href="#api">API</a>
+      <a href="#stack">Stack</a>
     </nav>
     <div class="toggles">
       <div class="seg" role="group" aria-label="Reading mode">
@@ -557,6 +581,7 @@ section[id],div[id]{scroll-margin-top:calc(var(--header-h,4.5rem) + .75rem)}
         <li><a href="#byo"><b>Check your own video</b><span>Your file, decoded here, never uploaded and never shown.</span></a></li>
         <li><a href="#api"><b>Build against it</b><span>A key in one click, or use it with no credential at all.</span></a></li>
         <li><a href="#criteria"><b>Criteria provenance</b><span>Every threshold traced, including the rule we did not implement.</span></a></li>
+        <li><a href="#stack"><b>The stack, live</b><span>Every component, with the ones answering right now marked.</span></a></li>
         <li><a href="#runtime"><b>Runtime evidence</b><span>The live MCP handshake and where credentials stop.</span></a></li>
         <li><a href="#boundary"><b>Decision boundary</b><span>ClickHouse decides. Gemini explains. A human acts.</span></a></li>
       </ol>
@@ -965,6 +990,24 @@ curl -s -X POST https://safe-frame-regression-109051079423.us-central1.run.app/v
         </div>
       </div>
       <p class="muted" style="font-size:var(--t-sm);margin-top:var(--s-4);max-width:70ch">This audit is not equivalent to expert review, and it does not establish efficacy. It is written so it can be checked: every threshold above quotes the source. Safe Frame is an open pre-check implementing published criteria. It is not certified, not broadcaster-approved, and not a medical device. It does not replace certified delivery testing.</p>
+    </div>
+  </section>
+
+  <section id="stack">
+    <div class="wrap">
+      <p class="eyebrow">What this is built from</p>
+      <h2>Every component, and which ones are answering right now.</h2>
+      <p class="lead" style="margin-top:var(--s-3)">Read live when this section loads. A dot is only green when something actually answered: ClickHouse returning its own version string, the official MCP server listing its tools, Vertex completing a round trip. Parts that build or verify the project but are not in the request path say so instead of borrowing a green light.</p>
+
+      <div class="controls">
+        <button class="btn btn-primary" id="stack-run">Check the stack</button>
+        <span class="note" id="stack-status">Nothing here is hardcoded.</span>
+        <a class="btn" href="https://github.com/usv240/safe-frame/blob/main/docs/STACK.md" target="_blank" rel="noreferrer">The long version</a>
+      </div>
+
+      <div id="stack-legend" class="legend" hidden></div>
+      <div id="stack-out" class="stackgrid"></div>
+      <p class="empty" id="stack-empty">Press the button to query each component.</p>
     </div>
   </section>
 
@@ -1854,6 +1897,79 @@ $("#key-run").addEventListener("click", async () => {
   if ("ResizeObserver" in window) new ResizeObserver(publish).observe(header);
   else window.addEventListener("resize", publish, { passive: true });
 })();
+
+/* The live stack. Statuses come from the API; this file never decides a colour. */
+$("#stack-run").addEventListener("click", async () => {
+  const button = $("#stack-run");
+  button.disabled = true; button.setAttribute("aria-busy", "true");
+  button.textContent = "Querying each component...";
+  try {
+    const r = await fetch("/v1/stack");
+    const p = await r.json();
+    if (!r.ok) throw new Error((p.detail && p.detail.message) || "The stack check failed.");
+    const d = p.data;
+    const grid = $("#stack-out");
+    grid.replaceChildren();
+    const groups = { partner: "ClickHouse, the partner track", google: "Google Cloud", app: "Application and verification" };
+    for (const group of ["partner", "google", "app"]) {
+      const items = d.components.filter((c) => c.group === group);
+      if (!items.length) continue;
+      const head = document.createElement("p");
+      head.className = "eyebrow";
+      head.style.gridColumn = "1 / -1";
+      head.style.marginTop = "var(--s-3)";
+      head.textContent = groups[group];
+      grid.appendChild(head);
+      for (const c of items) {
+        const card = document.createElement("article");
+        card.className = "comp";
+        const h = document.createElement("header");
+        const dot = document.createElement("span");
+        dot.className = `dot ${c.status}`;
+        dot.setAttribute("role", "img");
+        dot.setAttribute("aria-label", `status: ${c.status}`);
+        const title = document.createElement("h3");
+        title.textContent = c.name;
+        h.append(dot, title);
+        card.appendChild(h);
+        const status = document.createElement("p");
+        status.className = "ver";
+        status.textContent = c.version ? `${c.status} · ${c.version}` : c.status;
+        card.appendChild(status);
+        for (const [cls, text] of [["role", c.role], ["how", c.how], ["depth", c.depth], ["ev", c.evidence], ["ref", c.reference]]) {
+          if (!text) continue;
+          const el = document.createElement("p");
+          el.className = cls;
+          el.textContent = text;
+          card.appendChild(el);
+        }
+        grid.appendChild(card);
+      }
+    }
+    const legend = $("#stack-legend");
+    legend.replaceChildren();
+    for (const [key, text] of Object.entries(d.legend)) {
+      const item = document.createElement("span");
+      const dot = document.createElement("span");
+      dot.className = `dot ${key}`;
+      const label = document.createElement("span");
+      label.textContent = `${key}: ${text}`;
+      item.append(dot, label);
+      legend.appendChild(item);
+    }
+    legend.hidden = false;
+    $("#stack-empty").hidden = true;
+    $("#stack-status").textContent =
+      `${d.summary.live} answered live, ${d.summary.active} active in this process, ${d.summary.applied} used to build and verify it.`;
+  } catch (err) {
+    $("#stack-empty").hidden = false;
+    $("#stack-empty").textContent = err.message || "Could not read the stack.";
+    $("#stack-status").textContent = "The check itself failed, which is also information.";
+  } finally {
+    button.disabled = false; button.removeAttribute("aria-busy");
+    button.textContent = "Check the stack";
+  }
+});
 </script>
 </body>
 </html>

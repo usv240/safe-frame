@@ -1,6 +1,6 @@
 {
   "verified_at": "2026-09-02T00:00:00Z",
-  "revision": "safe-frame-regression-00045",
+  "revision": "safe-frame-regression-00049-jh7",
   "public_url": "https://safe-frame-regression-109051079423.us-central1.run.app",
   "note": "Every value below was read from the deployed revision or the live cluster. It contains no credentials.",
   "health": {
@@ -260,7 +260,8 @@
     "every threshold traced to its published definition, including the one not implemented",
     "an export so the findings can leave the page",
     "a check of your own video, decoded in the browser and never displayed",
-    "a self-serve API key, and the calls to use it"
+    "a self-serve API key, and the calls to use it",
+    "the live stack, with a status per component that has to be earned"
   ],
   "standards_audit": {
     "why": "expert review could not be obtained; the implementation was audited against the primary texts instead",
@@ -406,5 +407,27 @@
     "scan": "does persist the transition rows it is given, on purpose, with no TTL. Stated plainly rather than glossed",
     "api_keys": "no account, no user record, and the key is signed rather than saved, so there is no credential table",
     "logs": "endpoint and exception type on failure only; never submitted data or model prose"
+  },
+  "live_stack": {
+    "endpoint": "/v1/stack",
+    "why": "a status dot is worth nothing if it is decorative, so each one has to be earned",
+    "states": {
+      "live": "a round trip to a remote system completed during the request",
+      "active": "in use in the process serving the request",
+      "applied": "built or verified the project, not in the request path"
+    },
+    "observed": {
+      "live": 3,
+      "active": 6,
+      "applied": 3,
+      "unreachable": 0
+    },
+    "live_components": {
+      "clickhouse": "version 26.3.20.7 read from the cluster itself, not a constant",
+      "mcp_clickhouse": "advertised tools listed live: list_databases, list_tables, run_query",
+      "vertex": "a live Gemini round trip within the last minute"
+    },
+    "note": "Playwright and pytest report no version in production because they are development dependencies and are not installed in the container, which is the honest result",
+    "long_form": "docs/STACK.md"
   }
 }
