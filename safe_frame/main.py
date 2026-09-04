@@ -190,6 +190,23 @@ _HEALTH_CACHE: dict[str, object] = {"checked": 0.0, "value": None}
 WEB_ROOT = os.path.join(os.path.dirname(__file__), "web")
 
 
+@app.middleware("http")
+async def _never_cache_answers(request: Request, call_next):
+    """Every /v1 answer is computed for the request that asked for it.
+
+    The page says so in as many words, and a visitor who presses a button twice
+    and gets the same numbers has only our word for it, because a deterministic
+    query over a fixed corpus is supposed to return the same numbers. These
+    endpoints carried no cache directive at all, so the claim held only for as
+    long as no browser or proxy decided to apply heuristic caching to a GET.
+    Now it is stated rather than hoped for.
+    """
+    response = await call_next(request)
+    if request.url.path.startswith("/v1/") or request.url.path == "/health":
+        response.headers["Cache-Control"] = "no-store"
+    return response
+
+
 @app.on_event("startup")
 async def _warm_mcp() -> None:
     """Open the official mcp-clickhouse session before the first request.
@@ -629,6 +646,7 @@ async def stack() -> dict[str, object]:
     appears in requirements.txt would be the easiest thing on this page to fake,
     so it is the one thing here that is not asserted.
     """
+    started = time.perf_counter()
     integrations = await _integration_health()
     version: str | None = None
     tools: list[str] = []
@@ -645,14 +663,16 @@ async def stack() -> dict[str, object]:
             tools = await client.tools()
         except Exception:
             version, tools = None, []
-    return {
-        "data": build_stack(
-            clickhouse_live=bool(integrations.get("clickhouse")),
-            vertex_live=bool(integrations.get("google_vertex")),
-            clickhouse_version=version,
-            mcp_tools=tools,
-        )
-    }
+    payload = build_stack(
+        clickhouse_live=bool(integrations.get("clickhouse")),
+        vertex_live=bool(integrations.get("google_vertex")),
+        clickhouse_version=version,
+        mcp_tools=tools,
+    )
+    # The round trips above are the whole point of this panel, so report what
+    # they cost. Without it a second press looks identical to a cached page.
+    payload["timing"] = {"query_ms": round((time.perf_counter() - started) * 1000, 1)}
+    return {"data": payload}
 
 
 @app.get("/v1/catalogue/shape")
@@ -766,8 +786,11 @@ async def catalogue_transform_risk() -> dict[str, object]:
     """
     from .catalogue import transform_risk
 
+    started = time.perf_counter()
     try:
         result = await transform_risk()
+        result.setdefault("timing", {})["query_ms"] = round(
+            (time.perf_counter() - started) * 1000, 1)
     except ClickHouseNotConfigured as exc:
         raise HTTPException(
             503, detail={"code": "mcp_clickhouse_not_configured", "message": str(exc)}

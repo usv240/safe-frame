@@ -276,3 +276,18 @@ def test_the_page_shows_the_criteria_that_actually_run():
                       "changed_area_fraction &gt;= 0.25", "win_transitions &gt; 6"):
         assert condition in panel_text, f"the SQL panel does not show {condition}"
     assert "luma_min < 0.80" in sweep, "the sweep lost the darker-image condition"
+
+
+def test_live_answers_are_never_cacheable() -> None:
+    """This page claims every panel is computed on the press. That claim used to
+    depend on no browser or proxy choosing to cache a GET, because the answers
+    carried no cache directive at all. A deterministic query over a fixed corpus
+    returns the same numbers every time, so a cached response is indistinguishable
+    from a fresh one by looking at it, which is exactly why the header has to say so.
+    """
+    client = TestClient(app)
+    for path in ("/health", "/v1/stack", "/v1/catalogue/shape"):
+        response = client.get(path)
+        assert response.headers.get("cache-control") == "no-store", (
+            f"{path} may be cached, which would let a stale answer look live"
+        )

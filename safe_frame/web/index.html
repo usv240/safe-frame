@@ -162,7 +162,9 @@ header.top{
   backdrop-filter:blur(12px);border-bottom:1px solid var(--line)
 }
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:var(--s-3);padding:var(--s-3) 0;flex-wrap:wrap}
-.brand{display:flex;align-items:center;gap:.55rem;font-weight:800;letter-spacing:.15em;font-size:var(--t-sm);text-transform:uppercase}
+.brand{display:flex;align-items:center;gap:.55rem;font-weight:800;letter-spacing:.15em;font-size:var(--t-sm);text-transform:uppercase;color:var(--ink);text-decoration:none;border-radius:var(--r-md)}
+.brand:hover{color:var(--accent)}
+.brand:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
 .brand svg{flex:none}
 .toggles{display:flex;gap:var(--s-2);flex-wrap:wrap}
 .seg{display:flex;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:3px}
@@ -686,20 +688,38 @@ main section[id]{padding-block:var(--s-5)}
 .compmore > summary:hover{color:var(--ink)}
 .compmore > summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
 .compmore p{margin-top:var(--s-2)}
+
+/* Every panel here claims to be computed on the press rather than served from
+   a cache. Two presses of a deterministic query return identical numbers,
+   which is correct and looks exactly like a cache, so each panel now says when
+   it last ran and what the round trip cost. Without this the honest behaviour
+   reads as the dishonest one. */
+.ranat{display:flex;flex-wrap:wrap;gap:var(--s-2) var(--s-4);align-items:baseline;
+  margin-top:var(--s-3);padding-top:var(--s-3);border-top:1px solid var(--line);
+  font:var(--t-xs) var(--sans);color:var(--ink-3);line-height:1.6}
+.ranat b{color:var(--ink-2);font-family:var(--mono);font-weight:600}
+.ranat .pulse{display:inline-block;width:7px;height:7px;border-radius:50%;
+  background:var(--good);margin-right:.4rem}
+/* No fade, no pulse, nothing that animates. A test in tests/test_live_api.py
+   bans CSS animation outright on this page, by looking for the at-rule as a
+   literal string, and it caught the fade that used to be here. A blanket ban
+   is the right guard for a product about not triggering seizures, and the
+   changing timestamp is the signal anyway. Do not reintroduce one. */
 </style>
 </head>
 <body>
+<span id="top"></span>
 <a class="skip" href="#sweep">Skip to the catalogue sweep</a>
 
 <header class="top">
   <div class="wrap topbar">
-    <span class="brand">
+    <a class="brand" href="#top" aria-label="Safe Frame, back to the top">
       <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
         <rect x="1" y="1" width="16" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/>
         <path d="M5 9h8M9 5v8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
       </svg>
       Safe Frame
-    </span>
+    </a>
     <div class="navwrap"><nav class="sectionnav" aria-label="Sections of this page">
       <a href="#sweep">Sweep</a>
       <a href="#evaluation">Evidence</a>
@@ -927,6 +947,7 @@ main section[id]{padding-block:var(--s-5)}
           </div>
           <p class="muted" id="e-decoy" style="font-size:var(--t-sm);margin-top:var(--s-3)"></p>
           <p class="muted" id="e-scope" style="font-size:var(--t-xs);margin-top:var(--s-3)"></p>
+          <div id="eval-ran"></div>
         </div>
       </div>
 
@@ -957,6 +978,7 @@ main section[id]{padding-block:var(--s-5)}
         <p class="empty" id="risk-empty">Press &ldquo;Profile every transform&rdquo; to compute this live.</p>
         <div class="risk" id="risk" hidden></div>
         <p class="muted" id="risk-cap" style="font-size:var(--t-xs);margin-top:var(--s-3)"></p>
+        <div id="risk-ran"></div>
       </div>
 
       <div class="outcome" id="outcome" hidden>
@@ -1243,6 +1265,7 @@ curl -s -X POST https://safe-frame-regression-109051079423.us-central1.run.app/v
       <div class="controls">
         <button class="btn btn-primary" id="stack-run">Check the stack</button>
         <span class="note" id="stack-status">Nothing here is hardcoded.</span>
+        <div id="stack-ran" style="flex-basis:100%"></div>
         <a class="btn" href="https://github.com/usv240/safe-frame/blob/main/docs/STACK.md" target="_blank" rel="noreferrer">The long version</a>
       </div>
 
@@ -1716,6 +1739,7 @@ function renderRisk(d) {
   }
   host.hidden = false;
   $("#risk-empty").hidden = true;
+  ranAt("#risk-ran", (d.timing || {}).query_ms);
   $("#risk-cap").textContent =
     `Every transform in the catalogue, computed live. Bars are the rule split: ` +
     `blue is general flash, red is red flash, scaled to the worst transform. ` +
@@ -1883,6 +1907,8 @@ $("#eval-run").onclick = async () => {
       `${d.decoys.inherited} inherited and ${d.decoys.bright} bright-on-bright. ` +
       d.decoys.why.charAt(0).toUpperCase() + d.decoys.why.slice(1) + ".";
     $("#e-scope").textContent = d.scope + " " + d.independence + ".";
+    ranAt("#eval-ran", (d.timing || {}).query_ms,
+      "the same numbers on every press are the point: the corpus and the rule are both fixed");
     $("#eval-out").hidden = false;
     $("#eval-empty").hidden = true;
   } catch (e) {
@@ -2274,6 +2300,8 @@ $("#stack-run").addEventListener("click", async () => {
     }
     legend.hidden = false;
     $("#stack-empty").hidden = true;
+    ranAt("#stack-ran", (d.timing || {}).query_ms,
+      "every dot above was earned during this request");
     $("#stack-status").textContent =
       `${d.summary.live} answered live, ${d.summary.active} active in this process, ` +
       `${d.summary.applied} used to build and verify it` +
@@ -2592,6 +2620,44 @@ for (const type of ["dragover", "drop"]) {
    first real section. Open on a wide screen, closed on a narrow one. */
 const contentsFold = document.querySelector("#contents-fold");
 if (contentsFold && innerWidth < 760) contentsFold.open = false;
+
+/* "It just ran", for panels whose answer does not change. The evaluation scores
+   a fixed corpus against a fixed rule, so pressing twice must return 66 of 66
+   both times, and a different number would mean something had broken. The panel
+   showed nothing else, so re-running it was indistinguishable from a cached
+   page, and this site's whole claim is that nothing here is pre-computed. */
+function ranAt(hostSelector, queryMs, note) {
+  const host = document.querySelector(hostSelector);
+  if (!host) return;
+  host.replaceChildren();
+  host.className = "ranat";
+
+  const dot = document.createElement("span");
+  dot.className = "pulse";
+  dot.setAttribute("role", "img");
+  dot.setAttribute("aria-label", "answered live");
+  const when = document.createElement("span");
+  const at = document.createElement("b");
+  at.textContent = new Date().toLocaleTimeString(undefined,
+    { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  when.append(dot, document.createTextNode("computed at "), at);
+  host.append(when);
+
+  if (queryMs != null) {
+    const took = document.createElement("span");
+    const ms = document.createElement("b");
+    ms.textContent = `${Math.round(queryMs)} ms`;
+    took.append(document.createTextNode("round trip "), ms);
+    host.append(took);
+  }
+  if (note) {
+    const extra = document.createElement("span");
+    extra.textContent = note;
+    host.append(extra);
+  }
+  // The second-resolution timestamp is what makes a second press visibly a
+  // second press. Nothing here animates: see the note in the stylesheet.
+}
 </script>
 </body>
 </html>

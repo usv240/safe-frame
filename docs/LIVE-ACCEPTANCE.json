@@ -1,6 +1,6 @@
 {
   "verified_at": "2026-09-02T00:00:00Z",
-  "revision": "safe-frame-regression-00065",
+  "revision": "safe-frame-regression-00067",
   "public_url": "https://safe-frame-regression-109051079423.us-central1.run.app",
   "note": "Every value below was read from the deployed revision or the live cluster. It contains no credentials.",
   "health": {
@@ -230,7 +230,11 @@
     "the file zones carry class 'drop' and had no drop handler, so a dropped video made the browser navigate away to that file and discard every result on the page. They now accept a drop, and the rest of the document refuses one",
     "a picked file under 1MB reported itself as '0.0 MB', which reads as a file that failed to load rather than a small one",
     "the contents-map summary measured 4.36:1 in light mode, under the 4.5:1 requirement, having been muted body copy before it became a control",
-    "only one of the three tools the official mcp-clickhouse server advertises was ever called; the other two were checked for advertisement and never invoked. All three are called now, and the two discovery calls are what prove the session reaches a real cluster"
+    "only one of the three tools the official mcp-clickhouse server advertises was ever called; the other two were checked for advertisement and never invoked. All three are called now, and the two discovery calls are what prove the session reaches a real cluster",
+    "the brand in the sticky header was a span with no href, so the first thing most visitors click did nothing. It is a link to the top now",
+    "the live panels re-queried on every press and showed no evidence of it. A deterministic query over a fixed corpus returns the same numbers every time, which is correct and looks exactly like a cached page, so the honest behaviour read as the dishonest one on the site whose central claim is that nothing on it is pre-computed. Each panel now reports the time it ran and the round trip it cost",
+    "/v1/evaluation already returned timing.query_ms and the page discarded it; transform-risk and stack measured nothing at all. Both now report their round trip",
+    "no /v1 answer carried a cache directive, so 'computed on the press' held only for as long as no browser or proxy applied heuristic caching to a GET. All /v1 responses and /health now send Cache-Control: no-store, with a test"
   ],
   "multi_step_agent": {
     "agent": "QcTriageAgent",
@@ -572,5 +576,16 @@
         "verified_live": "13 cards, the declined dot renders as an outline rather than a fill, 16.25:1 light and 16.42:1 dark, and its disclosure reads 'Why it is not used' rather than 'How it is used'."
       }
     }
+  },
+  "freshness": {
+    "why": "every panel claims to be computed for the request that asked for it",
+    "verified_on_deployment": {
+      "evaluation": "press 1 at 2208 ms, press 2 at 2528 ms, distinct timestamps",
+      "transform_risk": "press 1 at 1847 ms, press 2 at 1355 ms",
+      "stack": "press 1 at 3755 ms, press 2 at 58 ms once the MCP session is warm",
+      "server_side": "three consecutive /v1/evaluation calls reported 2270.3, 1968.9 and 2045.6 ms, so the query really is re-run",
+      "no_response_was_served_from_cache": true
+    },
+    "note": "the numbers themselves are identical every time and that is the correct result: 66 planted, 66 found, precision 1.000. A different answer would mean something had broken."
   }
 }
