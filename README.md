@@ -1,281 +1,310 @@
 # Safe Frame
 
-Safe Frame is a master-to-rendition photosensitivity regression pre-check. It
-asks a deliberately narrow question: did a transformation introduce a violation
-that was absent from the approved parent?
+A film is approved once. Then it becomes dozens of versions: different frame
+rates, ad-break inserts, social crops, subtitle burn-ins. Photosensitivity
+testing runs on the master, before any of that happens.
 
-Public app: <https://safe-frame-regression-109051079423.us-central1.run.app>
+Safe Frame asks the question that testing the master cannot answer: **did one of
+those conversions introduce a flash risk the approved master did not have?**
 
-Start with [`JUDGING.md`](JUDGING.md) for the shortest verified judge path,
-[`docs/CLICKHOUSE-SKILLS-REVIEW.md`](docs/CLICKHOUSE-SKILLS-REVIEW.md) for how
-every one of the 31 official ClickHouse Agent Skills rules was applied, measured
-or declined,
-[`docs/STACK.md`](docs/STACK.md) for every component and the measurements behind
-each choice,
-[`docs/CRITERIA.md`](docs/CRITERIA.md) for where every threshold came from,
-[`docs/IMPACT.md`](docs/IMPACT.md) for who this is for and what has *not* been
-shown, [`docs/PRIVACY.md`](docs/PRIVACY.md) for exactly what each endpoint keeps
-and what it does not, and [`submission-evidence.json`](submission-evidence.json) for
-machine-readable proof.
+**Live app: <https://safe-frame-regression-109051079423.us-central1.run.app>**
 
-It is **not a certified, broadcaster-approved, or medical diagnostic device**.
-The deterministic detector and ClickHouse SQL are an open pre-check against
-published criteria. Gemini may explain database evidence; it cannot decide pass
-or fail.
+ClickHouse track. Every verdict on the site is a ClickHouse result, computed
+when you press the button.
 
-## Why this is different
+## Try it in sixty seconds
 
-Detection, repair, viewer-side dimming, and networked batch analysis already
-exist. Our documented search found file-level and networked batch analysers and
-an explicitly no-reference enterprise QC product, but did not find documented
-master-to-rendition photosensitivity regression analysis. This is a documented
-gap, not proof that no private integration exists.
+1. Open the link above and press **Run every live check**.
+2. Four panels answer from ClickHouse: the catalogue sweep, an accuracy score,
+   the systemic cause, and which components are answering right now.
+3. Click any row whose rule reads **Red flash**. Look at the luminance line in
+   the chart. It barely moves. A luminance-only checker passes that file.
 
-Safe Frame aligns an approved master and every rendition on presentation time,
-then uses a ClickHouse anti-join to isolate violations present only in the child
-and attribute them to the conversion. Frame index is never used for lineage
-alignment because frame-rate conversion makes it invalid.
+Each panel reports the second it ran and what the round trip cost, because a
+deterministic query over a fixed corpus returns the same numbers every time and
+that is indistinguishable from a cached page unless the page says otherwise.
 
-## Two rules, windowed independently
+## How it fits together
 
-Published guidance is not one rule, and the thresholds are not ours to pick.
-Every one traces to WCAG 2.3.1; see [`docs/CRITERIA.md`](docs/CRITERIA.md) for
-the quoted definitions. Safe Frame implements two of the three tests:
+```mermaid
+flowchart LR
+  B["Browser"] --> R["Cloud Run<br/>FastAPI"]
+  R -->|"reads: read-only stdio"| M["official<br/>mcp-clickhouse"]
+  M -->|HTTPS| C[("ClickHouse 26.3<br/>self-hosted GCP VM")]
+  R -->|"writes: /v1/scan only"| C
+  R --> G["Vertex AI<br/>Gemini 2.5 Flash<br/>via Google ADK"]
+  G -->|"its four tools take<br/>the same MCP path"| M
+```
 
-- **general flash**: luminance alternation at or above a 0.10 delta.
-- **red flash**: saturated-red alternation at or above a 0.20 red delta, with
-  **no luminance floor at all**. A red/blue alternation can hold luminance
-  almost flat and still be the higher-risk sequence, so gating it on luminance
-  would reproduce the exact blind spot the rule exists to close.
+The important part of that picture is what is missing. **Gemini has no path to
+a verdict.** It reads database evidence through the same read-only MCP server
+and writes prose. Pass or fail is decided by SQL, every time. If MCP fails or
+the count cannot be parsed, the API returns 502 rather than guessing.
 
-Each rule gets its own 1000 ms window, so one rule's qualifying transitions can
-never pad the other's count, and the anti-join is keyed on `rule`: a master
-that already flashed in luminance does not excuse a rendition that introduced a
-red flash. Both rules are evaluated in ClickHouse in a single pass over the
-catalogue.
+The MCP subprocess receives ClickHouse credentials and nothing else. It cannot
+reach Google credentials.
 
-## From pixels to a verdict
+## The idea
 
-`safe_frame.ingest.frames_to_transitions` measures decoded frames into the
-transition rows everything downstream evaluates. For each consecutive pair it
-records two things separately, because the criteria test them independently:
-how large the change is *where it happened* (averaged over the pixels that
-actually moved) and how much of the screen moved at all. Averaging over the
-whole frame would conflate the two and let a partial-screen flash slip under
-the delta floor.
+Existing tools judge *a file*. Detection, repair, viewer-side dimming and
+networked batch analysis are all mature. Our documented search found file-level
+analysers and an explicitly no-reference enterprise QC product, but no
+documented check that compares a rendition against **its own approved parent**
+and attributes a newly introduced violation to the transform that caused it.
+That is a gap in public documentation, not proof that no private integration
+exists.
 
-Presentation time comes from the frame rate, never the frame index, so a 24 to
-60 fps conversion still aligns against its master. Decoding a container into
-frames is out of scope on purpose: that is commodity ffmpeg work, and its codec
-dependencies do not belong in the request path of a service whose job is
-arithmetic.
+Safe Frame aligns master and rendition on **presentation time, never frame
+index**, because a 24 to 60 fps conversion renumbers every frame and preserves
+pts. Then a child-minus-parent isolation in ClickHouse keeps only the
+violations the master did not already have.
 
-`tests/test_ingest.py` runs constructed frame sequences end to end, including a
-saturated-red alternation at matched BT.709 luminance where the luminance rule
-measures a swing below 0.01 and stays silent while the red rule fires.
+### Two rules, and the one most tools miss
 
-## Runtime architecture
+Thresholds are not ours to pick. Every one traces to WCAG 2.3.1, quoted in
+[`docs/CRITERIA.md`](docs/CRITERIA.md).
 
-- The deterministic detector measures affected area directly, before lossy tile
-  aggregation. A constructed checkerboard test proves why this matters.
-- Writes use `clickhouse-connect` with a dedicated ingest identity.
-- **Every catalogue read and live verdict uses the official
-  `ClickHouse/mcp-clickhouse` server in read-only stdio mode.** The child process
-  receives only ClickHouse credentials; it cannot access Google credentials.
-- The deployed ClickHouse 26.3 LTS cluster is self-hosted on a dedicated GCP VM,
-  exposed only through HTTPS, and uses a separate SELECT-only MCP user.
-- Two real Google ADK agents on Gemini 2.5 Flash via Vertex AI, both of which
-  must retrieve evidence through MCP and always require human QC.
-  `RegressionExplainer` is single-step: one validated pair, one tool.
-  `QcTriageAgent` is the multi-step one: it has four tools over the same
-  read-only MCP transport and sequences them itself: survey the sweep, profile
-  every transform to find the systemic cause, size the luminance blind spot,
-  then go deep on the one pair it ranks first. The tool-call sequence is
-  recorded and returned with the brief, so the multi-step work is checkable
-  rather than asserted.
-- Cloud Run uses a dedicated `safe-frame-runtime` identity and Secret Manager.
-- Every agent run and every fail-closed refusal emits a structured entry that
-  Cloud Logging lifts into `jsonPayload`, recording which tools ran in what
-  order and that the decision stayed with SQL. An agent that reaches conclusions
-  from a database is only trustworthy if you can reconstruct afterwards which
-  queries it actually ran. No submitted metrics and no model prose are logged.
+- **General flash.** Luminance alternation at or above a 0.10 delta, and only
+  when the darker image is below 0.80.
+- **Red flash.** Saturated-red alternation at or above a 0.20 red delta, with
+  **no luminance condition at all.**
 
-  ```
-  gcloud logging read 'jsonPayload.event="agent_run"' --limit 20 --format json
-  ```
+That second rule is the whole point. A red-to-grey alternation can hold
+luminance almost flat and still be the higher-risk sequence. Gate it on
+luminance and you reproduce the exact blind spot the rule exists to close. On
+the live corpus, **23 of the 66 findings are red-flash only**, so a
+luminance-only workflow misses every one of them.
+
+Each rule gets its own 1000 ms window, so one rule's transitions can never pad
+the other's count, and the isolation is keyed on rule: a master that already
+flashed in luminance does not excuse a rendition that introduced a red flash.
 
 ## Does it actually work
 
-The fair objection to a synthetic demonstration is that it is circular: data was
+The fair objection to a synthetic corpus is that it is circular. Data was
 generated with flashes in it, and then the flashes were found.
 
-`sql/008_ground_truth.sql` answers that. It recovers the planted set from the decisions that chose where to plant, and reads **no measurement column at all**,
-not `luma_delta`, not `red_delta`, not `luma_min`, not
-`changed_area_fraction`, not `direction`. `/v1/evaluation` runs it alongside the
-sweep and reports the confusion matrix. Two queries produced by independent
-means; agreement between them is a result rather than a restatement.
+[`sql/008_ground_truth.sql`](sql/008_ground_truth.sql) answers that. It recovers
+the planted set from the generator's own planting decisions and reads **no
+measurement column at all**: not `luma_delta`, not `red_delta`, not `luma_min`,
+not `changed_area_fraction`, not `direction`. Two queries produced by
+independent means. Agreement between them is a result rather than a
+restatement.
 
-On the live corpus: **66 planted, 66 found, precision 1.000, recall 1.000**, and
-all 86 decoys correctly rejected.
+On the live corpus: **66 planted, 66 found, precision 1.000, recall 1.000**,
+and all 86 decoys correctly rejected.
 
-The decoys are the part that makes the number worth anything, because recall alone can
-be bought by flagging everything. They are renditions that carry a real burst
-and are still not regressions, because their approved master has the same burst
-at the same presentation time, plus a bright-on-bright cohort that clears every
-floor but sits above the published darker-image ceiling.
+The decoys are what make the number worth anything, because recall alone can be
+bought by flagging everything. Seventy of them carry a real flash burst and are
+still not regressions, because their master has the same burst at the same
+presentation time. Seventeen clear every floor but sit above the published
+darker-image ceiling. The two sets are drawn independently and one rendition
+landed in both, which is why seventy plus seventeen is eighty-six and not
+eighty-seven.
 
-The two cohorts are scored apart, and they agree: 1.000 on the 400 authored
-titles and 1.000 on the 24 whose every value was measured from constructed RGB
+The two cohorts are scored apart and they agree: 1.000 on the 400 authored
+titles, and 1.000 on the 24 whose every value was measured from constructed RGB
 frames rather than chosen. That is what rules out the corpus doing the work.
 
 This measures agreement with a ground truth we authored. It is not evidence
-about real footage and establishes no clinical efficacy.
+about real footage and it establishes no clinical efficacy.
 
-## From findings to an action
+## From a count to something a team can act on
 
-A count of failures is not an operational answer. `/v1/catalogue/transform-risk`
-asks the next question: of every transform in the catalogue, how many renditions
-did it produce and how many did it break?
+Sixty-six findings is not sixty-six problems.
+`/v1/catalogue/transform-risk` asks the next question: of every conversion in
+the catalogue, how many renditions did it produce and how many did it break?
 
-On the live corpus that turns 66 findings into four implicated encoder profiles
-and three clean ones. `60fps_interp` and `adbreak_insert` produce every
-luminance regression between them, `subtitle_burnin` and `social_crop_v` produce
-every red one. That is a small number of upstream configurations to fix rather
-than 66 renditions to patch, and 23 of the 66 come from profiles whose only
-failure mode is red flash, so a luminance-only checker passes all of them.
+The answer is **four implicated encoder profiles and three clean ones**.
+`60fps_interp` and `adbreak_insert` produce every luminance regression between
+them; `subtitle_burnin` and `social_crop_v` produce every red one. That is four
+upstream configurations to fix, rather than sixty-six outputs to patch one at a
+time, and fixing them stops the next unsafe version being made.
 
-## Using it programmatically
+## What it is built from
 
-Every endpoint works with no credential at all, so the product can be judged and
-tested without an account, a quota, or a signup. `/docs` is the full OpenAPI
-surface.
+**ClickHouse, through the official MCP server.** Every catalogue read and every
+live verdict goes through `ClickHouse/mcp-clickhouse` in read-only stdio mode,
+against a self-hosted ClickHouse 26.3 LTS cluster on a dedicated GCP VM with a
+SELECT-only MCP user. One long-lived session per event loop rather than a
+subprocess per request, which removes four to eight seconds of handshake from
+every call. All three tools the server advertises are called, not just the one
+this product needs: `list_databases` and `list_tables` prove the session reaches
+a real cluster with a real schema, which `run_query` alone cannot.
 
-**Keys are optional and raise limits; they never gate access.** `POST /v1/keys`
-mints one with no signup and no approval, and `GET /v1/keys/self` reports which
-tier a caller is on. A key multiplies the per-minute cap on the endpoints that
-spend model tokens or write, by 5, and names the caller in the logs. Reads are
-uncapped either way.
+The criteria are **evaluated in SQL**, not read from a precomputed column. The
+1000 ms window is a `RANGE BETWEEN CURRENT ROW AND 999 FOLLOWING`; direction is
+encoded so that `min(dir) != max(dir)` is exactly "both directions present".
+
+**ClickHouse Agent Skills.** All 31 official rules were worked through against
+this schema. Most were applied. Four were declined with measurements showing
+why, including one where the recommended single-scan shape measured 27 percent
+slower on our data, because per-granule min/max already skips about 93 percent
+of the second scan.
+[`docs/CLICKHOUSE-SKILLS-REVIEW.md`](docs/CLICKHOUSE-SKILLS-REVIEW.md) accounts
+for every one.
+
+One of those declines is worth reading on its own.
+[`sql/007_refreshable_regressions.sql`](sql/007_refreshable_regressions.sql) is
+a refreshable materialized view that serves the sweep from 44 rows in 5.9 ms
+instead of 10,263,552 rows in 932 ms. Identical output, about 158 times faster,
+and exactly what ClickHouse's own guidance recommends. It is deliberately not
+enabled, because this site claims nothing on it is precomputed, and serving that
+button from a five-minute-old view would make the claim false. The DDL ships so
+a real deployment can create it in one statement.
+
+**Google Cloud.** Two real ADK agents on Gemini 2.5 Flash via Vertex AI.
+`RegressionExplainer` is single-step and bound to one validated pair.
+`QcTriageAgent` has four tools over the same read-only MCP transport and
+sequences them itself: survey the sweep, profile every transform, size the
+red-flash blind spot, then go deep on the pair it ranks first. The tool-call
+sequence is recorded and returned with the brief, so the multi-step work is
+checkable rather than asserted. Cloud Run runs under a dedicated
+`safe-frame-runtime` identity with Secret Manager, and every agent run and every
+fail-closed refusal lands in Cloud Logging as structured `jsonPayload`:
 
 ```bash
-# Google's load balancer rejects a POST with no Content-Length before it reaches
-# the service, so send an explicit empty body.
+gcloud logging read 'jsonPayload.event="agent_run"' --limit 20 --format json
+```
+
+No submitted metrics and no model prose are logged.
+
+## Check your own video
+
+Three routes, in increasing order of how much you do yourself.
+
+1. **On the page.** Choose a video in the "Your video" section, or press one of
+   the three bundled sample scenarios. It is decoded in your browser, never
+   uploaded and never played back at you, and only downscaled samples are sent.
+   Add the approved master as a second file to ask the regression question
+   instead of the absolute one.
+2. **`POST /v1/analyze`** with decoded RGB samples, if you want the service to
+   run the measurement stage for you. Nothing is stored.
+3. **Measure frames yourself** with `safe_frame.ingest.frames_to_transitions`
+   and post the transition rows to `/v1/scan`.
+
+Frames are measured on a small grid, which every response states. The published
+area condition is a proportion of the screen, so a few hundred cells resolve it;
+a flash too small for the grid does not meet the area condition anyway.
+
+## Using the API
+
+**Every endpoint works with no credential at all.** The whole judge path can be
+exercised without an account, a quota or a signup. Press **Run every endpoint**
+on the page to watch all nine read endpoints answer in your browser.
+
+Keys are optional and only raise limits. They never gate access.
+
+```bash
+BASE=https://safe-frame-regression-109051079423.us-central1.run.app
+
+# Google's load balancer rejects a POST with no Content-Length before it
+# reaches the service, so send an explicit empty body.
 curl -s -X POST "$BASE/v1/keys" -H 'content-type: application/json' -d '{}'
 
 curl -s "$BASE/v1/keys/self" -H "Authorization: Bearer $KEY"   # or X-API-Key
 ```
 
 A key is stateless: an identifier and an issue date, signed with an HMAC the
-server holds. Verification is a signature check, so there is no credential table,
-no write on the request path, and nothing lost when an instance restarts. The
-cost of that is real and stated on the key itself: an individual key cannot be
-revoked without rotating the signing secret. Keys expire 90 days after issue,
-which bounds the exposure of a leaked one.
+server holds. Verification is a signature check, so there is no credential
+table, no write on the request path, and nothing lost when an instance
+restarts. The cost is real and stated on the key itself: an individual key
+cannot be revoked without rotating the signing secret, so keys expire 90 days
+after issue. A missing credential is the anonymous tier; a present but broken
+one is refused with the reason rather than silently downgraded.
 
-A credential that is absent is the anonymous tier. A credential that is present
-and broken is refused with the reason, rather than silently downgraded, so a
-caller is never left wondering why their quota did not rise.
+Two consequences are handled rather than ignored. `/v1/scan` persists what it is
+given and the per-pair anti-join reads the same table, so a fixed sample
+identifier would be shared mutable state and an anonymous write onto a published
+master could suppress a real finding; `/v1/samples` mints a fresh lineage per
+request and catalogue identifiers are refused as write targets. `/v1/triage` and
+`/v1/explain` spend model tokens, so they are capped per client per minute, as
+is the write path. No read endpoint is capped.
 
-Two consequences are handled rather than ignored:
+### Endpoints
 
-- **`/v1/scan` persists what it is given, and the per-pair anti-join reads the
-  same table.** A fixed sample identifier would therefore be shared mutable
-  state: one caller's scan could change what the next caller sees, and an
-  anonymous write onto a published master could suppress a real finding.
-  `/v1/samples` mints a fresh lineage per request, and the identifiers belonging
-  to the generated catalogue are refused as write targets.
-- **`/v1/triage` and `/v1/explain` spend model tokens.** They are capped per
-  client per minute, as is the write path. No read endpoint is capped.
+| Endpoint | What it gives you |
+|---|---|
+| `/` | the page itself, no flashing media |
+| `/health` | live Vertex and MCP round trips |
+| `/v1/catalogue/shape` | size of the corpus, read live |
+| `/v1/catalogue/sweep` | both rules across the whole catalogue |
+| `/v1/catalogue/regressions` | the verdict for one asset pair |
+| `/v1/catalogue/timeline` | per-second transitions for a master and rendition |
+| `/v1/catalogue/transform-risk` | per-transform regression rates |
+| `/v1/evaluation` | the detector scored against planted ground truth |
+| `/v1/stack` | every component, and which are answering right now |
+| `/v1/integrations/clickhouse/evidence` | all three MCP tools called live |
+| `/v1/triage` | the multi-step agent brief, with its tool-call sequence |
+| `/v1/explain` | an ADK explanation grounded in MCP evidence |
+| `/v1/analyze` | measure frames you supply, store nothing |
+| `/v1/scan` | submit transition rows for a parent and child pair |
+| `/v1/samples` | a fresh, isolated pass/fail pair |
+| `/v1/keys`, `/v1/keys/self` | mint an optional key, check your tier |
+| `/samples/{name}` | the three bundled sample clips |
+| `/docs` | the complete OpenAPI surface |
 
-To check your own content there are three routes, in increasing order of how
-much you have to do yourself:
+## Run and verify it yourself
 
-1. **Open the page and choose a video.** It is decoded in your browser, never
-   uploaded and never displayed back at you, and only downscaled samples are
-   sent. Add the
-   approved master as a second file to ask the regression question instead of
-   the absolute one.
-2. **`POST /v1/analyze`** with decoded RGB samples, if you want the service to
-   run the measurement stage for you.
-3. **Measure frames yourself** with `safe_frame.ingest.frames_to_transitions`
-   and POST the transition rows to `/v1/scan` under your own asset identifiers.
-
-Frames submitted for analysis are measured on a small grid, which the response
-states on every result. The published area condition is a proportion of the
-screen, so a grid of a few hundred cells resolves it; a flash too small for the
-grid does not meet the area condition in the first place.
-
-## Decision boundary
-
-`POST /v1/scan` computes the parent and child violations, persists them, and then
-asks ClickHouse, through official MCP, to execute the published child-minus-parent
-anti-join. The same anti-join backs `/v1/catalogue/regressions` and the evidence
-the ADK agent reads, so no two surfaces can disagree about one pair. If MCP fails or the SQL count cannot be parsed, the live API returns
-502. It never substitutes a Gemini verdict or a local guess.
-
-Useful judge endpoints:
-
-- `/`: the catalogue sweep, no flashing media
-- `/health`: cached live Vertex and MCP/ClickHouse round-trips
-- `/v1/catalogue/shape`: size of the corpus, read live
-- `/v1/catalogue/sweep`: both rules evaluated across the whole catalogue
-- `/v1/catalogue/regressions`: SQL/MCP verdict for one asset pair
-- `/v1/catalogue/timeline`: per-second qualifying transitions for a master and one
-  rendition, on one shared scale; this is what the evidence chart draws
-- `/v1/catalogue/transform-risk`: per-transform regression rates, the systemic view
-- `/v1/evaluation`: the detector scored against the generator's planted ground truth
-- `/v1/triage`: the multi-step agent brief, with its tool-call sequence
-- `/v1/analyze`: measure frames you supply and get the same verdict; send a
-  master too for the regression question rather than the absolute one
-- `/v1/keys`, `/v1/keys/self`: mint an optional key, and check which tier you are on
-- `/v1/samples`: self-authored exact pass/fail metric pair
-- `/v1/scan`: submit raw transition metrics for a parent/child pair
-- `/v1/integrations/clickhouse/evidence`: advertised MCP tools and live query
-- `/v1/explain`: ADK explanation grounded in MCP evidence
-- `/docs`: complete OpenAPI surface
-
-## Verification
-
-```powershell
+```bash
 python -m pip install -r requirements-dev.txt
-python -m pytest -q
+python -m pytest -q                       # 92 passed, 47 skipped without a cluster
 python -m uvicorn safe_frame.main:app --reload
 ```
 
-```powershell
+```bash
 python -m pip install playwright
 python -m playwright install chromium
-python scripts/visual_check.py --offline
+python scripts/visual_check.py --offline  # needs no cluster
 ```
 
-`scripts/visual_check.py` drives a real browser against the page. `--offline`
-serves the web directory with no backend, so every fetch fails, and requires
-that initialisation completes with zero page errors, the toggles respond, and a
-failing sweep reports failing closed; it then stubs the endpoints and drives the
+`scripts/visual_check.py` drives a real browser. `--offline` serves the web
+directory with no backend, so every fetch fails, and requires that
+initialisation completes with zero page errors, the toggles respond, and a
+failing sweep reports failing closed. It then stubs the endpoints and drives the
 whole evidence path. It exists because a script that throws at init detaches
 every listener while every assertion about page *content* still passes, and that
-has happened twice. `--url` drives the judge path against a deployment and fails
-on horizontal overflow or console errors at phone, laptop and desktop widths in
-both themes.
+has happened twice.
 
 `tests/test_sql_parity.py` runs the reference Python detector and the ClickHouse
-criteria SQL over identical randomized rows and requires exact agreement on both
-rules, 46 cases, including the six-versus-seven boundary, the darker-image
-ceiling, and a red alternation at matched luminance. The `parity` CI job stands
-up a throwaway ClickHouse and runs them through the real official
-`mcp-clickhouse` transport on **every commit**, so the agreement is checkable by
-anyone rather than asserted here.
+SQL over identical randomized rows and requires exact agreement on both rules:
+46 parity cases including the six-versus-seven boundary, the darker-image
+ceiling and a red alternation at matched luminance, plus two that call every
+tool the MCP server advertises. The `parity` CI job stands up a throwaway
+ClickHouse and runs all 48 through the real official `mcp-clickhouse` transport
+**on every commit**, and fails if any of them skip.
 
-That job exists because of a defect it would have caught. The tests need a
-cluster, CI had none, so they skipped everywhere, 45 green skips reading as a
-pass, and under that cover the parametrized case compared the SQL's first *row*
+That job exists because of a defect it would have caught. The tests needed a
+cluster, CI had none, so they skipped everywhere: 45 green skips reading as a
+pass. Under that cover, the parametrized case compared the SQL's first *row*
 against the detector's whole result list. It could never have passed. The two
-implementations did agree, once the comparison was fixed; but for weeks nothing
+implementations did agree once the comparison was fixed, but for weeks nothing
 demonstrated it. A test that cannot run is a claim, not evidence.
 
-The fixtures are self-authored synthetic measurements with known boundaries.
-They are engineering evidence, not clinical validation or certification. See
-`docs/PRIOR-ART.md`, `docs/LIMITATIONS.md`, and `docs/LIVE-ACCEPTANCE.json`.
+## What this is not
+
+It is **not a certified, broadcaster-approved, or medical diagnostic device.**
+The detector and the SQL are an open pre-check against published criteria.
+Gemini may explain database evidence; it cannot decide pass or fail. Safe Frame
+implements two of the three published tests and does not implement the spatial
+pattern rule, which is named on the page rather than left implied. The corpus is
+self-authored and synthetic, and contains no filmed footage.
+
+## Read further
+
+| Document | What is in it |
+|---|---|
+| [`JUDGING.md`](JUDGING.md) | the shortest verified judge path |
+| [`docs/CLICKHOUSE-SKILLS-REVIEW.md`](docs/CLICKHOUSE-SKILLS-REVIEW.md) | all 31 partner rules, applied, measured or declined |
+| [`docs/CRITERIA.md`](docs/CRITERIA.md) | where every threshold came from |
+| [`docs/STACK.md`](docs/STACK.md) | every component and the measurements behind each choice |
+| [`docs/IMPACT.md`](docs/IMPACT.md) | who this is for, and what has not been shown |
+| [`docs/PRIVACY.md`](docs/PRIVACY.md) | what each endpoint keeps, and what it does not |
+| [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) | the honest edges |
+| [`docs/PRIOR-ART.md`](docs/PRIOR-ART.md) | what already exists, and what we could not find |
+| [`docs/LIVE-ACCEPTANCE.json`](docs/LIVE-ACCEPTANCE.json) | measurements read from the deployment |
+| [`submission-evidence.json`](submission-evidence.json) | machine-readable proof |
 
 ## License
 
-Apache-2.0. See `LICENSE` and `NOTICE`.
+Apache-2.0. See [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).
