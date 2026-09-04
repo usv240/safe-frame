@@ -183,7 +183,31 @@
       "all transitions disabled under prefers-reduced-motion; no looping animation anywhere",
       "no flashing or moving media on a page about flashing media",
       "the visitor's OS colour preference is honoured; an explicit choice overrides it both ways"
-    ]
+    ],
+    "contrast_audit": {
+      "method": "measured from rendered pixels rather than computed styles, because a computed-style pass mis-parsed Chrome's color(srgb ...) notation and reported the brand at 1:1 when it renders at 15.48:1",
+      "requirement": "4.5:1 for body text",
+      "results_after_fix": {
+        "light": {
+          "boundary eyebrow": 8.49,
+          "boundary body": 8.49,
+          "sql comment": 6.63,
+          "sql keyword": 11.36,
+          "theme toggle": 7.06,
+          "FLASHES tag": 6.54,
+          "brand": 15.48
+        },
+        "dark": {
+          "boundary eyebrow": 8.49,
+          "boundary body": 8.49,
+          "sql comment": 6.63,
+          "sql keyword": 11.36,
+          "theme toggle": 8.1,
+          "FLASHES tag": 8.3,
+          "brand": 16.3
+        }
+      }
+    }
   },
   "defects_found_by_this_check": [
     "a `let` read from its temporal dead zone during theme restore threw at init and detached every listener; the page rendered and did nothing, and the whole pytest suite passed",
@@ -194,7 +218,10 @@
     "the code blocks in the API section reused .sqlbox, which is light-on-dark by design because it sits on the dark boundary panel; on a pale surface it rendered grey on grey. Now a .codebox with per-theme tokens at 12.7:1 light and 13.7:1 dark",
     "/v1/analyze persisted every submitted pair and ran the stored anti-join, so measurements derived from a visitor's own video were kept indefinitely while the response claimed nothing was retained. Both modes now evaluate inline and write nothing, verified by counting rows either side of a live submission; six rows left by pre-fix testing were deleted",
     "the first test written to guard that claim was vacuous: without ClickHouse credentials the handler never enters the branch containing the write, so re-introducing the write still passed. It now forces the branch on, and fails when mutated",
-    "clicking a second sample scenario left the previous verdict on screen while the new one computed, so a judge clicking through them could read a stale FAIL over a running PASS; the panel is now cleared as each run begins"
+    "clicking a second sample scenario left the previous verdict on screen while the new one computed, so a judge clicking through them could read a stale FAIL over a running PASS; the panel is now cleared as each run begins",
+    "--bad was referenced nine times and never defined, so the FAIL verdict was never red, the safety warning border was not drawn, and the FLASHES tag rendered white on white. Now defined per theme with --bad-ink, measured 6.54:1 light and 8.30:1 dark",
+    "the decision-boundary panel was painted with var(--ink), which inverted it to a light panel in dark mode while the SQL box and eyebrow still assumed a dark ground: 1.92:1 and 1.17:1 measured. It now carries its own fixed palette and is dark in both themes",
+    "the inactive reading-mode and theme toggles sat at 4.03:1 in light, just under the requirement"
   ],
   "multi_step_agent": {
     "agent": "QcTriageAgent",
@@ -262,7 +289,8 @@
     "an export so the findings can leave the page",
     "a check of your own video, decoded in the browser and never displayed",
     "a self-serve API key, and the calls to use it",
-    "the live stack, with a status per component that has to be earned"
+    "the live stack, with a status per component that has to be earned",
+    "a runner that calls every read endpoint from the browser and shows what came back"
   ],
   "standards_audit": {
     "why": "expert review could not be obtained; the implementation was audited against the primary texts instead",

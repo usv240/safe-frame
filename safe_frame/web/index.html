@@ -167,7 +167,7 @@ header.top{
 .toggles{display:flex;gap:var(--s-2);flex-wrap:wrap}
 .seg{display:flex;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:3px}
 .seg button{
-  font:600 var(--t-xs)/1 var(--sans);letter-spacing:.04em;border:0;background:transparent;color:var(--ink-3);
+  font:600 var(--t-xs)/1 var(--sans);letter-spacing:.04em;border:0;background:transparent;color:var(--ink-2);
   padding:.5rem .8rem;border-radius:999px;cursor:pointer;white-space:nowrap
 }
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
@@ -393,10 +393,18 @@ pre.out{
 .prov .no{color:var(--ink-3)}
 
 /* ---------- decision boundary ---------- */
-.boundary{background:var(--ink);color:var(--paper);border-radius:var(--r-xl);padding:clamp(1.6rem,4vw,var(--s-6))}
-.boundary h2,.boundary h3{color:var(--paper)}
-.boundary p{color:color-mix(in srgb,var(--paper) 76%,var(--ink))}
-.boundary .eyebrow{color:var(--accent)}
+/* This panel is a deliberate dark full-stop at the end of the page. It used to
+   be painted with var(--ink), which inverts it to a LIGHT panel in dark mode
+   while the SQL box and the eyebrow still assumed a dark ground: the eyebrow
+   measured 1.92:1 and the SQL comments 1.17:1 against rendered pixels. It now
+   carries its own palette so it is dark in both themes and everything on it can
+   rely on that. */
+.boundary{--panel-bg:#14120f;--panel-ink:#f3efe6;--panel-accent:#e0a267;
+  background:var(--panel-bg);color:var(--panel-ink);
+  border-radius:var(--r-xl);padding:clamp(1.6rem,4vw,var(--s-6))}
+.boundary h2,.boundary h3{color:var(--panel-ink)}
+.boundary p{color:color-mix(in srgb,var(--panel-ink) 80%,var(--panel-bg))}
+.boundary .eyebrow{color:var(--panel-accent)}
 .boundary-grid{display:grid;gap:var(--s-4)}
 @media (min-width:56rem){.boundary-grid{grid-template-columns:1fr 1fr;align-items:start}}
 .sqlbox{
