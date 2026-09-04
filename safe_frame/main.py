@@ -847,12 +847,17 @@ async def evaluation_endpoint() -> dict[str, object]:
 async def clickhouse_evidence() -> dict[str, object]:
     try:
         client = ClickHouseMcp()
-        tools, query = await asyncio.gather(
+        # Every tool the official server advertises is called, not just the one
+        # this product needs. The two discovery calls are the part a reader can
+        # check without trusting us: they reach a real cluster and a real schema.
+        tools, query, databases, tables = await asyncio.gather(
             client.tools(),
             client.query(
                 "SELECT count() AS violations, uniqExact(lineage_id) AS lineages "
                 "FROM safe_frame.violations"
             ),
+            client.call("list_databases"),
+            client.call("list_tables", {"database": "safe_frame"}),
         )
     except ClickHouseNotConfigured as exc:
         raise HTTPException(503, detail={"code": "mcp_clickhouse_not_configured", "message": str(exc)}) from exc
@@ -861,7 +866,10 @@ async def clickhouse_evidence() -> dict[str, object]:
             "transport": "official_mcp_clickhouse_stdio",
             "read_only": True,
             "required_tools_advertised": {name: name in tools for name in ("run_query", "list_databases", "list_tables")},
+            "tools_called": sorted({query["tool"], databases["tool"], tables["tool"]}),
             "query": query,
+            "list_databases": databases,
+            "list_tables": tables,
         }
     }
 

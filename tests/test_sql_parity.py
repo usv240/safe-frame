@@ -23,12 +23,13 @@ a defect in the comparison below that meant they had never once executed.
 
 from __future__ import annotations
 
+import json
 import os
 import random
 
 import pytest
 
-from safe_frame.clickhouse_mcp import parity_violations
+from safe_frame.clickhouse_mcp import ClickHouseMcp, parity_violations
 from safe_frame.detector import detect_violations
 from safe_frame.models import TransitionMetric
 
@@ -301,3 +302,55 @@ async def test_darker_image_ceiling_agrees() -> None:
         expected = _reference(rows)
         assert (len(expected) > 0) is should_violate, f"python disagreed at {luma_min}"
         assert _normalise(await parity_violations(rows)) == expected
+
+
+@requires_cluster
+@pytest.mark.asyncio
+async def test_every_advertised_mcp_tool_is_actually_called() -> None:
+    """The ClickHouse track is scored on using the partner product, and this
+    project reads the catalogue through exactly one tool. It used to check that
+    `list_databases` and `list_tables` were advertised and call neither, which
+    is the server's word rather than evidence.
+
+    All three are called here against the real official server. The two
+    discovery calls prove something `run_query` cannot: the session reaches a
+    cluster that has databases and a schema, rather than a single statement
+    being echoed back at us.
+    """
+    client = ClickHouseMcp()
+    advertised = await client.tools()
+    for name in ("run_query", "list_databases", "list_tables"):
+        assert name in advertised, f"official mcp-clickhouse did not advertise {name}: {advertised}"
+
+    databases = await client.call("list_databases")
+    assert databases["tool"] == "list_databases"
+    assert not databases["is_error"], databases
+    assert databases["content"], "list_databases returned nothing"
+
+    # The server filters the system databases out, so the reply names user
+    # databases only: against the deployment that is ["safe_frame"], and in CI
+    # it is whatever the throwaway container has. Ask it rather than assume,
+    # because asserting "system" here passed nowhere and would have failed CI.
+    listed = json.loads(databases["content"][0]["text"])
+    target = listed[0] if listed else "default"
+
+    tables = await client.call("list_tables", {"database": target})
+    assert tables["tool"] == "list_tables"
+    assert not tables["is_error"], tables
+    assert tables["content"], f"list_tables returned nothing for {target}"
+
+    query = await client.query("SELECT 1 AS one")
+    assert query["tool"] == "run_query"
+    assert not query["is_error"], query
+
+
+@requires_cluster
+@pytest.mark.asyncio
+async def test_a_tool_the_server_does_not_advertise_is_refused() -> None:
+    """Generalising the worker from one hardcoded tool to any named tool is
+    only safe if an unknown name fails loudly rather than reaching the server.
+    """
+    client = ClickHouseMcp()
+    with pytest.raises(Exception) as caught:
+        await client.call("drop_everything", {})
+    assert "drop_everything" in str(caught.value)

@@ -1,6 +1,6 @@
 {
   "verified_at": "2026-09-02T00:00:00Z",
-  "revision": "safe-frame-regression-00061-srj",
+  "revision": "safe-frame-regression-00063-lh7",
   "public_url": "https://safe-frame-regression-109051079423.us-central1.run.app",
   "note": "Every value below was read from the deployed revision or the live cluster. It contains no credentials.",
   "health": {
@@ -229,7 +229,8 @@
     "disabled buttons were the brand colour at 50% opacity, rendering as a muddy tan that reads as a button that failed to paint. Now neutral, with cursor:not-allowed",
     "the file zones carry class 'drop' and had no drop handler, so a dropped video made the browser navigate away to that file and discard every result on the page. They now accept a drop, and the rest of the document refuses one",
     "a picked file under 1MB reported itself as '0.0 MB', which reads as a file that failed to load rather than a small one",
-    "the contents-map summary measured 4.36:1 in light mode, under the 4.5:1 requirement, having been muted body copy before it became a control"
+    "the contents-map summary measured 4.36:1 in light mode, under the 4.5:1 requirement, having been muted body copy before it became a control",
+    "only one of the three tools the official mcp-clickhouse server advertises was ever called; the other two were checked for advertisement and never invoked. All three are called now, and the two discovery calls are what prove the session reaches a real cluster"
   ],
   "multi_step_agent": {
     "agent": "QcTriageAgent",
@@ -525,5 +526,38 @@
       "each stack component shows its status and role, with method, depth, evidence and citation behind a per-card disclosure"
     ],
     "nothing_removed": "Every fact that was on the page before is still on it. The changes are about when it is laid out, not whether it is there."
+  },
+  "sponsor_tool_audit": {
+    "checked_against": "Rules.md, sections 6.B (Essential Components) and the ClickHouse track requirement",
+    "track": "ClickHouse",
+    "required": {
+      "clickhouse_at_runtime_via_official_mcp_clickhouse": "yes: mcp-clickhouse 0.3.0 over stdio, read only, against a self-hosted ClickHouse 26.3.20.7 on a GCP VM",
+      "google_cloud_ai_package_imported_and_called": "yes: google-adk 2.7.1 (LlmAgent, Runner) and google-genai 2.12.1, called from safe_frame/adk_app.py",
+      "gemini": "yes: gemini-2.5-flash on Vertex AI, answering live",
+      "platform_web": "yes",
+      "public_repo_with_detectable_licence": "yes: public, Apache License 2.0 in the About section",
+      "hosted_url": "https://safe-frame-regression-109051079423.us-central1.run.app",
+      "no_other_ai_vendor": "confirmed: requirements.txt and requirements-dev.txt contain no openai, anthropic, langchain, mistral, cohere, ollama, boto3 or azure package"
+    },
+    "encouraged": {
+      "clickhouse_agent_skills": "used during development, .claude/skills/clickhouse-best-practices, and recorded as an applied component at /v1/stack"
+    },
+    "gap_this_audit_found": {
+      "what": "the project called one of the three tools the official mcp-clickhouse server advertises. /v1/integrations/clickhouse/evidence checked that list_databases and list_tables were advertised and then called neither, which is the server's word about itself rather than evidence.",
+      "why_it_mattered": "one of the four equally weighted judging criteria asks how effectively the project uses the partner services, and the two discovery tools prove something run_query cannot: that the session reaches a real cluster with a real schema rather than a single statement being echoed back.",
+      "fix": "the worker queue carried a bare SQL string, so only one tool could ever be reached through it. It now carries a tool name and arguments, and the evidence endpoint calls all three.",
+      "verified_live": {
+        "tools_called": [
+          "list_databases",
+          "list_tables",
+          "run_query"
+        ],
+        "list_databases": "[\"safe_frame\"]",
+        "list_tables": "safe_frame.transitions, MergeTree, with its CREATE TABLE statement",
+        "run_query": "{\"columns\":[\"violations\",\"lineages\"],\"rows\":[[2,2]]}"
+      },
+      "covered_in_ci": "tests/test_sql_parity.py, two tests, run by the parity job against a real ClickHouse container. One calls all three tools; the other asserts an unadvertised tool name is refused rather than reaching the server."
+    },
+    "not_applicable": "IBM, Grafana Labs, Parallel and Replit are the other four tracks. Their products are deliberately absent."
   }
 }

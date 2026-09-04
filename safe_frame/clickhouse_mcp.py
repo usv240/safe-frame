@@ -88,6 +88,15 @@ class ClickHouseMcp:
     async def tools(self) -> list[str]:
         return await self._worker().tools()
 
+    async def call(self, tool: str, arguments: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Call one advertised tool by name.
+
+        `run_query` has a typed path of its own above. This exists for the two
+        discovery tools, whose result is evidence rather than data: they show
+        the session reaching a real cluster and a real schema.
+        """
+        return await self._worker().call(tool, arguments or {})
+
     async def query(self, sql: str) -> dict[str, Any]:
         results, _ = await self.query_many([sql])
         return results[0]

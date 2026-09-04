@@ -1,14 +1,28 @@
 # Safe Frame, demo script
 
-**Target 2:40–2:50. Hard limit 3:00**, only the first 3:00 is evaluated.
+**Target 2:49 at 180 words a minute. Hard limit 3:00**, and only the first
+3:00 is evaluated.
 
-At a calm 165 words a minute this run lands at **2:51**, which is inside the
-limit but not comfortably. At 180 it lands at **2:40**. Pick your pace
-deliberately and rehearse the close, and do not speed up mid-take to rescue a
-number. **A clear 2:51 beats a rushed 2:40 that fumbles the last sentence.**
+**Read this before you record.** The API beat added at 2:24 costs about nine
+seconds, and it does not come free. At a brisk 180 words a minute the run lands
+at **2:49**. At a calm 165 it lands at **3:00**, which is the limit itself, and
+only the first 3:00 is evaluated.
 
-Narration is **380 words**. Forty-three of them are spoken *over* the triage
-agent's wait, so they cost almost no wall-clock time.
+You therefore have to pick one of two things, deliberately, before you start:
+
+1. **Speak at 180 words a minute** and keep everything. 2:49, with 7 to 11
+   seconds of margin. This is the recommended run.
+2. **Speak at 165 and drop the stack line** from the close, the sentence
+   beginning "And none of that is on my word" (24 words, about 9 seconds). The
+   three green dots are still on screen and the API run has just made the same
+   "check it yourself" point, so the close still lands. That gives 2:51.
+
+Do not try to have both at 165. Do not speed up mid-take to rescue a number:
+**a clear 2:51 beats a 3:00 that gets cut off mid-sentence.**
+
+Narration is **393 words**. Forty-three of them are spoken *over* the triage
+agent's wait and thirteen more over the API run, so those fifty-six cost almost
+no wall-clock time.
 
 **Your speaking pace decides whether this is comfortable or tight.** The table
 below is built from each beat's own word count plus the presses and waits that
@@ -16,8 +30,8 @@ beat contains, rather than from a single guess at the total:
 
 | pace | run lands at | margin to 3:00 |
 |---|---|---|
-| calm, 165 words a minute | **2:51**, or 2:55 if the agent is slow | 5 to 9 seconds |
-| brisk, 180 words a minute | **2:40**, or 2:44 if the agent is slow | 16 to 20 seconds |
+| calm, 165 words a minute | **3:00**, or 3:04 if the agent is slow | **none, this overruns** |
+| brisk, 180 words a minute | **2:49**, or 2:53 if the agent is slow | 7 to 11 seconds |
 
 The "presses and waits" column is a human allowance. Measured on the deployed
 revision at 1440x900, the machine's own response time is smaller: sweep 7.8s,
@@ -36,8 +50,9 @@ seconds in total, which covers your hand and eye as well as the server.
 | Findings become an action | 54 | 20s | 4s: press, the profile returns | 1:46 |
 | The agent | 68 | 25s | the 12 to 20 second wait is covered by the line written for it | 2:10 |
 | One-file workflow | 29 | 11s | 3s: one click, decode and verdict | 2:24 |
-| Credibility, shown not said | 0 | 0s | 4s: a silent dwell on the greyed row | 2:28 |
-| Proof, and close | 53 | 19s | 4s: press, the stack answers | **2:51** |
+| The API, in one press | 13 | 5s | 9s: nine endpoints, measured 7.3s warm and 11.6s cold, spoken over | 2:33 |
+| Credibility, shown not said | 0 | 0s | 4s: a silent dwell on the greyed row | 2:37 |
+| Proof, and close | 53 | 19s | 4s: press, the stack answers | **3:00** |
 
 An earlier version of this page claimed 2:39 to 2:41 at 165 words a minute. That
 was wrong in a specific way worth knowing: it counted the words honestly but
@@ -56,7 +71,7 @@ time came from.
 The margin is the point. It absorbs a slower delivery, a fumbled click, or an
 agent having a bad minute. Anything you add spends it.
 
-Nine beats, and they are not equal. The red-flash case and the four-profile
+Ten beats, and they are not equal. The red-flash case and the four-profile
 result carry Potential Impact and Quality of the Idea between them; the agent
 and the closing stack check carry Technological Implementation. Those four are
 the reason to make the video at all. The evaluation beat is one line on purpose
@@ -87,6 +102,9 @@ hero.
 - Browser at 1440×900, 100% zoom, signed out, no extensions or bookmarks bar.
 - Run the sweep once to warm the MCP session, then reload, so the recording
   shows a genuine cold press.
+- **Press "Run every endpoint" once before you record, then reload.** Measured
+  cold it takes 11.6 seconds and warm 7.3, and the timing above assumes warm.
+  Four seconds is the whole margin at 180 words a minute.
 - The triage agent takes 12–20 seconds. Do not cut it: the wait is the proof.
   The narration for that beat is deliberately short so you can talk over it.
 - Read numbers **off the screen**. The catalogue is live and a row you click may
@@ -250,7 +268,26 @@ path.*
 
 ---
 
-## 2:24–2:28, Credibility, shown not said
+## 2:24–2:33, The API, in one press
+
+**DO:** Click **API** in the header nav. Press **Run every endpoint**. Nine
+endpoints tick through in the browser, warm in about seven seconds and about
+twelve on the first press of a session. **Speak the line over the run**, the
+way you did for the agent: the rows filling in are the point, not the wait.
+**POINT:** The summary line under the rows when it lands.
+
+**SAY:**
+
+> **"And it is a public API. Nine endpoints, no key needed, running now."**
+
+*The screen finishes the sentence: "9 of 9 returned 200". Read whatever the
+summary actually says. The endpoints that spend model tokens are deliberately
+not in this loop, which is worth knowing if a judge asks why the agent is
+missing from it.*
+
+---
+
+## 2:33–2:37, Credibility, shown not said
 
 **DO:** Click **Criteria** in the header nav. The threshold table now sits
 behind a disclosure, so press the summary line once to open it. Rest the cursor
@@ -268,7 +305,7 @@ over, but there is a click to miss. Rehearse this one.*
 
 ---
 
-## 2:28–2:51, Proof, and close
+## 2:37–3:00, Proof, and close
 
 **DO:** Click **Stack** in the header nav. Press **Check the stack**. It returns in
 about four seconds. This is where the demo ends.
@@ -297,6 +334,7 @@ about four seconds. This is where the demo ends.
 - [ ] Triage agent run live, numbered trace visible, **wait not cut**
 - [ ] `decision_source` and `requires_human` legible on screen
 - [ ] A sample scenario checked live, verdict and decision source visible
+- [ ] **Run every endpoint** pressed live, nine 200s visible on screen
 - [ ] The **not implemented** row rested on, silently, on the way to Stack
 - [ ] Stack checked live, the three green dots and the ClickHouse version visible
 - [ ] Ends on the live stack, no scroll-back
@@ -326,8 +364,10 @@ what other checkers miss → name the cause → let the agent prioritise the wor
 Cut for time, and because each would dilute the arc rather than add to it. If a
 judge asks, they are all on the page or in the repository.
 
-- **Build against it**: API keys and the OpenAPI surface at `/docs`. Useful to
-  anyone integrating, worth nothing to the four criteria.
+- **Minting an API key on camera.** The runner beat shows the API answering
+  without a credential, which is the stronger claim and costs nine seconds
+  rather than twenty. The key generator, the copy button and `/docs` are all on
+  the page if a judge wants them.
 - **Runtime evidence**: the MCP handshake and the credential-boundary diagram.
   The closing stack check now carries that point in less time.
 - **Decision boundary**: the SQL panel. The agent section makes the same point
@@ -340,8 +380,8 @@ judge asks, they are all on the page or in the repository.
 
 ## If you overrun
 
-At 165 words a minute the margin is 5 to 9 seconds, so this list is not
-hypothetical. Cut in this order. Never cut the red-flash beat or the
+At 180 words a minute the margin is 7 to 11 seconds, and at 165 there is none
+at all, so this list is not hypothetical. Cut in this order. Never cut the red-flash beat or the
 four-profile result, they carry Potential Impact and Quality of the Idea
 between them.
 

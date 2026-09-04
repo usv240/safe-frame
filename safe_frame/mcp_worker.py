@@ -37,7 +37,9 @@ class McpWorker:
 
     def __init__(self, parameters: StdioServerParameters) -> None:
         self._parameters = parameters
-        self._requests: asyncio.Queue[tuple[str, asyncio.Future[Any]]] = asyncio.Queue()
+        self._requests: asyncio.Queue[
+            tuple[str, dict[str, Any], asyncio.Future[Any]]
+        ] = asyncio.Queue()
         self._task: asyncio.Task[None] | None = None
         self._ready: asyncio.Future[list[str]] | None = None
         self._lock = asyncio.Lock()
@@ -56,15 +58,19 @@ class McpWorker:
                     if not ready.done():
                         ready.set_result(names)
                     while True:
-                        sql, future = await self._requests.get()
+                        tool, arguments, future = await self._requests.get()
                         if future.cancelled():
                             continue
                         try:
-                            result = await session.call_tool(_REQUIRED_TOOL, {"query": sql})
+                            if tool not in names:
+                                raise RuntimeError(
+                                    f"official mcp-clickhouse does not advertise {tool}: {names}"
+                                )
+                            result = await session.call_tool(tool, arguments)
                             if not future.done():
                                 future.set_result(
                                     {
-                                        "tool": _REQUIRED_TOOL,
+                                        "tool": tool,
                                         "is_error": bool(getattr(result, "isError", False)),
                                         "content": [item.model_dump() for item in result.content],
                                     }
@@ -89,7 +95,7 @@ class McpWorker:
     def _drain(self, error: BaseException) -> None:
         while not self._requests.empty():
             try:
-                _, pending = self._requests.get_nowait()
+                *_, pending = self._requests.get_nowait()
             except asyncio.QueueEmpty:  # pragma: no cover - race on shutdown
                 break
             if not pending.done():
@@ -114,11 +120,15 @@ class McpWorker:
 
     async def query(self, sql: str) -> dict[str, Any]:
         """Run one statement, restarting the session once if it had died."""
+        return await self.call(_REQUIRED_TOOL, {"query": sql})
+
+    async def call(self, tool: str, arguments: dict[str, Any]) -> dict[str, Any]:
+        """Call any advertised tool, restarting the session once if it had died."""
         for attempt in (1, 2):
             await self._ensure()
             loop = asyncio.get_running_loop()
             future: asyncio.Future[Any] = loop.create_future()
-            await self._requests.put((sql, future))
+            await self._requests.put((tool, arguments, future))
             try:
                 return await future
             except Exception:
