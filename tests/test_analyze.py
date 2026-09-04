@@ -226,3 +226,22 @@ def test_the_result_states_what_is_stored(client: TestClient) -> None:
     assert privacy["what_is_stored"].startswith("nothing")
     for key in ("file_never_uploaded", "never_displayed", "what_is_sent", "logs"):
         assert privacy[key]
+
+
+@pytest.mark.parametrize(
+    "name", ["master.webm", "rendition-flash.webm", "rendition-red.webm"]
+)
+def test_the_sample_clips_are_served(client: TestClient, name: str) -> None:
+    """A judge with no video to hand still needs to be able to run the real check."""
+    response = client.get(f"/samples/{name}")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "video/webm"
+    assert len(response.content) > 1000
+
+
+@pytest.mark.parametrize(
+    "name", ["index.html", "../index.html", "..%2findex.html", "evil.webm", "master.WEBM"]
+)
+def test_only_the_named_sample_clips_are_reachable(client: TestClient, name: str) -> None:
+    """Whitelist, not a directory mount: nothing else under web/ is fetchable."""
+    assert client.get(f"/samples/{name}").status_code in (404, 400)

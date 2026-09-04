@@ -521,6 +521,15 @@ section[id],div[id]{scroll-margin-top:calc(var(--header-h,4.5rem) + .75rem)}
 .legend{display:flex;flex-wrap:wrap;gap:var(--s-3);margin-top:var(--s-4);
   font-size:.85rem;color:var(--ink-3)}
 .legend span{display:inline-flex;align-items:center;gap:.4rem}
+
+/* Sample scenarios. The clips are analysed, never rendered, and the flashing
+   ones are not downloadable. */
+.samples{margin-top:var(--s-5);padding:var(--s-4);border:1px solid var(--line);
+  border-radius:var(--r-lg);background:var(--surface)}
+.samples-title{color:var(--ink);font-size:.95rem;margin-bottom:var(--s-3)}
+.samplerow{display:flex;flex-wrap:wrap;gap:var(--s-2)}
+.samplerow .btn{font-size:.88rem}
+.samplerow .btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 </style>
 </head>
 <body>
@@ -829,6 +838,16 @@ section[id],div[id]{scroll-margin-top:calc(var(--header-h,4.5rem) + .75rem)}
       <h2>Everything above ran on our catalogue. Run it on yours.</h2>
       <p class="lead" style="margin-top:var(--s-3)">Choose a video and it is decoded <em>in this browser</em>. It is never uploaded, and never displayed on this page: only downscaled samples are sent, and they are measured by the same function the catalogue used. The verdict comes back from ClickHouse.</p>
       <p class="lead" style="margin-top:var(--s-3)">Add the approved master as well and the question changes from <em>does this flash</em> to the one this product exists for: <em>did this conversion introduce a flash the master did not have</em>. A clip that flashes is not a regression if its master flashed the same way.</p>
+
+      <div class="samples">
+        <p class="samples-title">No video to hand? Run one of ours. Each loads a constructed pair and checks it for real.</p>
+        <div class="samplerow">
+          <button class="btn" data-child="rendition-flash.webm" data-parent="master.webm">A rendition that regressed</button>
+          <button class="btn" data-child="rendition-red.webm" data-parent="master.webm">The red-flash blind spot</button>
+          <button class="btn" data-child="rendition-flash.webm" data-parent="rendition-flash.webm">Flashes, but not a regression</button>
+        </div>
+        <p class="note" style="margin-top:var(--s-2)">These are constructed from arithmetic, not filmed, by <code class="mono">scripts/make_samples.py</code>. They are measured and never played, and the flashing ones are deliberately not offered for download: handing somebody a seizure-inducing file is the harm this product exists to prevent, and that applies to us too.</p>
+      </div>
 
       <ul class="promises">
         <li><b>Never uploaded.</b> Decoded in this browser; the file does not leave your machine.</li>
@@ -1766,6 +1785,46 @@ function byoRenderChart(child, parent) {
 byoPick("child", "#byo-child", "#byo-child-name");
 byoPick("parent", "#byo-parent", "#byo-parent-name");
 
+/* One submit path, whether the clip came from a file the visitor picked or from
+   one of the sample scenarios. Two copies of this would drift. */
+async function byoSubmit(rendition, master, say) {
+  const body = master ? { rendition, master } : { rendition };
+  const r = await fetch("/v1/analyze", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const p = await r.json();
+  if (!r.ok) throw new Error((p.detail && p.detail.message) || "The check failed closed.");
+  const d = p.data;
+
+  const verdict = $("#byo-verdict");
+  verdict.textContent = d.verdict === "fail" ? "FAIL" : "PASS";
+  verdict.className = `vlabel ${d.verdict}`;
+  if (d.mode === "regression") {
+    $("#byo-mode").textContent = d.verdict === "fail"
+      ? "this rendition introduced a violation its approved master did not have"
+      : "nothing was introduced that the approved master did not already have";
+  } else {
+    $("#byo-mode").textContent = d.verdict === "fail"
+      ? "this clip meets the published criteria for a flash violation"
+      : "no violation of the published criteria was found";
+  }
+  $("#byo-findings").textContent = d.findings.length
+    ? d.findings.map((f) => `${f.rule.replace("_", " ")} at ${f.window_start_ms} ms, ${f.transitions} transitions`).join("; ")
+    : "none";
+  $("#byo-count").textContent = d.master
+    ? `${d.rendition.transitions_measured} rendition, ${d.master.transitions_measured} master`
+    : `${d.rendition.transitions_measured}`;
+  $("#byo-src").textContent = d.decision_source;
+  $("#byo-by").textContent = d.measurement.measured_by;
+  $("#byo-note").textContent = `${d.measurement.note} ${d.privacy.what_is_stored}`;
+  byoRenderChart(d.rendition.per_second, d.master ? d.master.per_second : null);
+  $("#byo-empty").hidden = true;
+  $("#byo-out").hidden = false;
+  say("Done. Nothing was stored.");
+}
+
 $("#byo-run").addEventListener("click", async () => {
   const button = $("#byo-run");
   const status = $("#byo-status");
@@ -1783,41 +1842,7 @@ $("#byo-run").addEventListener("click", async () => {
     }
     button.textContent = "Measuring and checking...";
     say("Sending downscaled samples. The video itself stays on your machine.");
-    const body = master ? { rendition, master } : { rendition };
-    const r = await fetch("/v1/analyze", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const p = await r.json();
-    if (!r.ok) throw new Error((p.detail && p.detail.message) || "The check failed closed.");
-    const d = p.data;
-
-    const verdict = $("#byo-verdict");
-    verdict.textContent = d.verdict === "fail" ? "FAIL" : "PASS";
-    verdict.className = `vlabel ${d.verdict}`;
-    if (d.mode === "regression") {
-      $("#byo-mode").textContent = d.verdict === "fail"
-        ? "this rendition introduced a violation its approved master did not have"
-        : "nothing was introduced that the approved master did not already have";
-    } else {
-      $("#byo-mode").textContent = d.verdict === "fail"
-        ? "this clip meets the published criteria for a flash violation"
-        : "no violation of the published criteria was found";
-    }
-    $("#byo-findings").textContent = d.findings.length
-      ? d.findings.map((f) => `${f.rule.replace("_", " ")} at ${f.window_start_ms} ms, ${f.transitions} transitions`).join("; ")
-      : "none";
-    $("#byo-count").textContent = d.master
-      ? `${d.rendition.transitions_measured} rendition, ${d.master.transitions_measured} master`
-      : `${d.rendition.transitions_measured}`;
-    $("#byo-src").textContent = d.decision_source;
-    $("#byo-by").textContent = d.measurement.measured_by;
-    $("#byo-note").textContent = `${d.measurement.note} ${d.privacy}`;
-    byoRenderChart(d.rendition.per_second, d.master ? d.master.per_second : null);
-    $("#byo-empty").hidden = true;
-    $("#byo-out").hidden = false;
-    say("Done. Nothing was stored.");
+    await byoSubmit(rendition, master, say);
   } catch (err) {
     $("#byo-out").hidden = true;
     $("#byo-empty").hidden = false;
@@ -1848,7 +1873,11 @@ $("#key-run").addEventListener("click", async () => {
     $("#key-note").textContent = `${d.note} ${d.anonymous_still_works}`;
     $("#key-empty").hidden = true;
     $("#key-out").hidden = false;
-    $("#key-status").textContent = "Copy it now: this is the only time it is shown.";
+    // Put the real key into the examples, so what is on screen is runnable.
+    for (const block of document.querySelectorAll("#api .codebox code")) {
+      block.textContent = block.textContent.replace(/YOUR_KEY/g, d.api_key);
+    }
+    $("#key-status").textContent = "Copy it now: this is the only time it is shown. The examples below now carry it.";
   } catch (err) {
     $("#key-out").hidden = true;
     $("#key-empty").hidden = false;
@@ -1970,6 +1999,44 @@ $("#stack-run").addEventListener("click", async () => {
     button.textContent = "Check the stack";
   }
 });
+
+/* Sample scenarios: fetch a constructed clip, decode it through the same path a
+   file the visitor picked would take, and check it. The clips are never played
+   and never offered for download. */
+async function byoFetchSample(name, onProgress) {
+  const response = await fetch(`/samples/${name}`);
+  if (!response.ok) throw new Error("That sample could not be loaded.");
+  const blob = await response.blob();
+  return byoDecode(new File([blob], name, { type: "video/webm" }), onProgress);
+}
+
+for (const button of document.querySelectorAll(".samplerow .btn")) {
+  button.addEventListener("click", async () => {
+    const buttons = Array.from(document.querySelectorAll(".samplerow .btn"));
+    const status = $("#byo-status");
+    const say = (text) => { status.textContent = text; };
+    for (const other of buttons) { other.disabled = true; other.removeAttribute("aria-pressed"); }
+    button.setAttribute("aria-pressed", "true");
+    $("#byo-run").disabled = true;
+    try {
+      say("Loading the sample and decoding it here in the browser...");
+      const rendition = await byoFetchSample(button.dataset.child,
+        (p) => say(`Decoding the rendition: ${Math.round(p * 100)}%`));
+      const master = await byoFetchSample(button.dataset.parent,
+        (p) => say(`Decoding the master: ${Math.round(p * 100)}%`));
+      say("Measuring and checking against ClickHouse...");
+      await byoSubmit(rendition, master, say);
+    } catch (err) {
+      $("#byo-out").hidden = true;
+      $("#byo-empty").hidden = false;
+      $("#byo-empty").textContent = err.message || "That sample could not be checked.";
+      say("Nothing was stored.");
+    } finally {
+      for (const other of buttons) other.disabled = false;
+      $("#byo-run").disabled = !byoFiles.child;
+    }
+  });
+}
 </script>
 </body>
 </html>

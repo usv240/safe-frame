@@ -364,7 +364,19 @@
     "why_that_grid_is_enough": "the published area condition is a proportion of the screen (0.25), which a grid this size resolves; a flash too small for it does not meet the area condition anyway",
     "what_is_stored": "nothing",
     "verified_by_counting_rows": "the violations table was counted through MCP immediately before and after submitting a regression pair and an absolute clip: 0 rows written, and 0 byo-* rows remain",
-    "how_that_was_achieved": "both modes evaluate the criteria over inline rows via clickhouse_mcp.submitted_regression_sql and parity_sql, so the SELECT-only MCP user answers the question and no write path is reached; tests/test_analyze.py forces the ClickHouse branch on and fails if a write is reintroduced"
+    "how_that_was_achieved": "both modes evaluate the criteria over inline rows via clickhouse_mcp.submitted_regression_sql and parity_sql, so the SELECT-only MCP user answers the question and no write path is reached; tests/test_analyze.py forces the ClickHouse branch on and fails if a write is reintroduced",
+    "sample_scenarios": {
+      "why": "a judge arriving here usually has no video to hand, which made the most convincing part of the product the one nobody tried",
+      "clips": "three, generated from arithmetic by scripts/make_samples.py, 16 to 23 KB, no recorded imagery",
+      "served_from": "/samples/{name} against a three-name whitelist, not a directory mount",
+      "scenarios_verified_in_a_real_browser": {
+        "a rendition that regressed": "fail, general_flash, 2.5s",
+        "the red-flash blind spot": "fail, red_flash and not general_flash, 1.4s",
+        "flashes but not a regression": "pass, nothing introduced, 1.4s"
+      },
+      "never_played": "0 video elements exist in the DOM at any point; the clips are decoded to samples and measured",
+      "not_downloadable": "the two clips containing a flash burst are deliberately not offered for download"
+    }
   },
   "api_keys": {
     "endpoints": [

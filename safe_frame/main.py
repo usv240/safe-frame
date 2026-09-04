@@ -356,6 +356,29 @@ async def describe_api_key(request: Request) -> dict[str, object]:
     }
 
 
+# Only these three, by name. A directory mount would let any file that ever
+# lands under web/ be fetched; a whitelist cannot.
+SAMPLE_CLIPS = frozenset({"master.webm", "rendition-flash.webm", "rendition-red.webm"})
+
+
+@app.get("/samples/{name}", include_in_schema=False)
+def sample_clip(name: str) -> FileResponse:
+    """Serve one constructed sample clip for in-page analysis.
+
+    These exist so a judge with no video to hand can still run the real check.
+    They are decoded and measured by the page and never played: no video element
+    is inserted into the document, and the page offers no download for the
+    flashing ones. Handing somebody a seizure-inducing file is the harm this
+    product exists to prevent, so the rule applies to us too.
+    """
+    if name not in SAMPLE_CLIPS:
+        raise HTTPException(404, detail={"code": "unknown_sample", "message": "no such sample clip"})
+    path = os.path.join(WEB_ROOT, "samples", name)
+    if not os.path.exists(path):
+        raise HTTPException(404, detail={"code": "unknown_sample", "message": "no such sample clip"})
+    return FileResponse(path, media_type="video/webm")
+
+
 @app.get("/health")
 async def health() -> dict[str, object]:
     integrations = await _integration_health()

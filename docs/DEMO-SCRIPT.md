@@ -166,15 +166,21 @@ still working when you finish, hold the silence; do not fill it.)*
 
 ## 2:22–2:36, Your file, not ours
 
-**DO:** Click **Your video** in the header nav. Both files are already chosen. Press
-**Measure and check**. It returns in about two seconds.
+**DO:** Click **Your video** in the header nav, then the sample button **A
+rendition that regressed**. One click, no file dialog. It returns in about two
+seconds.
 **POINT:** The verdict, then **Decision**.
 
 **SAY:**
 
-> **"Everything so far ran on our catalogue. This is my own file. It decodes in
-> this browser, never uploaded, never shown, measured by the same code. Same
-> verdict, same ClickHouse."**
+> **"Everything so far ran on our catalogue. This decodes a video in the browser
+> and runs the same check on it. Nothing uploaded, nothing shown, nothing
+> stored. The picker beside it takes your own file."**
+
+*Use the sample button rather than the file picker. A file dialog on camera is
+slow, shows your own filesystem, and can fail in a way you cannot recover from
+mid-take. The samples are served by the app and decode through the identical
+path.*
 
 ---
 
@@ -219,7 +225,7 @@ about four seconds. This is where the demo ends.
 - [ ] Transform profile run live, four-versus-three point made
 - [ ] Triage agent run live, numbered trace visible, **wait not cut**
 - [ ] `decision_source` and `requires_human` legible on screen
-- [ ] A file of your own checked live, verdict and decision source visible
+- [ ] A sample scenario checked live, verdict and decision source visible
 - [ ] Criteria table including the **not implemented** row
 - [ ] Stack checked live, the three green dots and the ClickHouse version visible
 - [ ] Ends on the live stack, no scroll-back
