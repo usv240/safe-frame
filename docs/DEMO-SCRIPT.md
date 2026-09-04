@@ -6,17 +6,24 @@ If the triage agent takes its full twenty seconds the run lands nearer 2:50 than
 2:40. That is still safely inside the limit, so do not speed up to hit a number.
 **A clear 2:50 beats a rushed 2:40.**
 
-Narration is **395 words**, about 2:24 at a calm 165 words a minute. Forty-seven
+Narration is **400 words**, about 2:25 at a calm 165 words a minute. Forty-seven
 of those words are spoken *over* the triage agent's wait, so they cost almost no
-wall-clock time: the run measures **2:38 if the agent answers in twelve seconds,
-2:41 if it takes twenty**, including scrolling, the five button presses, and the
-roughly two seconds the bring-your-own check takes to return.
+wall-clock time: the run measures **2:44 if the agent answers in twelve seconds,
+2:47 if it takes twenty**, including scrolling, the six button presses, and the
+few seconds the bring-your-own check and the stack check take to return.
+
+Nine beats, and they are not equal. The red-flash case and the four-profile
+result carry Potential Impact and Quality of the Idea between them; the agent
+and the closing stack check carry Technological Implementation. Those four are
+the reason to make the video at all. The evaluation and criteria beats are one
+line each on purpose: their numbers are legible on screen, so narrating them
+twice would spend the time the four above need.
 
 Word count is not the constraint; runtime is. Do not add lines, the remaining
 margin is the whole reason this fits.
 
 The page is ordered to match this script and the header nav is in that same
-order, so the demo moves **downward only** and ends on the criteria table.
+order, so the demo moves **downward only** and ends on the live stack.
 Use the nav rather than scrolling: it lands exactly on each panel, which is one
 fewer thing to fumble on camera. Never go back up. The Safe Frame name sits in
 the sticky header the entire time, so the close does not need to return to the
@@ -53,8 +60,8 @@ never checked."*
 **SAY:**
 
 > **"A film is approved once, then becomes dozens of versions: frame rates,
-> ad-break inserts, social crops, subtitles. Testing runs on the master, before
-> all of that. Safe Frame finds the version that introduced the risk."**
+> ad-break inserts, social crops. Testing runs on the master, before all of
+> that. Safe Frame finds the version that introduced the risk."**
 
 ---
 
@@ -65,9 +72,9 @@ never checked."*
 
 **SAY:**
 
-> **"Four hundred and twenty-four titles. Ten million transitions in ClickHouse.
-> Both published flash rules, evaluated across all of it in one pass, through
-> the official ClickHouse MCP server."**
+> **"Four hundred and twenty-four titles. Ten million transitions. Both
+> published flash rules across all of it in one pass, through the official
+> ClickHouse MCP server."**
 
 **POINT:** The result headline, then the **Rule** column.
 
@@ -101,16 +108,13 @@ never checked."*
 **DO:** Click **Evidence** in the header nav. Press **Score the detector**.
 **POINT:** The four tiles, left to right.
 
+**POINT:** The **found and planted** tile, then **decoys correctly rejected**.
+
 **SAY:**
 
-> **"Synthetic data, so don't just believe it. This recovers the planted set
-> from the generator's own decisions, reading no flash measurement at all.
-> Sixty-six planted, sixty-six found."**
-
-**POINT:** The **decoys correctly rejected** tile.
-
-> **"And eighty-six decoys placed to be rejected: files that genuinely flash,
-> but whose master flashes identically. All eighty-six left alone."**
+> **"Synthetic data, so don't just believe it. This recovers what was planted
+> using a query that reads no flash measurement. Sixty-six for sixty-six, and
+> eighty-six decoys that really do flash, correctly left alone."**
 
 ---
 
@@ -174,16 +178,29 @@ still working when you finish, hold the silence; do not fill it.)*
 
 ---
 
-## 2:36–2:52, Credibility, and close
+## 2:36–2:44, Credibility
 
-**DO:** Scroll down to **Criteria provenance**. This is where the demo ends, do not
-scroll further, and do not scroll back.
-**POINT:** Two or three threshold rows, then the greyed **not implemented** row.
+**DO:** Scroll down to **Criteria provenance**. Do not linger.
+**POINT:** The greyed **not implemented** row.
 
 **SAY:**
 
-> **"Every threshold traces to published guidance, and the rule we haven't
-> implemented is stated openly. An open pre-check, not a certified device."**
+> **"Every threshold traces to published guidance, and the rule we have not
+> implemented is stated openly."**
+
+---
+
+## 2:44–2:58, Proof, and close
+
+**DO:** Click **Stack** in the header nav. Press **Check the stack**. It returns in
+about four seconds. This is where the demo ends.
+**POINT:** The three green dots in the ClickHouse and Google rows.
+
+**SAY:**
+
+> **"And none of that is on my word. ClickHouse just reported its own version,
+> the MCP server listed its own tools, Vertex answered. Green means it replied
+> just now."**
 
 **POINT:** The **Safe Frame** name in the sticky header, top-left.
 
@@ -204,7 +221,8 @@ scroll further, and do not scroll back.
 - [ ] `decision_source` and `requires_human` legible on screen
 - [ ] A file of your own checked live, verdict and decision source visible
 - [ ] Criteria table including the **not implemented** row
-- [ ] Ends on the criteria section, no scroll-back
+- [ ] Stack checked live, the three green dots and the ClickHouse version visible
+- [ ] Ends on the live stack, no scroll-back
 - [ ] No GitHub tab, no logos, no music
 - [ ] Under 3:00, uploaded Public, English audio or subtitles
 
@@ -218,7 +236,7 @@ their names:
 
 | Criterion | Where it lands |
 |---|---|
-| Technological Implementation | ten million rows in one pass through the official MCP server; the agent's real tool trace |
+| Technological Implementation | ten million rows in one pass through the official MCP server; the agent's real tool trace; and the stack answering live at the end, so the partner integration is shown rather than claimed |
 | Design | a named contents map, a nav that follows you, and one downward path: problem, evidence, cause, action |
 | Potential Impact | the red-flash case a luminance-only checker passes, and four profiles to fix instead of sixty-six files |
 | Quality of the Idea | a non-obvious master-versus-rendition comparison that existing file-level checks do not address, with the unimplemented rule named rather than hidden |
