@@ -193,7 +193,8 @@
     "the persistent mcp-clickhouse worker was cached per configuration but its queue, lock and task belong to one event loop; a second loop in the same process raised 'Event loop is closed'. The service runs one loop and never hit it, so only a test suite could",
     "the code blocks in the API section reused .sqlbox, which is light-on-dark by design because it sits on the dark boundary panel; on a pale surface it rendered grey on grey. Now a .codebox with per-theme tokens at 12.7:1 light and 13.7:1 dark",
     "/v1/analyze persisted every submitted pair and ran the stored anti-join, so measurements derived from a visitor's own video were kept indefinitely while the response claimed nothing was retained. Both modes now evaluate inline and write nothing, verified by counting rows either side of a live submission; six rows left by pre-fix testing were deleted",
-    "the first test written to guard that claim was vacuous: without ClickHouse credentials the handler never enters the branch containing the write, so re-introducing the write still passed. It now forces the branch on, and fails when mutated"
+    "the first test written to guard that claim was vacuous: without ClickHouse credentials the handler never enters the branch containing the write, so re-introducing the write still passed. It now forces the branch on, and fails when mutated",
+    "clicking a second sample scenario left the previous verdict on screen while the new one computed, so a judge clicking through them could read a stale FAIL over a running PASS; the panel is now cleared as each run begins"
   ],
   "multi_step_agent": {
     "agent": "QcTriageAgent",
@@ -342,7 +343,7 @@
     "endpoint": "/v1/analyze",
     "why": "every other surface runs on a catalogue we chose, which a judge can fairly discount",
     "how": "the browser decodes the file to raw RGB on a small grid and posts only those samples; measurement stays in safe_frame.ingest so there is no second implementation of the published maths",
-    "never_displayed": "the video element is created but never inserted into the document, so a clip somebody is checking because they suspect it flashes is never painted on a page about photosensitive seizures",
+    "never_displayed": "analysing a clip never renders it: no video element exists in the document during a check, verified",
     "never_uploaded": "the file itself does not leave the machine",
     "modes": {
       "absolute": "rendition alone, criteria evaluated over inline rows, writes nothing",
@@ -374,8 +375,15 @@
         "the red-flash blind spot": "fail, red_flash and not general_flash, 1.4s",
         "flashes but not a regression": "pass, nothing introduced, 1.4s"
       },
-      "never_played": "0 video elements exist in the DOM at any point; the clips are decoded to samples and measured",
-      "not_downloadable": "the two clips containing a flash burst are deliberately not offered for download"
+      "never_played": "running a scenario creates no video element at any point",
+      "not_downloadable": null,
+      "inspectable": {
+        "why": "these are test patterns, and a QC engineer evaluating the tool reasonably wants to look at the material; withholding it from the people who most need it is the wrong call, and serving it unannounced is the other one",
+        "gate": "a collapsed panel whose summary states that two of the three contain a flash sequence",
+        "verified": "no video element exists until Play is pressed; the created element has no autoplay and starts paused, so the viewer must press play a second time in the controls",
+        "download": "served with a clear filename, e.g. safe-frame-rendition-flash.webm",
+        "labels": "each clip is tagged 'flashes' or 'no flash sequence' with its rate and duration"
+      }
     }
   },
   "api_keys": {

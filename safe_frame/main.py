@@ -366,10 +366,13 @@ def sample_clip(name: str) -> FileResponse:
     """Serve one constructed sample clip for in-page analysis.
 
     These exist so a judge with no video to hand can still run the real check.
-    They are decoded and measured by the page and never played: no video element
-    is inserted into the document, and the page offers no download for the
-    flashing ones. Handing somebody a seizure-inducing file is the harm this
-    product exists to prevent, so the rule applies to us too.
+    Running a check decodes and measures them without rendering anything.
+
+    The same route serves them for playback and download from the page's sample
+    panel, which is collapsed by default and names which two contain a flash
+    sequence. They are test patterns: withholding them from the professionals
+    who most need to inspect such material would be the wrong call, and serving
+    them without a warning would be the other one.
     """
     if name not in SAMPLE_CLIPS:
         raise HTTPException(404, detail={"code": "unknown_sample", "message": "no such sample clip"})

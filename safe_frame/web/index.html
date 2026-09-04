@@ -530,6 +530,26 @@ section[id],div[id]{scroll-margin-top:calc(var(--header-h,4.5rem) + .75rem)}
 .samplerow{display:flex;flex-wrap:wrap;gap:var(--s-2)}
 .samplerow .btn{font-size:.88rem}
 .samplerow .btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+
+/* Sample files, inspectable behind a warning. Nothing here autoplays, and the
+   player element does not exist until somebody presses play. */
+.warnbox{margin-top:var(--s-3);border:1px solid var(--line);border-left:3px solid var(--bad);
+  border-radius:0 var(--r-md) var(--r-md) 0;background:var(--surface);padding:var(--s-3) var(--s-4)}
+.warnbox summary{cursor:pointer;font-size:.92rem;color:var(--ink)}
+.warnbox summary b{color:var(--bad)}
+.warnbox summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.clips{list-style:none;margin:var(--s-3) 0 0;padding:0;display:grid;gap:var(--s-3)}
+.clips li{padding:var(--s-3);border:1px solid var(--line);border-radius:var(--r-md)}
+.clips b{font:var(--t-xs) var(--mono);color:var(--ink);font-weight:700}
+.clips p{color:var(--ink-2);font-size:.85rem;margin-top:.25rem;line-height:1.5}
+.clipactions{display:flex;gap:var(--s-2);margin-top:var(--s-2);flex-wrap:wrap}
+.clipactions .btn{font-size:.82rem;padding:.3rem .7rem}
+.tag{font-size:.7rem;letter-spacing:.04em;text-transform:uppercase;padding:.1rem .4rem;
+  border-radius:3px;vertical-align:middle;margin-left:.35rem}
+.tag.safe{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good)}
+.tag.warn{background:color-mix(in srgb,var(--bad) 18%,transparent);color:var(--bad)}
+#clip-player{margin-top:var(--s-3)}
+#clip-player video{max-width:min(100%,30rem);border-radius:var(--r-md);border:1px solid var(--line)}
 </style>
 </head>
 <body>
@@ -846,12 +866,44 @@ section[id],div[id]{scroll-margin-top:calc(var(--header-h,4.5rem) + .75rem)}
           <button class="btn" data-child="rendition-red.webm" data-parent="master.webm">The red-flash blind spot</button>
           <button class="btn" data-child="rendition-flash.webm" data-parent="rendition-flash.webm">Flashes, but not a regression</button>
         </div>
-        <p class="note" style="margin-top:var(--s-2)">These are constructed from arithmetic, not filmed, by <code class="mono">scripts/make_samples.py</code>. They are measured and never played, and the flashing ones are deliberately not offered for download: handing somebody a seizure-inducing file is the harm this product exists to prevent, and that applies to us too.</p>
+        <p class="note" style="margin-top:var(--s-2)">Constructed from arithmetic, not filmed, by <code class="mono">scripts/make_samples.py</code>. Checking one does not play it. If you want to inspect the material itself, it is below, behind a warning rather than behind a refusal.</p>
+
+        <details class="warnbox">
+          <summary><b>Play or download the sample files.</b> Two of the three contain a deliberate flash sequence.</summary>
+          <p class="note" style="margin-top:var(--s-3)">These are test patterns. They are the kind of material a QC engineer needs to be able to look at, so they are here rather than withheld, but nothing plays until you press play. <b>If you are photosensitive, do not open the two marked as flashing.</b></p>
+          <ul class="clips">
+            <li>
+              <div><b>master.webm</b> <span class="tag safe">no flash sequence</span></div>
+              <p>The approved master. Gentle drift, nothing that meets any threshold.</p>
+              <div class="clipactions">
+                <button class="btn" data-play="master.webm">Play</button>
+                <a class="btn" href="/samples/master.webm" download="safe-frame-master.webm">Download</a>
+              </div>
+            </li>
+            <li>
+              <div><b>rendition-flash.webm</b> <span class="tag warn">flashes</span></div>
+              <p>A full-screen luminance alternation, about twelve per second for two seconds, from one second in.</p>
+              <div class="clipactions">
+                <button class="btn" data-play="rendition-flash.webm" data-flashing="1">Play, it flashes</button>
+                <a class="btn" href="/samples/rendition-flash.webm" download="safe-frame-rendition-flash.webm">Download</a>
+              </div>
+            </li>
+            <li>
+              <div><b>rendition-red.webm</b> <span class="tag warn">flashes</span></div>
+              <p>A saturated-red alternation at matched luminance, the case a luminance-only checker passes. Same rate, same two seconds.</p>
+              <div class="clipactions">
+                <button class="btn" data-play="rendition-red.webm" data-flashing="1">Play, it flashes</button>
+                <a class="btn" href="/samples/rendition-red.webm" download="safe-frame-rendition-red.webm">Download</a>
+              </div>
+            </li>
+          </ul>
+          <div id="clip-player"></div>
+        </details>
       </div>
 
       <ul class="promises">
         <li><b>Never uploaded.</b> Decoded in this browser; the file does not leave your machine.</li>
-        <li><b>Never displayed.</b> A clip you suspect of flashing is not played back at you.</li>
+        <li><b>Your file is never displayed.</b> Checking a clip never plays it back at you. Our own sample files can be played, but only if you ask for them above.</li>
         <li><b>Nothing stored.</b> Downscaled samples are measured in memory and written nowhere.</li>
       </ul>
 
@@ -1787,6 +1839,14 @@ byoPick("parent", "#byo-parent", "#byo-parent-name");
 
 /* One submit path, whether the clip came from a file the visitor picked or from
    one of the sample scenarios. Two copies of this would drift. */
+function byoClearResult(message) {
+  // A previous verdict must not sit on screen while the next one computes.
+  // Clicking through the scenarios showed a stale FAIL over a running PASS.
+  $("#byo-out").hidden = true;
+  $("#byo-empty").hidden = false;
+  $("#byo-empty").textContent = message;
+}
+
 async function byoSubmit(rendition, master, say) {
   const body = master ? { rendition, master } : { rendition };
   const r = await fetch("/v1/analyze", {
@@ -1832,6 +1892,7 @@ $("#byo-run").addEventListener("click", async () => {
   button.setAttribute("aria-busy", "true");
   const say = (text) => { status.textContent = text; };
   try {
+    byoClearResult("Decoding and measuring...");
     button.textContent = "Decoding in your browser...";
     const rendition = await byoDecode(byoFiles.child,
       (p) => say(`Decoding your rendition: ${Math.round(p * 100)}%`));
@@ -2019,6 +2080,7 @@ for (const button of document.querySelectorAll(".samplerow .btn")) {
     button.setAttribute("aria-pressed", "true");
     $("#byo-run").disabled = true;
     try {
+      byoClearResult("Loading and measuring this scenario...");
       say("Loading the sample and decoding it here in the browser...");
       const rendition = await byoFetchSample(button.dataset.child,
         (p) => say(`Decoding the rendition: ${Math.round(p * 100)}%`));
@@ -2035,6 +2097,33 @@ for (const button of document.querySelectorAll(".samplerow .btn")) {
       for (const other of buttons) other.disabled = false;
       $("#byo-run").disabled = !byoFiles.child;
     }
+  });
+}
+
+/* Play a sample file, on request only. The video element is created here rather
+   than sitting in the document, so nothing can autoplay and nothing is present
+   until somebody has read the warning and pressed the button. */
+for (const button of document.querySelectorAll("[data-play]")) {
+  button.addEventListener("click", () => {
+    const host = $("#clip-player");
+    host.replaceChildren();
+    const caption = document.createElement("p");
+    caption.className = "note";
+    caption.textContent = button.dataset.flashing
+      ? `${button.dataset.play}: this clip contains a deliberate flash sequence. Press play when you are ready.`
+      : `${button.dataset.play}: no flash sequence.`;
+    const video = document.createElement("video");
+    video.src = `/samples/${button.dataset.play}`;
+    video.controls = true;
+    video.preload = "none";
+    video.setAttribute("playsinline", "");
+    const stop = document.createElement("button");
+    stop.className = "btn";
+    stop.textContent = "Close the player";
+    stop.style.marginTop = "var(--s-2)";
+    stop.addEventListener("click", () => host.replaceChildren());
+    host.append(caption, video, document.createElement("br"), stop);
+    video.scrollIntoView({ block: "nearest" });
   });
 }
 </script>

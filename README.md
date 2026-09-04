@@ -190,7 +190,8 @@ To check your own content there are three routes, in increasing order of how
 much you have to do yourself:
 
 1. **Open the page and choose a video.** It is decoded in your browser, never
-   uploaded and never displayed, and only downscaled samples are sent. Add the
+   uploaded and never displayed back at you, and only downscaled samples are
+   sent. Add the
    approved master as a second file to ask the regression question instead of
    the absolute one.
 2. **`POST /v1/analyze`** with decoded RGB samples, if you want the service to

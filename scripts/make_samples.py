@@ -20,10 +20,13 @@ Three files support three scenarios, because the third reuses one of the others:
     blind spot      master.webm  + rendition-red.webm     -> fail, red rule only
     inherited       rendition-flash.webm as both sides    -> pass, nothing introduced
 
-**These files are never played on the site.** The page decodes them to samples
-and measures them; no video element is ever inserted into the document, and the
-flashing clips are deliberately not offered for download. Handing somebody a
-seizure-inducing file is the exact harm this product exists to prevent.
+**Checking a clip never plays it.** The page decodes these to samples and
+measures them, and analysing a clip a visitor supplied never renders it.
+
+The sample files themselves can be played and downloaded, from a collapsed
+panel that warns which two contain a flash sequence. They are test patterns, and
+a QC engineer evaluating this tool reasonably wants to look at the material, so
+the rule is that nothing plays by surprise rather than that nothing plays.
 """
 
 from __future__ import annotations
