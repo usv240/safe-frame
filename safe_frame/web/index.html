@@ -23,6 +23,8 @@
 :root{
   color-scheme:light;
 
+  --bad:#b3261e;--bad-ink:#ffffff;
+
   --code-bg:#f2ece0;--code-ink:#232825;--code-line:#ddd5c4;
 
   --paper:#faf7f0;
@@ -75,6 +77,7 @@
 
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
+    --bad:#f2938c;--bad-ink:#14120f;
     --code-bg:#100e0b;--code-ink:#ded9cd;--code-line:#2b261e;
     color-scheme:dark;
     --paper:#14120f;
@@ -99,6 +102,7 @@
   }
 }
 :root[data-theme="dark"]{
+  --bad:#f2938c;--bad-ink:#14120f;
   --code-bg:#100e0b;--code-ink:#ded9cd;--code-line:#2b261e;
   color-scheme:dark;
   --paper:#14120f;
@@ -547,9 +551,64 @@ section[id],div[id]{scroll-margin-top:calc(var(--header-h,4.5rem) + .75rem)}
 .tag{font-size:.7rem;letter-spacing:.04em;text-transform:uppercase;padding:.1rem .4rem;
   border-radius:3px;vertical-align:middle;margin-left:.35rem}
 .tag.safe{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good)}
-.tag.warn{background:color-mix(in srgb,var(--bad) 18%,transparent);color:var(--bad)}
 #clip-player{margin-top:var(--s-3)}
 #clip-player video{max-width:min(100%,30rem);border-radius:var(--r-md);border:1px solid var(--line)}
+
+/* API section. The key is the one thing here somebody has to move to another
+   window, so it gets a field and a copy button rather than being loose text. */
+.keyfield{display:flex;align-items:center;gap:var(--s-2);flex-wrap:wrap;
+  padding:var(--s-3);border:1px solid var(--line);border-radius:var(--r-md);background:var(--code-bg)}
+.keylabel{font-size:.78rem;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);flex:0 0 auto}
+.keyfield code{flex:1 1 14rem;min-width:0;overflow-wrap:anywhere;color:var(--code-ink);font-size:.84rem}
+.btn-copy{padding:.35rem .8rem;font-size:.8rem;flex:0 0 auto}
+.btn-copy.done{background:var(--good);border-color:var(--good);color:#fff}
+.keymeta{display:flex;gap:var(--s-4);margin-top:var(--s-2);color:var(--ink-3);font-size:.85rem;flex-wrap:wrap}
+.keymeta b{color:var(--ink)}
+
+.codewrap{position:relative}
+.codewrap .btn-copy{position:absolute;top:.5rem;right:.5rem;opacity:.72;transition:opacity .15s}
+.codewrap:hover .btn-copy,.codewrap:focus-within .btn-copy{opacity:1}
+@media (hover:none){.codewrap .btn-copy{opacity:1}}
+
+/* The runner. Status is the first thing read, so it leads each row. */
+.runner{margin-top:var(--s-5);padding:var(--s-4);border:1px solid var(--line);
+  border-radius:var(--r-lg);background:var(--surface)}
+.runnerhead{display:flex;gap:var(--s-4);align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+.runnerhead h3{font-size:1rem;margin:0}
+.runnerhead .note{margin-top:.3rem;max-width:44ch}
+.calls{list-style:none;margin:var(--s-4) 0 0;padding:0;display:grid;gap:.4rem}
+.calls li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:var(--s-3);align-items:baseline;
+  padding:.55rem var(--s-3);border:1px solid var(--line);border-radius:var(--r-md);background:var(--paper)}
+.calls .st{font:700 .72rem/1 var(--mono);padding:.28rem .45rem;border-radius:4px;letter-spacing:.03em}
+.calls .st.ok{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good)}
+.calls .st.bad{background:color-mix(in srgb,var(--bad) 18%,transparent);color:var(--bad)}
+.calls .st.run{background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
+.calls .ep{font:var(--t-xs) var(--mono);color:var(--ink);overflow-wrap:anywhere}
+.calls .ep small{display:block;color:var(--ink-3);font-family:var(--sans);margin-top:.15rem;line-height:1.4}
+.calls .ms{font:var(--t-xs) var(--mono);color:var(--ink-3);white-space:nowrap}
+@media (max-width:560px){
+  .calls li{grid-template-columns:auto minmax(0,1fr);}
+  .calls .ms{grid-column:2;justify-self:start}
+}
+
+/* Samples. This was four boxes deep: section, panel, disclosure, card. The
+   panel border is gone and the disclosure carries the grouping, so the cards
+   sit two levels in rather than four and the eye has one edge to follow. */
+.samples{border:0;background:none;padding:0;margin-top:var(--s-5)}
+.warnbox{margin-top:var(--s-3)}
+.clips li{background:var(--paper)}
+.clips li:has(.playerslot video){border-color:var(--accent)}
+.cliphead{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.playerslot:not(:empty){margin-top:var(--s-3);padding-top:var(--s-3);border-top:1px solid var(--line)}
+.playerslot video{width:min(100%,26rem);display:block;border-radius:var(--r-md);border:1px solid var(--line);background:#000}
+.playerslot .note{margin-bottom:var(--s-2)}
+/* Secondary actions should not compete with the primary one. */
+.btn-quiet{background:transparent;border-color:var(--line);color:var(--ink-2)}
+.btn-quiet:hover{border-color:var(--line-strong);color:var(--ink)}
+/* The warning tag has to read as a warning at a glance. */
+.tag{font-weight:700}
+.tag.warn{background:var(--bad);color:var(--bad-ink)}
+.tag.safe{background:color-mix(in srgb,var(--good) 20%,transparent);color:var(--good)}
 </style>
 </head>
 <body>
@@ -877,27 +936,29 @@ section[id],div[id]{scroll-margin-top:calc(var(--header-h,4.5rem) + .75rem)}
               <p>The approved master. Gentle drift, nothing that meets any threshold.</p>
               <div class="clipactions">
                 <button class="btn" data-play="master.webm">Play</button>
-                <a class="btn" href="/samples/master.webm" download="safe-frame-master.webm">Download</a>
+                <a class="btn btn-quiet" href="/samples/master.webm" download="safe-frame-master.webm">Download</a>
               </div>
+              <div class="playerslot" data-slot="master.webm"></div>
             </li>
             <li>
               <div><b>rendition-flash.webm</b> <span class="tag warn">flashes</span></div>
               <p>A full-screen luminance alternation, about twelve per second for two seconds, from one second in.</p>
               <div class="clipactions">
                 <button class="btn" data-play="rendition-flash.webm" data-flashing="1">Play, it flashes</button>
-                <a class="btn" href="/samples/rendition-flash.webm" download="safe-frame-rendition-flash.webm">Download</a>
+                <a class="btn btn-quiet" href="/samples/rendition-flash.webm" download="safe-frame-rendition-flash.webm">Download</a>
               </div>
+              <div class="playerslot" data-slot="rendition-flash.webm"></div>
             </li>
             <li>
               <div><b>rendition-red.webm</b> <span class="tag warn">flashes</span></div>
               <p>A saturated-red alternation at matched luminance, the case a luminance-only checker passes. Same rate, same two seconds.</p>
               <div class="clipactions">
                 <button class="btn" data-play="rendition-red.webm" data-flashing="1">Play, it flashes</button>
-                <a class="btn" href="/samples/rendition-red.webm" download="safe-frame-rendition-red.webm">Download</a>
+                <a class="btn btn-quiet" href="/samples/rendition-red.webm" download="safe-frame-rendition-red.webm">Download</a>
               </div>
+              <div class="playerslot" data-slot="rendition-red.webm"></div>
             </li>
           </ul>
-          <div id="clip-player"></div>
         </details>
       </div>
 
@@ -963,14 +1024,30 @@ section[id],div[id]{scroll-margin-top:calc(var(--header-h,4.5rem) + .75rem)}
 
       <div class="panel" style="padding:var(--s-4)">
         <div id="key-out" hidden>
-          <dl class="facts">
-            <dt>Your key</dt><dd class="mono" id="key-value" style="overflow-wrap:anywhere">n/a</dd>
-            <dt>Tier</dt><dd id="key-tier">n/a</dd>
-            <dt>Expires</dt><dd id="key-exp">n/a</dd>
-          </dl>
+          <div class="keyfield">
+            <span class="keylabel">Your key</span>
+            <code class="mono" id="key-value">n/a</code>
+            <button class="btn btn-copy" id="key-copy" data-copy-target="#key-value">Copy</button>
+          </div>
+          <div class="keymeta">
+            <span><b id="key-tier">n/a</b> tier</span>
+            <span>expires <b id="key-exp">n/a</b></span>
+          </div>
           <p class="note" style="margin-top:var(--s-3)" id="key-note"></p>
         </div>
         <p class="note" id="key-empty">Shown once, here, and never stored by us. Press the button above.</p>
+
+        <div class="runner">
+          <div class="runnerhead">
+            <div>
+              <h3>Run it from here</h3>
+              <p class="note">Calls every read endpoint in your browser, in order, and shows what came back. Uses your key if you minted one, anonymously if not.</p>
+            </div>
+            <button class="btn btn-primary" id="api-run">Run every endpoint</button>
+          </div>
+          <ol class="calls" id="api-calls"></ol>
+          <p class="note" id="api-summary" hidden></p>
+        </div>
 
         <h3 style="margin-top:var(--s-5);font-size:1rem">Mint a key from the command line</h3>
         <p class="note" style="margin-top:var(--s-2)">Send an explicit empty body. A POST with no <code class="mono">Content-Length</code> is rejected with <code class="mono">411</code> by the load balancer before it reaches the service, which is a quirk of the hosting rather than of this API.</p>
@@ -2100,32 +2177,173 @@ for (const button of document.querySelectorAll(".samplerow .btn")) {
   });
 }
 
-/* Play a sample file, on request only. The video element is created here rather
-   than sitting in the document, so nothing can autoplay and nothing is present
-   until somebody has read the warning and pressed the button. */
+/* Play a sample file, on request only, in the card it belongs to. The video
+   element is created here rather than sitting in the document, so nothing can
+   autoplay and nothing exists until somebody has read the warning and pressed
+   the button. Pressing again closes it, so the control is its own undo. */
 for (const button of document.querySelectorAll("[data-play]")) {
   button.addEventListener("click", () => {
-    const host = $("#clip-player");
-    host.replaceChildren();
+    const name = button.dataset.play;
+    const slot = document.querySelector(`.playerslot[data-slot="${name}"]`);
+    const label = button.dataset.flashing ? "Play, it flashes" : "Play";
+    if (slot.firstChild) {
+      slot.replaceChildren();
+      button.textContent = label;
+      button.setAttribute("aria-expanded", "false");
+      return;
+    }
+    for (const other of document.querySelectorAll(".playerslot")) other.replaceChildren();
+    for (const other of document.querySelectorAll("[data-play]")) {
+      other.textContent = other.dataset.flashing ? "Play, it flashes" : "Play";
+      other.setAttribute("aria-expanded", "false");
+    }
     const caption = document.createElement("p");
     caption.className = "note";
     caption.textContent = button.dataset.flashing
-      ? `${button.dataset.play}: this clip contains a deliberate flash sequence. Press play when you are ready.`
-      : `${button.dataset.play}: no flash sequence.`;
+      ? "Contains a deliberate flash sequence. Press play in the controls when you are ready."
+      : "No flash sequence in this clip.";
     const video = document.createElement("video");
-    video.src = `/samples/${button.dataset.play}`;
+    video.src = `/samples/${name}`;
     video.controls = true;
     video.preload = "none";
     video.setAttribute("playsinline", "");
-    const stop = document.createElement("button");
-    stop.className = "btn";
-    stop.textContent = "Close the player";
-    stop.style.marginTop = "var(--s-2)";
-    stop.addEventListener("click", () => host.replaceChildren());
-    host.append(caption, video, document.createElement("br"), stop);
-    video.scrollIntoView({ block: "nearest" });
+    slot.append(caption, video);
+    button.textContent = "Close";
+    button.setAttribute("aria-expanded", "true");
   });
 }
+
+/* Copy to clipboard, with the confirmation people look for. One handler for
+   every copy button rather than one per site. */
+function safeFrameCopy(text, button) {
+  const done = () => {
+    const original = button.textContent;
+    button.textContent = "Copied";
+    button.classList.add("done");
+    setTimeout(() => { button.textContent = original; button.classList.remove("done"); }, 1600);
+  };
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(done, () => fallback());
+  } else {
+    fallback();
+  }
+  function fallback() {
+    // http, or a browser that refuses the async API
+    const area = document.createElement("textarea");
+    area.value = text;
+    area.setAttribute("readonly", "");
+    area.style.cssText = "position:fixed;left:-9999px";
+    document.body.appendChild(area);
+    area.select();
+    try { document.execCommand("copy"); done(); } catch (e) { button.textContent = "Press Ctrl+C"; }
+    document.body.removeChild(area);
+  }
+}
+
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-copy-target]");
+  if (!button) return;
+  const source = document.querySelector(button.dataset.copyTarget);
+  if (source) safeFrameCopy(source.textContent.trim(), button);
+});
+
+/* Wrap every command block so it gets a copy button of its own. */
+for (const block of document.querySelectorAll("#api .codebox")) {
+  const wrap = document.createElement("div");
+  wrap.className = "codewrap";
+  block.parentNode.insertBefore(wrap, block);
+  wrap.appendChild(block);
+  const code = block.querySelector("code");
+  if (!code.id) code.id = `cmd-${Math.random().toString(36).slice(2, 8)}`;
+  const button = document.createElement("button");
+  button.className = "btn btn-copy";
+  button.textContent = "Copy";
+  button.setAttribute("data-copy-target", `#${code.id}`);
+  wrap.appendChild(button);
+}
+
+/* Run every read endpoint from the page, using the minted key if there is one.
+   The endpoints that spend model tokens are left out on purpose: the agent
+   section already runs one on camera, and looping them here would burn the
+   Vertex quota during judging. */
+const API_CALLS = [
+  ["GET", "/health", "integrations reachable", (d) => Object.entries(d.integrations).filter(([, v]) => v).length + " of " + Object.keys(d.integrations).length + " live"],
+  ["GET", "/v1/keys/self", "which tier this call is on", (d) => d.data.tier + ", " + d.data.quota_multiplier + "x limits"],
+  ["GET", "/v1/catalogue/shape", "size of the corpus", (d) => d.data.transitions.toLocaleString() + " transitions, " + d.data.titles + " titles"],
+  ["GET", "/v1/catalogue/sweep", "both rules across the catalogue", (d) => d.data.regressions.length + " regressions"],
+  ["GET", "/v1/evaluation", "scored against planted ground truth", (d) => d.data.found + "/" + d.data.planted + ", precision " + d.data.precision],
+  ["GET", "/v1/catalogue/transform-risk", "which conversions break files", (d) => d.data.transforms_implicated + " implicated, " + d.data.transforms_clean + " clean"],
+  ["GET", "/v1/integrations/clickhouse/evidence", "the partner integration, checkable", (d) => (d.data.tools || []).join(", ")],
+  ["GET", "/v1/stack", "what is answering right now", (d) => d.data.summary.live + " live, " + d.data.summary.active + " active"],
+  ["GET", "/v1/samples", "a fresh isolated pair", (d) => d.data.name],
+];
+
+$("#api-run").addEventListener("click", async () => {
+  const button = $("#api-run");
+  const list = $("#api-calls");
+  const summary = $("#api-summary");
+  button.disabled = true;
+  button.setAttribute("aria-busy", "true");
+  button.textContent = "Running...";
+  list.replaceChildren();
+  summary.hidden = true;
+
+  const keyed = !$("#key-out").hidden;
+  const key = keyed ? $("#key-value").textContent.trim() : null;
+  const headers = key ? { Authorization: `Bearer ${key}` } : {};
+  let ok = 0;
+  const started = performance.now();
+
+  for (const [method, path, what, describe] of API_CALLS) {
+    const row = document.createElement("li");
+    const status = document.createElement("span");
+    status.className = "st run";
+    status.textContent = "...";
+    const label = document.createElement("span");
+    label.className = "ep";
+    label.textContent = `${method} ${path}`;
+    const detail = document.createElement("small");
+    detail.textContent = what;
+    label.appendChild(detail);
+    const ms = document.createElement("span");
+    ms.className = "ms";
+    ms.textContent = "";
+    row.append(status, label, ms);
+    list.appendChild(row);
+
+    const t0 = performance.now();
+    try {
+      const response = await fetch(path, { headers });
+      const took = Math.round(performance.now() - t0);
+      const payload = await response.json();
+      ms.textContent = `${took} ms`;
+      if (response.ok) {
+        ok += 1;
+        status.className = "st ok";
+        status.textContent = String(response.status);
+        try { detail.textContent = describe(payload); } catch (e) { /* keep the label */ }
+      } else {
+        status.className = "st bad";
+        status.textContent = String(response.status);
+        detail.textContent = (payload.detail && payload.detail.message) || "failed";
+      }
+    } catch (err) {
+      status.className = "st bad";
+      status.textContent = "err";
+      detail.textContent = err.message || "network error";
+      ms.textContent = `${Math.round(performance.now() - t0)} ms`;
+    }
+  }
+
+  const total = Math.round(performance.now() - started);
+  summary.textContent =
+    `${ok} of ${API_CALLS.length} returned 200 in ${total} ms, ${keyed ? "using your key" : "anonymously, with no credential"}. ` +
+    `The endpoints that spend model tokens are not looped here: the agent section runs one on camera.`;
+  summary.hidden = false;
+  button.disabled = false;
+  button.removeAttribute("aria-busy");
+  button.textContent = "Run every endpoint again";
+});
 </script>
 </body>
 </html>
